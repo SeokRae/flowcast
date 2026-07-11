@@ -496,3 +496,15 @@ def test_topology_l4_and_fw_are_distinct():
     data["nodes"][2]["kind"] = "fw"
     svg, _, _ = render_svg_topology(data, data["scenarios"][1])
     assert "topo-l4" in svg and "topo-fw" in svg  # 두 표현 공존·구분
+
+
+def test_topology_l4_box_is_narrower_than_srv():
+    import re
+    data = _topo()
+    data["nodes"][1]["kind"] = "l4"   # r1 → l4(좁은 박스), r2 = srv(표준)
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+
+    def width_of(nid):
+        m = re.search(r'data-id="' + nid + r'".*?<rect class="[^"]*"[^>]*width="([\d.]+)"', svg)
+        return float(m.group(1))
+    assert width_of("r1") < width_of("r2")  # l4 폭 < srv 폭
