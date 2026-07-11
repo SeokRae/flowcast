@@ -1,7 +1,7 @@
 {
   "name": "flowcast",
   "description": "IF/서비스 흐름도 작업 하네스 — /flowcast 오케스트레이터가 데이터·.pptx를 다이어그램 단위로 쪼개 뷰를 판별하고, drawer 서브에이전트를 병렬 팬아웃해 flowcast:sequence·flowcast:topology·flowcast:component 로 렌더·파일링하며, 요청 시 편집가능 .pptx(B-out)로 export",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "author": {
     "name": "SeokRae",
     "email": "kslbsh@gmail.com"
