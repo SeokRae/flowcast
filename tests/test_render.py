@@ -395,3 +395,26 @@ def test_component_example_validates():
     errors, _ = validate_component(data)
     assert errors == []
     assert len(data["scenarios"]) == 2
+
+
+def test_topology_badge_overlap_spread():
+    # 동일 엣지 2개 → 소박한 배지 위치 완전 중첩 — spread 로 지름(22px) 이상 분리돼야 (#19)
+    import re
+    data = {
+        "view": "topology",
+        "system": "S",
+        "nodes": [
+            {"id": "a", "name": "A", "col": 0, "row": 0},
+            {"id": "b", "name": "B", "col": 1, "row": 0},
+        ],
+        "scenarios": [{"title": "T", "segments": [
+            {"n": 1, "from": "a", "to": "b", "label": "one"},
+            {"n": 2, "from": "a", "to": "b", "label": "two"},
+        ]}],
+    }
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    pts = [(float(m.group(1)), float(m.group(2)))
+           for m in re.finditer(r'class="topo-badge" cx="([-\d.]+)" cy="([-\d.]+)"', svg)]
+    assert len(pts) == 2
+    (x1, y1), (x2, y2) = pts
+    assert ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 >= 22

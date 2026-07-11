@@ -401,17 +401,17 @@ def export_topology(data, out_path, slide_size="wide"):
                                       emu(bx + ox), emu(by + oy))
             ln.line.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
 
-        # 구간 오버레이(segments) — 화살촉 + 원형 번호 배지 (전문 라벨은 범례로)
+        # 구간 오버레이(segments) — 화살촉 커넥터. 배지는 아래에서 spread 후 일괄 배치.
+        badge_sgs = []
         for sg in segments:
             r1 = rects.get(sg.get("from"))
             if not r1:
                 continue
+            if sg.get("n") is not None:
+                badge_sgs.append(sg)
             to = sg.get("to")
             if sg.get("self") or not to or to not in rects:
-                # self·대상없음 → 배지만 노드 위에 (rail/self 커넥터 라우팅은 범위 밖)
-                if sg.get("n") is not None:
-                    _badge(r1[0] + r1[2] / 2, r1[1] - 34, sg["n"])
-                continue
+                continue   # self·대상없음 커넥터 라우팅은 범위 밖 (배지는 노드 위)
             r2 = rects[to]
             (ax, ay), (bx, by) = _anchor(r1, r2)
             conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(ax + ox), emu(ay + oy),
@@ -419,12 +419,11 @@ def export_topology(data, out_path, slide_size="wide"):
             conn.line.color.rgb = RGBColor(0x33, 0x41, 0x55)
             ln = conn.line._get_or_add_ln()
             ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
-            if sg.get("n") is not None:
-                if sg.get("rail") is not None:
-                    _badge((ax + bx) / 2, float(sg["rail"]), sg["n"])
-                else:
-                    # render.py 패리티 — 중점이 아닌 0.45/0.55 보간(교차 구간 배지 분산)
-                    _badge(ax * 0.45 + bx * 0.55, ay * 0.45 + by * 0.55, sg["n"])
+
+        # 번호 배지 — render.py 공용 헬퍼(_t_badge_geom/_t_spread_badges)로 겹침 자동 회피
+        spread = R._t_spread_badges([R._t_badge_geom(sg, rects) for sg in badge_sgs])
+        for sg, (bx, by) in zip(badge_sgs, spread):
+            _badge(bx, by, sg["n"])
 
         # 흐름 설명 범례 (render.py 패리티 — 다이어그램 하단)
         if leg_lines:
