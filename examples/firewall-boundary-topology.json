@@ -1,6 +1,6 @@
 {
   "system": "Gateway Platform",
-  "source": "flowcast 합성 예제 (topology · fw 방화벽 경계)",
+  "source": "flowcast 합성 예제 (topology · fw 방화벽 + l4 로드밸런서)",
   "view": "topology",
   "zones": [
     { "id": "web", "name": "WEB Tier" },
@@ -8,22 +8,24 @@
   ],
   "nodes": [
     { "id": "client", "name": "Client", "kind": "ext", "col": 0, "row": 0 },
-    { "id": "fw-in", "name": "Ingress L4/VIP", "kind": "fw", "col": 1, "row": 0 },
-    { "id": "web1", "name": "web", "zone": "web", "col": 2, "row": 0 },
-    { "id": "app1", "name": "app", "zone": "app", "col": 3, "row": 0 },
-    { "id": "fw-out", "name": "Egress L4/VIP", "kind": "fw", "col": 4, "row": 0 },
-    { "id": "partner", "name": "Partner API", "kind": "ext", "col": 5, "row": 0 }
+    { "id": "fw-edge", "name": "Edge Firewall", "kind": "fw", "col": 1, "row": 0 },
+    { "id": "lb-in", "name": "Ingress L4/VIP", "kind": "l4", "col": 2, "row": 0 },
+    { "id": "web1", "name": "web", "zone": "web", "col": 3, "row": 0 },
+    { "id": "app1", "name": "app", "zone": "app", "col": 4, "row": 0 },
+    { "id": "lb-out", "name": "Egress L4/VIP", "kind": "l4", "col": 5, "row": 0 },
+    { "id": "partner", "name": "Partner API", "kind": "ext", "col": 6, "row": 0 }
   ],
   "scenarios": [
     { "title": "인프라 구성도" },
     {
-      "title": "인/아웃바운드 방화벽 통과 FLOW",
+      "title": "방화벽·L4 통과 FLOW",
       "segments": [
-        { "n": 1, "from": "client", "to": "fw-in", "label": "인바운드 요청" },
-        { "n": 2, "from": "fw-in", "to": "web1", "label": "인바운드 방화벽 통과" },
-        { "n": 3, "from": "web1", "to": "app1", "label": "내부 호출" },
-        { "n": 4, "from": "app1", "to": "fw-out", "label": "아웃바운드 요청" },
-        { "n": 5, "from": "fw-out", "to": "partner", "label": "아웃바운드 방화벽 통과" }
+        { "n": 1, "from": "client", "to": "fw-edge", "label": "인바운드 요청" },
+        { "n": 2, "from": "fw-edge", "to": "lb-in", "label": "방화벽 통과(보안 필터)" },
+        { "n": 3, "from": "lb-in", "to": "web1", "label": "L4 분배(로드밸런싱)" },
+        { "n": 4, "from": "web1", "to": "app1", "label": "내부 호출" },
+        { "n": 5, "from": "app1", "to": "lb-out", "label": "아웃바운드 요청" },
+        { "n": 6, "from": "lb-out", "to": "partner", "label": "L4 통과" }
       ]
     }
   ]

@@ -16,7 +16,7 @@
 
     view      : "sequence"(기본) | "topology" | "component"
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
-                    kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽/L4 경계, 벽돌)
+                    kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽, 벽돌) | l4(L4/VIP 로드밸런서, fan-out)
                     links[]: { from, to } — 번호·화살촉 없는 정적 배선(토폴로지 공통)
                     scenarios[].segments[]: { n?, from, to|self, label?, rail? } — 번호 구간 오버레이
                     segments 없는 시나리오 = 순수 인프라 구성도
@@ -133,7 +133,7 @@ def validate_topology(data):
     for z in data.get("zones") or []:
         if not z.get("id") or not z.get("name"):
             errors.append(f"zone에 id/name 누락: {z}")
-    TOPO_KINDS = {"srv", "ext", "gear", "fw"}
+    TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
     for n in nodes:
         if not n.get("id") or not n.get("name"):
             errors.append(f"node에 id/name 누락: {n}")
@@ -507,9 +507,16 @@ def render_svg_topology(data, scenario):
             cls += " topo-gear"
         elif kind == "fw":
             cls += " topo-fw"
+        elif kind == "l4":
+            cls += " topo-l4"
         cls += state
         node_body.append(f'<g class="iff-node" data-id="{esc(nd["id"])}" data-cx="{x + w / 2}" data-cy="{y + h / 2}" data-w="{w}" data-h="{h}">')
         node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
+        if kind == "l4":
+            # L4/VIP = 로드밸런서 fan-out 아이콘(1→N 분배), 좌상단
+            ix, iy = x + 12, y + 13
+            node_body.append(f'<circle class="l4-ico" cx="{ix}" cy="{iy}" r="1.8"/>')
+            node_body.append(f'<path class="l4-ico-l" d="M{ix},{iy} L{ix + 11},{iy - 5} M{ix},{iy} L{ix + 11},{iy} M{ix},{iy} L{ix + 11},{iy + 5}"/>')
         lines = str(nd["name"]).split("\n")
         txcls = "topo-tx on" if state == " on" else "topo-tx"
         for i, ln in enumerate(lines):
@@ -815,6 +822,9 @@ CSS = """
     .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
     .fw-brick-bg{fill:var(--surface);}
     .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
+    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.6;}
+    .l4-ico{fill:var(--accent);}
+    .l4-ico-l{stroke:var(--accent);stroke-width:1.2;fill:none;}
     .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
     .topo-tx.on{fill:var(--accent);}
     .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
