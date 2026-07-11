@@ -55,6 +55,7 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 | 2026-07-11 | 배지 spread 부호를 분리 벡터 내적 기반으로 — 역평행(왕복 A→B/B→A) 퇴행 수정 + 무개선 시 부호 반전 폴백 | `scripts/render.py` | 왕복 구간(12×13) 배지가 같은 방향으로 밀려 겹침 유지되던 실사용 퇴행 (#21) |
 | 2026-07-11 | 워크플로우 게이트 4종 — 소스 게이트(지식 계층: 개념 노트→흐름 문서→다이어그램→PPT)·2축 페어링(sequence+topology 번호 공유)·순서 검증(업무 트리거=n1)·속성 근거 규칙 | `skills/flowcast`·`agents/diagram-router`·`skills/{sequence,topology}` | 실사용 검토에서 업무 순서 어긋남·근거 없는 속성(async 등)·계보 부재 확인 (#23) |
 | 2026-07-11 | pptx z-순서 패리티 — topology·component 드로잉 순서를 존→커넥터→노드(→배지·라벨) 로 (HTML과 동일, 노드가 관통 선을 가림) | `scripts/pptx_export.py` | 같은 행 관통 릴레이(VIP→WEB)가 pptx에서만 노드 위로 노출 (#25) |
+| 2026-07-11 | 소스 게이트 세분화 — 지식 계층에 **시나리오 노트**(업무별: 트리거·전제·정상 흐름·분기·예외) 추가, sequence 소스 요건·분기/예외 복수 슬라이드 규칙 | `skills/flowcast`·`skills/sequence`·`agents/diagram-router` | 시나리오 노트 없이 분석 노트→시퀀스 직행 시 분기·예외 소실 (실사용, #27) |
 
 ## 라이선스
 
