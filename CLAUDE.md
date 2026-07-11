@@ -53,6 +53,7 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 | 2026-07-11 | B-out 품질 개선 — 멀티라인 전 문단 스타일·topology 배지+범례·wide(1920×1080) 캔버스 기본값 | `scripts/pptx_export.py` | 실사용에서 둘째 줄 18pt 누수·라벨 겹침·비표준 슬라이드 비율 확인 (#17) |
 | 2026-07-11 | topology 번호 배지 겹침 자동 회피 — `_t_badge_geom`/`_t_spread_badges` 공용화(HTML·pptx 단일 진실) | `scripts/render.py`·`scripts/pptx_export.py` | 교차 엣지 배지 완전 중첩(구간 3×8) 실사용 확인 (#19) |
 | 2026-07-11 | 배지 spread 부호를 분리 벡터 내적 기반으로 — 역평행(왕복 A→B/B→A) 퇴행 수정 + 무개선 시 부호 반전 폴백 | `scripts/render.py` | 왕복 구간(12×13) 배지가 같은 방향으로 밀려 겹침 유지되던 실사용 퇴행 (#21) |
+| 2026-07-11 | 워크플로우 게이트 4종 — 소스 게이트(지식 계층: 개념 노트→흐름 문서→다이어그램→PPT)·2축 페어링(sequence+topology 번호 공유)·순서 검증(업무 트리거=n1)·속성 근거 규칙 | `skills/flowcast`·`agents/diagram-router`·`skills/{sequence,topology}` | 실사용 검토에서 업무 순서 어긋남·근거 없는 속성(async 등)·계보 부재 확인 (#23) |
 
 ## 라이선스
 
