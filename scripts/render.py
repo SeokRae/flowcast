@@ -206,8 +206,19 @@ def validate_component(data):
     return errors, warnings
 
 
-# ── SVG 생성 ──────────────────────────────────────────────────
-def render_svg(data, scenario):
+# ── 시퀀스 레이아웃 (단일 진실) ────────────────────────────────
+def layout_sequence(data, scenario):
+    """sequence 뷰 기하 계산. render_svg(SVG)·export_sequence(pptx)가 공유 — 재구현 금지.
+
+    반환 dict:
+      width, height, zone_y, box_y, bottom : 캔버스/기준 좌표
+      actors : [{id, x, name, attrs}]        (x = 라이프라인 중심)
+      zones  : [{name, x1, x2}]              (존 밴드; y=zone_y, h=ZONE_H)
+      steps  : 순서 보존 레코드
+        note : {type:"note", x1, x2, y, h, lines}
+        msg  : {type:"msg", kind, self, y, x1, x2, self_x, mid, lines, extras:[(cls,val)]}
+      bars   : [{x, y, h}]                    (액티베이션바; w=ACT_W)
+    """
     actors = data["actors"]
     zones = data.get("zones") or []
     n_act = len(actors)
@@ -218,7 +229,7 @@ def render_svg(data, scenario):
     box_y = zone_y + ZONE_H + ZONE_GAP if zones else 14
     y0 = box_y + BOX_H + 34
 
-    body, touched = [], {}
+    steps, touched = [], {}
 
     def touch(aid, y):
         touched.setdefault(aid, []).append(y)
@@ -232,9 +243,7 @@ def render_svg(data, scenario):
             x1 = min(cx[st["from"]], cx[st["to"]]) - 70
             x2 = max(cx[st["from"]], cx[st["to"]]) + 70
             h = 18 * len(lines) + 16
-            body.append(f'<rect class="note" x="{x1}" y="{cur}" width="{x2 - x1}" height="{h}" rx="8"/>')
-            for i, ln in enumerate(lines):
-                body.append(f'<text class="note-tx" x="{x1 + 14}" y="{cur + 22 + i * 18}">{esc(ln)}</text>')
+            steps.append({"type": "note", "x1": x1, "x2": x2, "y": cur, "h": h, "lines": lines})
             cur += h + 18
             continue
 
@@ -247,53 +256,93 @@ def render_svg(data, scenario):
         touch(st["to"], y)
         mid = (xa + xb) / 2
 
+        rec = {"type": "msg", "kind": kind, "self": kind == "self", "y": y,
+               "mid": mid, "lines": lines, "x1": None, "x2": None, "self_x": None, "extras": []}
         if kind == "self":
-            x = xa + ACT_W / 2
-            body.append(f'<path class="ar-{kind} ar" d="M{x},{y - 14} C{x + 44},{y - 14} {x + 44},{y} {x},{y}" marker-end="url(#mk-{kind})"/>')
-            for i, ln in enumerate(lines):
-                body.append(f'<text class="lb-{kind}" x="{x + 52}" y="{y - 14 - 4 - LBL_LH * (len(lines) - 1 - i)}">{esc(ln)}</text>')
+            rec["self_x"] = xa + ACT_W / 2
         else:
             off = ACT_W / 2 + 1
-            x1, x2 = (xa + off, xb - off - 1) if xb > xa else (xa - off, xb + off + 1)
-            body.append(f'<line class="ar-{kind} ar" x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" marker-end="url(#mk-{kind})"/>')
-            for i, ln in enumerate(lines):
-                body.append(f'<text class="lb-{kind}" x="{mid}" y="{y - 6 - LBL_LH * (len(lines) - 1 - i)}" text-anchor="middle">{esc(ln)}</text>')
-
-        extra_y = y + EXTRA_LH
+            rec["x1"], rec["x2"] = (xa + off, xb - off - 1) if xb > xa else (xa - off, xb + off + 1)
         for cls, val in (("proto", st.get("protocol")), ("sub", st.get("sub"))):
             if val:
-                body.append(f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">( {esc(val)} )</text>' if cls == "proto"
-                            else f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">{esc(val)}</text>')
-                extra_y += EXTRA_LH
-        cur = extra_y - EXTRA_LH + ROW
+                rec["extras"].append((cls, val))
+        steps.append(rec)
+        cur = y + EXTRA_LH * len(rec["extras"]) + ROW
 
     bottom = cur + 8
     height = bottom + 16
 
-    head = []
-    # 존 밴드
+    zone_bands = []
     for z in zones:
         idx = [i for i, a in enumerate(actors) if a.get("zone") == z["id"]]
         if not idx:
             continue
         zx1 = ML + LANE_W * idx[0] + 8
         zx2 = ML + LANE_W * idx[-1] + LANE_W - 8
-        head.append(f'<rect class="zone" x="{zx1}" y="{zone_y}" width="{zx2 - zx1}" height="{ZONE_H}" rx="8"/>')
-        head.append(f'<text class="zone-tx" x="{(zx1 + zx2) / 2}" y="{zone_y + ZONE_H / 2 + 4}" text-anchor="middle">{esc(z["name"])}</text>')
+        zone_bands.append({"name": z["name"], "x1": zx1, "x2": zx2})
+
+    actor_recs = [{"id": a["id"], "x": cx[a["id"]], "name": a["name"],
+                   "attrs": " · ".join(str(a[k]) for k in ("port", "line") if a.get(k))}
+                  for a in actors]
+    bars = [{"x": cx[aid] - ACT_W / 2, "y": min(ys) - 10, "h": max(ys) - min(ys) + 20}
+            for aid, ys in touched.items()]
+
+    return {"width": width, "height": height, "zone_y": zone_y, "box_y": box_y,
+            "bottom": bottom, "actors": actor_recs, "zones": zone_bands,
+            "steps": steps, "bars": bars}
+
+
+# ── SVG 생성 ──────────────────────────────────────────────────
+def render_svg(data, scenario):
+    L = layout_sequence(data, scenario)
+    width, height, box_y, bottom = L["width"], L["height"], L["box_y"], L["bottom"]
+
+    body = []
+    for st in L["steps"]:
+        if st["type"] == "note":
+            x1, x2, y, h, lines = st["x1"], st["x2"], st["y"], st["h"], st["lines"]
+            body.append(f'<rect class="note" x="{x1}" y="{y}" width="{x2 - x1}" height="{h}" rx="8"/>')
+            for i, ln in enumerate(lines):
+                body.append(f'<text class="note-tx" x="{x1 + 14}" y="{y + 22 + i * 18}">{esc(ln)}</text>')
+            continue
+
+        kind, y, lines, mid = st["kind"], st["y"], st["lines"], st["mid"]
+        if st["self"]:
+            x = st["self_x"]
+            body.append(f'<path class="ar-{kind} ar" d="M{x},{y - 14} C{x + 44},{y - 14} {x + 44},{y} {x},{y}" marker-end="url(#mk-{kind})"/>')
+            for i, ln in enumerate(lines):
+                body.append(f'<text class="lb-{kind}" x="{x + 52}" y="{y - 14 - 4 - LBL_LH * (len(lines) - 1 - i)}">{esc(ln)}</text>')
+        else:
+            x1, x2 = st["x1"], st["x2"]
+            body.append(f'<line class="ar-{kind} ar" x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" marker-end="url(#mk-{kind})"/>')
+            for i, ln in enumerate(lines):
+                body.append(f'<text class="lb-{kind}" x="{mid}" y="{y - 6 - LBL_LH * (len(lines) - 1 - i)}" text-anchor="middle">{esc(ln)}</text>')
+
+        extra_y = y + EXTRA_LH
+        for cls, val in st["extras"]:
+            body.append(f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">( {esc(val)} )</text>' if cls == "proto"
+                        else f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">{esc(val)}</text>')
+            extra_y += EXTRA_LH
+
+    head = []
+    # 존 밴드
+    for z in L["zones"]:
+        zx1, zx2 = z["x1"], z["x2"]
+        head.append(f'<rect class="zone" x="{zx1}" y="{L["zone_y"]}" width="{zx2 - zx1}" height="{ZONE_H}" rx="8"/>')
+        head.append(f'<text class="zone-tx" x="{(zx1 + zx2) / 2}" y="{L["zone_y"] + ZONE_H / 2 + 4}" text-anchor="middle">{esc(z["name"])}</text>')
     # 라이프라인 → 액터 박스 → 액티베이션바 순서로 겹침 처리
-    for a in actors:
-        x = cx[a["id"]]
+    for a in L["actors"]:
+        x = a["x"]
         head.append(f'<line class="lifeline" x1="{x}" y1="{box_y + BOX_H}" x2="{x}" y2="{bottom}"/>')
-    for a in actors:
-        x = cx[a["id"]]
-        attrs = " · ".join(str(a[k]) for k in ("port", "line") if a.get(k))
+    for a in L["actors"]:
+        x, attrs = a["x"], a["attrs"]
         head.append(f'<rect class="actor" x="{x - BOX_W / 2}" y="{box_y}" width="{BOX_W}" height="{BOX_H}" rx="9"/>')
         ny = box_y + (BOX_H / 2 + 4 if not attrs else BOX_H / 2 - 3)
         head.append(f'<text class="actor-tx" x="{x}" y="{ny}" text-anchor="middle">{esc(a["name"])}</text>')
         if attrs:
             head.append(f'<text class="actor-sub" x="{x}" y="{box_y + BOX_H / 2 + 15}" text-anchor="middle">{esc(attrs)}</text>')
-    for aid, ys in touched.items():
-        head.append(f'<rect class="act-bar" x="{cx[aid] - ACT_W / 2}" y="{min(ys) - 10}" width="{ACT_W}" height="{max(ys) - min(ys) + 20}" rx="2"/>')
+    for b in L["bars"]:
+        head.append(f'<rect class="act-bar" x="{b["x"]}" y="{b["y"]}" width="{ACT_W}" height="{b["h"]}" rx="2"/>')
 
     markers = "".join(
         f'<marker id="mk-{k}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'

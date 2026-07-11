@@ -21,10 +21,12 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 export_component = _mod.export_component
 export_topology = _mod.export_topology
+export_sequence = _mod.export_sequence
 
 EX = Path(__file__).parent.parent / "examples"
 SRC = EX / "microservice-component.json"
 TOPO = EX / "three-tier-topology.json"
+SEQ = EX / "order-service-sequence.json"
 
 
 def _export(tmp_path):
@@ -137,3 +139,80 @@ def test_topology_connector_count(tmp_path):
     conns = sum(1 for s in prs.slides for sh in s.shapes
                 if sh.shape_type == MSO_SHAPE_TYPE.LINE)
     assert conns == expected
+
+
+# ── sequence export ───────────────────────────────────────────
+
+def _export_seq(tmp_path):
+    data = json.loads(SEQ.read_text(encoding="utf-8"))
+    out = tmp_path / "s.pptx"
+    n = export_sequence(data, out)
+    return data, out, n
+
+
+def test_sequence_slide_per_scenario(tmp_path):
+    data, out, n = _export_seq(tmp_path)
+    assert n == len(data["scenarios"]) == 2
+    assert len(Presentation(str(out)).slides) == 2
+
+
+def test_sequence_actors_and_zones_preserved(tmp_path):
+    data, out, _ = _export_seq(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    for a in data["actors"]:
+        assert a["name"] in text
+        if a.get("port"):
+            assert str(a["port"]) in text   # sequence 서브라벨 = raw 값(render.py 동일)
+    for z in data["zones"]:
+        assert z["name"] in text
+
+
+def test_sequence_message_labels_and_numbers(tmp_path):
+    _, out, _ = _export_seq(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert "1. 상품 주문" in text and "8. 주문 완료" in text  # 번호 인라인
+    assert "( HTTPS )" in text                              # protocol extra
+
+
+def test_sequence_connector_count(tmp_path):
+    # 라이프라인(actor 수) + 메시지 커넥터(note 제외), 슬라이드별 합산
+    data, out, _ = _export_seq(tmp_path)
+    prs = Presentation(str(out))
+    n_actors = len(data["actors"])
+    expected = sum(n_actors + sum(1 for st in sc["steps"] if st["kind"] != "note")
+                   for sc in data["scenarios"])
+    conns = sum(1 for s in prs.slides for sh in s.shapes
+                if sh.shape_type == MSO_SHAPE_TYPE.LINE)
+    assert conns == expected
+
+
+def test_sequence_actor_boxes_within_bounds(tmp_path):
+    data, out, _ = _export_seq(tmp_path)
+    prs = Presentation(str(out))
+    names = {a["name"] for a in data["actors"]}
+    W, H = prs.slide_width, prs.slide_height
+    found = 0
+    for s in prs.slides:
+        for sh in s.shapes:
+            if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in names:
+                assert 0 <= sh.left and sh.left + sh.width <= W
+                assert 0 <= sh.top and sh.top + sh.height <= H
+                found += 1
+    assert found == len(names) * len(data["scenarios"])
+
+
+def test_sequence_self_and_note_render(tmp_path):
+    # self·note 는 예제에 없어 합성 데이터로 두 분기 커버
+    data = {
+        "system": "S",
+        "actors": [{"id": "a", "name": "Alpha"}, {"id": "b", "name": "Beta"}],
+        "scenarios": [{"title": "T", "steps": [
+            {"n": 1, "from": "a", "to": "b", "label": "요청", "kind": "req"},
+            {"from": "b", "to": "b", "label": "내부 처리", "kind": "self"},
+            {"from": "a", "to": "b", "label": "메모", "kind": "note"},
+        ]}],
+    }
+    out = tmp_path / "sn.pptx"
+    assert export_sequence(data, out) == 1
+    text = _all_text(Presentation(str(out)))
+    assert "1. 요청" in text and "내부 처리" in text and "메모" in text
