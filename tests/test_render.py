@@ -418,3 +418,27 @@ def test_topology_badge_overlap_spread():
     assert len(pts) == 2
     (x1, y1), (x2, y2) = pts
     assert ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 >= 22
+
+
+def test_topology_badge_spread_antiparallel_roundtrip():
+    # 왕복 구간(a→b, b→a) — 역평행 엣지에서 부호 규칙이 둘을 같은 방향으로 밀면
+    # 겹침이 유지되는 퇴행(#21). 내적 기반 부호로 지름(22px) 이상 분리돼야.
+    import re
+    data = {
+        "view": "topology",
+        "system": "S",
+        "nodes": [
+            {"id": "a", "name": "A", "col": 0, "row": 0},
+            {"id": "b", "name": "B", "col": 1, "row": 0},
+        ],
+        "scenarios": [{"title": "T", "segments": [
+            {"n": 1, "from": "a", "to": "b", "label": "go"},
+            {"n": 2, "from": "b", "to": "a", "label": "back"},
+        ]}],
+    }
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    pts = [(float(m.group(1)), float(m.group(2)))
+           for m in re.finditer(r'class="topo-badge" cx="([-\d.]+)" cy="([-\d.]+)"', svg)]
+    assert len(pts) == 2
+    (x1, y1), (x2, y2) = pts
+    assert ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 >= 22
