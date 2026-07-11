@@ -53,6 +53,7 @@ T_MARGIN = 26         # 캔버스 여백
 T_CELL_W = 196        # 그리드 열 간격
 T_CELL_H = 88         # 그리드 행 간격
 T_BOX_W, T_BOX_H = 154, 50
+T_L4_W = 120          # l4(VIP/로드밸런서) 좁은 박스 폭 — 경량 통과 장비 표현
 T_ZONE_PAD = 14       # 존 박스 여백
 T_ZONE_LBL = 18       # 존 라벨 높이
 T_LEG_LH = 19         # 흐름 설명 줄 높이
@@ -359,10 +360,13 @@ def render_svg(data, scenario):
 
 # ── 토폴로지 SVG 생성 ─────────────────────────────────────────
 def _t_rect(nd):
-    """노드 사각형 (x, y, w, h). col/row 그리드 기준, x/y 있으면 오버라이드."""
-    w, h = nd.get("w", T_BOX_W), nd.get("h", T_BOX_H)
+    """노드 사각형 (x, y, w, h). col/row 그리드 기준, x/y 있으면 오버라이드.
+    l4(VIP)는 기본 폭을 좁게(T_L4_W) 잡고, 표준 슬롯 안에서 가운데 정렬해
+    화살표 연결점(박스 중심)은 표준 박스와 동일하게 유지한다."""
+    dw = T_L4_W if nd.get("kind") == "l4" else T_BOX_W
+    w, h = nd.get("w", dw), nd.get("h", T_BOX_H)
     if nd.get("col") is not None and nd.get("row") is not None:
-        x = T_MARGIN + nd["col"] * T_CELL_W
+        x = T_MARGIN + nd["col"] * T_CELL_W + (T_BOX_W - w) / 2
         y = T_MARGIN + nd["row"] * T_CELL_H
     else:
         x = y = T_MARGIN
@@ -822,7 +826,7 @@ CSS = """
     .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
     .fw-brick-bg{fill:var(--surface);}
     .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
-    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.6;}
+    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:4,3;}
     .l4-ico{fill:var(--accent);}
     .l4-ico-l{stroke:var(--accent);stroke-width:1.2;fill:none;}
     .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}

@@ -18,7 +18,7 @@ allowed-tools: Bash, Read, Write, Edit
 ## 스키마 필드 (`view: topology`)
 
 - `nodes[]`: `{ id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }` — x/y가 있으면 그리드보다 우선
-- `kind`: `srv`(기본) · `ext`(외부, 앰버) · `gear`(네트워크 장비, 점선) · `fw`(방화벽, 벽돌) · `l4`(L4/VIP 로드밸런서, fan-out)
+- `kind`: `srv`(기본) · `ext`(외부, 앰버) · `gear`(네트워크 장비, 점선) · `fw`(방화벽, 벽돌) · `l4`(L4/VIP 로드밸런서 — 좁은 점선 박스+fan-out, srv보다 경량)
   - **L4 VIP(로드밸런서·가상 IP)는 `l4`** — 트래픽 분배 장비. `fw`(방화벽=보안 필터)와 구분한다. VIP를 방화벽으로 그리지 말 것.
   - **`fw`는 실제 방화벽 경계**에만. 인바운드 L4는 흐름 왼쪽, 아웃바운드 L4는 오른쪽에 배치해 좌→우로 통과하게 그린다(세그먼트가 노드를 지나가도록).
 - `zones[]`: `{ id, name }` — 소속 노드를 감싸는 **자동 bounding box**
