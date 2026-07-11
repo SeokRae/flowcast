@@ -50,6 +50,7 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 | 2026-07-11 | B-out export를 하네스에 배선 | `agents/diagram-drawer`·`skills/flowcast` | export가 raw 스크립트로만 도달되던 drift 해소 — `/flowcast`에서 `export` 옵션으로 노출 (#9) |
 | 2026-07-11 | B-in 파서 그룹 좌표 보정 + `connectors_loose[]` | `scripts/pptx_import.py` | 그룹 덱 좌표 왜곡·glue 없는 커넥터 탈락 해소 (#11) |
 | 2026-07-11 | 편집 경로(⓪ 컨텍스트 확인)·`_workspace` 배선·문서 위생 | `skills/*`·`agents/*`·CLAUDE.md | 하네스 감사 후속 — 후속 요청 절차 부재·draft 경로 충돌 해소 (#12) |
+| 2026-07-11 | B-out 품질 개선 — 멀티라인 전 문단 스타일·topology 배지+범례·wide(1920×1080) 캔버스 기본값 | `scripts/pptx_export.py` | 실사용에서 둘째 줄 18pt 누수·라벨 겹침·비표준 슬라이드 비율 확인 (#17) |
 
 ## 라이선스
 
