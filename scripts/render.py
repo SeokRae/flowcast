@@ -388,6 +388,61 @@ def _wrap(text, width):
     return [text[i:i + width] for i in range(0, len(text), width)] or [""]
 
 
+def _t_badge_geom(sg, rects):
+    """세그먼트 1개의 배지 위치 + 엣지 단위방향 (bx, by, ux, uy) — render·pptx 공용.
+
+    normal은 앵커의 0.45/0.55 보간, rail은 rail 중점, self·대상없음은 노드 위(-34).
+    ux,uy 는 충돌 spread 때 배지를 밀어낼 방향(자기 엣지 방향, self는 수평).
+    """
+    a = rects[sg["from"]]
+    to = sg.get("to")
+    if sg.get("self") or not to or to not in rects:
+        return a[0] + a[2] / 2, a[1] - 34, 1.0, 0.0
+    b = rects[to]
+    ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
+    bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
+    if sg.get("rail") is not None:
+        rail = float(sg["rail"])
+        p1 = _edge_pt(a, ac[0], rail)
+        p2 = _edge_pt(b, bc[0], rail)
+        bx, by = (p1[0] + p2[0]) / 2, rail
+        dx, dy = p2[0] - p1[0], 0.0
+    else:
+        p1 = _edge_pt(a, bc[0], bc[1])
+        p2 = _edge_pt(b, ac[0], ac[1])
+        bx, by = p1[0] * 0.45 + p2[0] * 0.55, p1[1] * 0.45 + p2[1] * 0.55
+        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    n = (dx * dx + dy * dy) ** 0.5 or 1.0
+    return bx, by, dx / n, dy / n
+
+
+def _t_spread_badges(geoms, r=11, gap=2, iters=8):
+    """배지 겹침 자동 회피 — 쌍별 중심 거리 < 지름+gap 이면 각자 엣지 방향으로 반씩 밀어냄.
+
+    geoms: [(bx, by, ux, uy)] → [(bx, by)]. 결정적(입력 순서 고정·반복 상한 iters).
+    """
+    min_d = 2 * r + gap
+    pts = [list(g) for g in geoms]
+    for _ in range(iters):
+        moved = False
+        for i in range(len(pts)):
+            for j in range(i + 1, len(pts)):
+                dx = pts[j][0] - pts[i][0]
+                dy = pts[j][1] - pts[i][1]
+                d = (dx * dx + dy * dy) ** 0.5
+                if d >= min_d:
+                    continue
+                push = (min_d - d) / 2 + 0.5
+                pts[i][0] -= pts[i][2] * push
+                pts[i][1] -= pts[i][3] * push
+                pts[j][0] += pts[j][2] * push
+                pts[j][1] += pts[j][3] * push
+                moved = True
+        if not moved:
+            break
+    return [(p[0], p[1]) for p in pts]
+
+
 def render_svg_topology(data, scenario):
     nodes = data["nodes"]
     zones = data.get("zones") or []
@@ -459,14 +514,13 @@ def render_svg_topology(data, scenario):
         p2 = _edge_pt(b, ac[0], ac[1])
         link_body.append(f'<line class="topo-link" data-from="{esc(lk["from"])}" data-to="{esc(lk["to"])}" x1="{p1[0]}" y1="{p1[1]}" x2="{p2[0]}" y2="{p2[1]}"/>')
 
-    # 구간 오버레이 (화살표 + 번호 배지)
-    seg_paths, badges = [], []
+    # 구간 오버레이 (화살표 + 번호 배지 — 배지는 _t_badge_geom/_t_spread_badges 로 겹침 회피)
+    seg_paths, badges, badge_sgs = [], [], []
     for sg in segments:
         a = rects[sg["from"]]
         if sg.get("self"):
             sx, sy = a[0] + a[2] / 2, a[1]
             seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="M{sx - 16},{sy} C{sx - 16},{sy - 30} {sx + 16},{sy - 30} {sx + 16},{sy}" marker-end="url(#mk-topo)"/>')
-            bx, by = sx, sy - 34
         else:
             b = rects[sg["to"]]
             ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
@@ -476,19 +530,20 @@ def render_svg_topology(data, scenario):
                 p1 = _edge_pt(a, ac[0], rail)
                 p2 = _edge_pt(b, bc[0], rail)
                 d = f'M{p1[0]},{p1[1]} L{p1[0]},{rail} L{p2[0]},{rail} L{p2[0]},{p2[1]}'
-                bx, by = (p1[0] + p2[0]) / 2, rail
             else:
                 p1 = _edge_pt(a, bc[0], bc[1])
                 p2 = _edge_pt(b, ac[0], ac[1])
                 d = f'M{p1[0]},{p1[1]} L{p2[0]},{p2[1]}'
-                bx, by = p1[0] * 0.45 + p2[0] * 0.55, p1[1] * 0.45 + p2[1] * 0.55
             seg_paths.append(f'<path class="topo-seg" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#mk-topo)"/>')
         if sg.get("n") is not None:
-            dattr = f'data-self="{esc(sg["from"])}"' if sg.get("self") else f'data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"'
-            badges.append(f'<g class="iff-badge" {dattr}>')
-            badges.append(f'<circle class="topo-badge" cx="{bx}" cy="{by}" r="11"/>')
-            badges.append(f'<text class="topo-badge-tx" x="{bx}" y="{by + 4}" text-anchor="middle">{esc(sg["n"])}</text>')
-            badges.append('</g>')
+            badge_sgs.append(sg)
+    spread = _t_spread_badges([_t_badge_geom(sg, rects) for sg in badge_sgs])
+    for sg, (bx, by) in zip(badge_sgs, spread):
+        dattr = f'data-self="{esc(sg["from"])}"' if sg.get("self") else f'data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"'
+        badges.append(f'<g class="iff-badge" {dattr}>')
+        badges.append(f'<circle class="topo-badge" cx="{bx}" cy="{by}" r="11"/>')
+        badges.append(f'<text class="topo-badge-tx" x="{bx}" y="{by + 4}" text-anchor="middle">{esc(sg["n"])}</text>')
+        badges.append('</g>')
 
     # 흐름 설명 legend (토폴로지 하단)
     leg_x = min(xs) if xs else T_MARGIN

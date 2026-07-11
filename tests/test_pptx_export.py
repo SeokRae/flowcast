@@ -296,3 +296,29 @@ def test_font_scale_follows_canvas(tmp_path):
              for s in prs.slides for sh in s.shapes
              if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_names]
     assert sizes and all(sz > 10 for sz in sizes)
+
+
+def test_topology_badge_overlap_spread(tmp_path):
+    # 동일 엣지 2개 → 배지 완전 중첩 — spread 로 지름(22px) 이상 분리 (#19). auto=scale 1
+    data = {
+        "view": "topology",
+        "system": "S",
+        "nodes": [
+            {"id": "a", "name": "A", "col": 0, "row": 0},
+            {"id": "b", "name": "B", "col": 1, "row": 0},
+        ],
+        "scenarios": [{"title": "T", "segments": [
+            {"n": 1, "from": "a", "to": "b", "label": "one"},
+            {"n": 2, "from": "a", "to": "b", "label": "two"},
+        ]}],
+    }
+    out = tmp_path / "spread.pptx"
+    export_topology(data, out, slide_size="auto")
+    prs = Presentation(str(out))
+    centers = [(sh.left + sh.width / 2, sh.top + sh.height / 2)
+               for sh in prs.slides[0].shapes
+               if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and sh.has_text_frame
+               and sh.text_frame.text.strip().isdigit()]
+    assert len(centers) == 2
+    d = ((centers[0][0] - centers[1][0]) ** 2 + (centers[0][1] - centers[1][1]) ** 2) ** 0.5
+    assert d >= 22 * 9525   # 지름 22px 이상 (EMU)
