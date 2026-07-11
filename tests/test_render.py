@@ -469,3 +469,30 @@ def test_topology_fw_node_renders_brick():
     assert "topo-fw" in svg            # fw 클래스 적용
     assert 'id="fw-brick"' in svg      # 벽돌 패턴 정의(defs)
     assert 'class="fw-mortar"' in svg  # 벽돌 mortar 패턴 내용 출력
+
+
+# ── l4(L4/VIP 로드밸런서) kind ─────────────────────────────────
+
+def test_topology_l4_kind_validates_ok():
+    data = _topo()
+    data["nodes"][1]["kind"] = "l4"
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert warnings == []
+
+
+def test_topology_l4_node_renders_fanout_icon():
+    data = _topo()
+    data["nodes"][1]["kind"] = "l4"  # r1 → L4/VIP
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "topo-l4" in svg           # l4 클래스 적용
+    assert 'class="l4-ico"' in svg    # fan-out 아이콘(입력 점)
+    assert 'class="l4-ico-l"' in svg  # fan-out 분배 선
+
+
+def test_topology_l4_and_fw_are_distinct():
+    data = _topo()
+    data["nodes"][1]["kind"] = "l4"
+    data["nodes"][2]["kind"] = "fw"
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "topo-l4" in svg and "topo-fw" in svg  # 두 표현 공존·구분
