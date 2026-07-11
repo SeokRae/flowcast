@@ -20,12 +20,12 @@
     {
       "title": "방화벽·L4 통과 FLOW",
       "segments": [
-        { "n": 1, "from": "client", "to": "fw-edge", "label": "인바운드 요청" },
-        { "n": 2, "from": "fw-edge", "to": "lb-in", "label": "방화벽 통과(보안 필터)" },
-        { "n": 3, "from": "lb-in", "to": "web1", "label": "L4 분배(로드밸런싱)" },
-        { "n": 4, "from": "web1", "to": "app1", "label": "내부 호출" },
+        { "n": 1, "from": "client", "to": "fw-edge", "label": "인바운드 요청", "meta": "HTTPS 443" },
+        { "n": 2, "from": "fw-edge", "to": "lb-in", "label": "방화벽 통과(보안 필터)", "meta": "FW rule · 인바운드 허용" },
+        { "n": 3, "from": "lb-in", "to": "web1", "label": "L4 분배(로드밸런싱)", "meta": "TCP · VIP → 백엔드 풀" },
+        { "n": 4, "from": "web1", "to": "app1", "label": "내부 호출", "meta": "AJP 9109" },
         { "n": 5, "from": "app1", "to": "lb-out", "label": "아웃바운드 요청" },
-        { "n": 6, "from": "lb-out", "to": "partner", "label": "L4 통과" }
+        { "n": 6, "from": "lb-out", "to": "partner", "label": "L4 통과", "meta": "egress 443" }
       ]
     }
   ]
