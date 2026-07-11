@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> IF/서비스 흐름도 생성 하네스 — Claude Code 플러그인. 데이터를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링.
+> IF/서비스 흐름도 작업 하네스 — Claude Code 플러그인. 데이터·.pptx를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링. (생성·PPT입력 구현 / PPT출력·편집 계획)
 
 ## 구조
 
@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `agents/diagram-router.md` | 데이터 → 다이어그램 단위 분할 + 뷰 판별 (그리지 않음) |
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
+| `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
 | `tests/test_render.py` | 렌더러 검증·출력 테스트 |
