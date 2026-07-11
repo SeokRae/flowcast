@@ -417,9 +417,12 @@ def _t_badge_geom(sg, rects):
 
 
 def _t_spread_badges(geoms, r=11, gap=2, iters=8):
-    """배지 겹침 자동 회피 — 쌍별 중심 거리 < 지름+gap 이면 각자 엣지 방향으로 반씩 밀어냄.
+    """배지 겹침 자동 회피 — 겹친 쌍을 각자 자기 엣지 방향으로, 서로 멀어지는 부호로 밀어냄.
 
     geoms: [(bx, by, ux, uy)] → [(bx, by)]. 결정적(입력 순서 고정·반복 상한 iters).
+    부호는 분리 벡터와의 내적으로 정한다 — 역평행 엣지(왕복 구간 A→B/B→A)에서
+    둘이 같은 방향으로 밀려 겹침이 유지되는 퇴행을 막고, 그래도 개선이 없으면
+    (완전 평행·동일점) j 쪽 부호를 반전한다.
     """
     min_d = 2 * r + gap
     pts = [list(g) for g in geoms]
@@ -433,10 +436,18 @@ def _t_spread_badges(geoms, r=11, gap=2, iters=8):
                 if d >= min_d:
                     continue
                 push = (min_d - d) / 2 + 0.5
-                pts[i][0] -= pts[i][2] * push
-                pts[i][1] -= pts[i][3] * push
-                pts[j][0] += pts[j][2] * push
-                pts[j][1] += pts[j][3] * push
+                si = -1.0 if dx * pts[i][2] + dy * pts[i][3] > 0 else 1.0
+                sj = 1.0 if dx * pts[j][2] + dy * pts[j][3] >= 0 else -1.0
+                nix = pts[i][0] + pts[i][2] * si * push
+                niy = pts[i][1] + pts[i][3] * si * push
+                njx = pts[j][0] + pts[j][2] * sj * push
+                njy = pts[j][1] + pts[j][3] * sj * push
+                if ((njx - nix) ** 2 + (njy - niy) ** 2) ** 0.5 <= d:
+                    sj = -sj
+                    njx = pts[j][0] + pts[j][2] * sj * push
+                    njy = pts[j][1] + pts[j][3] * sj * push
+                pts[i][0], pts[i][1] = nix, niy
+                pts[j][0], pts[j][1] = njx, njy
                 moved = True
         if not moved:
             break
