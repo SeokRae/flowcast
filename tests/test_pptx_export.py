@@ -20,9 +20,11 @@ _spec = importlib.util.spec_from_file_location(
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 export_component = _mod.export_component
+export_topology = _mod.export_topology
 
 EX = Path(__file__).parent.parent / "examples"
 SRC = EX / "microservice-component.json"
+TOPO = EX / "three-tier-topology.json"
 
 
 def _export(tmp_path):
@@ -91,3 +93,47 @@ def test_non_component_view_returns_none_of_our_shapes(tmp_path):
     prs = Presentation(str(out))
     # 존 박스도 하나 존재해야(첫 시나리오 < Internal >)
     assert "< Internal >" in _all_text(prs)
+
+
+# ── topology export ───────────────────────────────────────────
+
+def _export_topo(tmp_path):
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    out = tmp_path / "t.pptx"
+    n = export_topology(data, out)
+    return data, out, n
+
+
+def test_topology_slide_per_scenario(tmp_path):
+    data, out, n = _export_topo(tmp_path)
+    assert n == len(data["scenarios"])
+    assert len(Presentation(str(out)).slides) == n
+
+
+def test_topology_nodes_and_zones_preserved(tmp_path):
+    data, out, _ = _export_topo(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    for nd in data["nodes"]:
+        assert nd["name"] in text
+    for z in data.get("zones") or []:
+        assert z["name"] in text
+
+
+def test_topology_segment_labels_preserved(tmp_path):
+    _, out, _ = _export_topo(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert "HTTPS 요청" in text and "부하 분산" in text  # slide2 segments
+
+
+def test_topology_connector_count(tmp_path):
+    data, out, _ = _export_topo(tmp_path)
+    prs = Presentation(str(out))
+    links = len(data.get("links") or [])
+    ids = {n["id"] for n in data["nodes"]}
+    seg_arrows = sum(
+        1 for sc in data["scenarios"] for sg in (sc.get("segments") or [])
+        if not sg.get("self") and sg.get("to") in ids)
+    expected = links * len(data["scenarios"]) + seg_arrows  # 링크는 슬라이드마다 공통
+    conns = sum(1 for s in prs.slides for sh in s.shapes
+                if sh.shape_type == MSO_SHAPE_TYPE.LINE)
+    assert conns == expected
