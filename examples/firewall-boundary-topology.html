@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gateway Platform IF 흐름도</title>
+<style>
+    :root {
+      --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+      --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --line:rgba(104,182,255,0.75); --line-soft:rgba(140,166,205,0.55);
+      --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
+      --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
+      --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
+      --comp-bg:rgba(78,205,190,0.14); --comp-bd:rgba(78,205,190,0.44);
+      --shadow:0 24px 72px rgba(0,0,0,0.34);
+      --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+    }
+    :root[data-theme="light"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .page{width:min(1210px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;display:grid;gap:18px;}
+    .sheet{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);border-radius:20px;padding:20px 24px;}
+    .hero{margin-bottom:14px;}
+    .eyebrow{display:inline-flex;padding:6px 12px;border-radius:999px;border:1px solid var(--zone-bd);background:var(--zone-bg);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.07em;}
+    h1{margin:10px 0 4px;font-size:clamp(1.3rem,2.2vw,1.7rem);letter-spacing:-0.02em;}
+    p.sub{margin:0;color:var(--muted);font-size:12.5px;}
+    .diagram-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+    .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
+    /* ── SVG ── */
+    .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:12px;font-weight:700;}
+    .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:12.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:10px;}
+    .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
+    .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
+    .ar{fill:none;}
+    .ar-req{stroke:var(--line);stroke-width:1.8;}
+    .ar-res{stroke:var(--line-soft);stroke-width:1.5;stroke-dasharray:6,4;}
+    .ar-relay{stroke:var(--line-soft);stroke-width:1.4;}
+    .ar-self{stroke:var(--line);stroke-width:1.6;}
+    .mk-req,.mk-self{fill:var(--line);}
+    .mk-res,.mk-relay{fill:var(--line-soft);}
+    text{font-family:var(--font);}
+    .lb-req,.lb-self{fill:var(--accent);font-size:12px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:12px;}
+    .lb-relay{fill:var(--muted);font-size:11.5px;font-style:italic;}
+    .lb-sub{fill:var(--warn);font-size:11px;font-weight:600;}
+    .lb-proto{fill:var(--muted);font-size:10.5px;font-family:var(--mono);}
+    .note{fill:var(--note-bg);stroke:var(--note-bd);stroke-width:1.3;}
+    .note-tx{fill:var(--text);font-size:11.5px;}
+    /* ── 토폴로지(구성도) 뷰 ── */
+    .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
+    .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
+    .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-node.dim{opacity:0.5;}
+    .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
+    .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
+    .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
+    .fw-brick-bg{fill:var(--surface);}
+    .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
+    .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
+    .topo-tx.on{fill:var(--accent);}
+    .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
+    .topo-seg{fill:none;stroke:var(--line);stroke-width:2;}
+    .mk-topo{fill:var(--line);}
+    .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
+    .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    /* ── 컴포넌트 뷰 ── */
+    .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
+    .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
+    .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
+    .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
+    .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
+    .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
+    .comp-lb{fill:var(--text);font-size:11px;font-weight:600;}
+    .comp-proto{fill:var(--muted);font-size:10px;font-family:var(--mono);}
+    .mk-comp{fill:var(--line);}
+    @media print {
+      :root, :root[data-theme="dark"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+      .theme-toggle{display:none;}
+      body{background:#fff;}
+      .page{width:1210px;padding:0;gap:0;}
+      .sheet{border:none;box-shadow:none;border-radius:0;page-break-after:always;page-break-inside:avoid;}
+      .diagram-wrap{overflow:visible;border:none;}
+      .hero{height:96px;overflow:hidden;}
+    }
+
+    @page { size: 1210px 456px; margin: 0; }
+
+    .iff-node{cursor:grab;}
+    .iff-node:active{cursor:grabbing;}
+    .iff-zone{cursor:grab;}
+    .iff-zone:active{cursor:grabbing;}
+    .iff-export{margin:0 0 10px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;}
+    @media print{ .iff-export{display:none;} }
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button">🌓 테마</button>
+<main class="page">
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">Gateway Platform · IF 흐름도</span>
+      <h1>인프라 구성도</h1>
+      <p class="sub">flowcast 합성 예제 (topology · fw 방화벽 경계)</p>
+    </header>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="12 -20 1162 124" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="인프라 구성도"><defs><marker id="mk-topo" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="web" data-members="web1" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="404" y="-6" width="182" height="96" rx="10"/><text class="topo-zone-tx" x="414" y="7">WEB Tier</text></g><g class="iff-zone" data-zone="app" data-members="app1" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="600" y="-6" width="182" height="96" rx="10"/><text class="topo-zone-tx" x="610" y="7">APP Tier</text></g><g class="iff-node" data-id="client" data-cx="103.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-ext" x="26" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="103.0" y="55.0" text-anchor="middle">Client</text></g><g class="iff-node" data-id="fw-in" data-cx="299.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-fw" x="222" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="299.0" y="55.0" text-anchor="middle">Ingress L4/VIP</text></g><g class="iff-node" data-id="web1" data-cx="495.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node" x="418" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="495.0" y="55.0" text-anchor="middle">web</text></g><g class="iff-node" data-id="app1" data-cx="691.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node" x="614" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="691.0" y="55.0" text-anchor="middle">app</text></g><g class="iff-node" data-id="fw-out" data-cx="887.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-fw" x="810" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="887.0" y="55.0" text-anchor="middle">Egress L4/VIP</text></g><g class="iff-node" data-id="partner" data-cx="1083.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-ext" x="1006" y="26" width="154" height="50" rx="9"/><text class="topo-tx" x="1083.0" y="55.0" text-anchor="middle">Partner API</text></g></svg></div>
+  </section>
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">Gateway Platform · IF 흐름도</span>
+      <h1>인/아웃바운드 방화벽 통과 FLOW</h1>
+      <p class="sub">flowcast 합성 예제 (topology · fw 방화벽 경계)</p>
+    </header>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="12 -20 1162 282" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="인/아웃바운드 방화벽 통과 FLOW"><defs><marker id="mk-topo" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="web" data-members="web1" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="404" y="-6" width="182" height="96" rx="10"/><text class="topo-zone-tx" x="414" y="7">WEB Tier</text></g><g class="iff-zone" data-zone="app" data-members="app1" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="600" y="-6" width="182" height="96" rx="10"/><text class="topo-zone-tx" x="610" y="7">APP Tier</text></g><path class="topo-seg" data-from="client" data-to="fw-in" d="M180.0,51.0 L222.0,51.0" marker-end="url(#mk-topo)"/><path class="topo-seg" data-from="fw-in" data-to="web1" d="M376.0,51.0 L418.0,51.0" marker-end="url(#mk-topo)"/><path class="topo-seg" data-from="web1" data-to="app1" d="M572.0,51.0 L614.0,51.0" marker-end="url(#mk-topo)"/><path class="topo-seg" data-from="app1" data-to="fw-out" d="M768.0,51.0 L810.0,51.0" marker-end="url(#mk-topo)"/><path class="topo-seg" data-from="fw-out" data-to="partner" d="M964.0,51.0 L1006.0,51.0" marker-end="url(#mk-topo)"/><g class="iff-node" data-id="client" data-cx="103.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="26" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="103.0" y="55.0" text-anchor="middle">Client</text></g><g class="iff-node" data-id="fw-in" data-cx="299.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-fw on" x="222" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="299.0" y="55.0" text-anchor="middle">Ingress L4/VIP</text></g><g class="iff-node" data-id="web1" data-cx="495.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node on" x="418" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="495.0" y="55.0" text-anchor="middle">web</text></g><g class="iff-node" data-id="app1" data-cx="691.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node on" x="614" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="691.0" y="55.0" text-anchor="middle">app</text></g><g class="iff-node" data-id="fw-out" data-cx="887.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-fw on" x="810" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="887.0" y="55.0" text-anchor="middle">Egress L4/VIP</text></g><g class="iff-node" data-id="partner" data-cx="1083.0" data-cy="51.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="1006" y="26" width="154" height="50" rx="9"/><text class="topo-tx on" x="1083.0" y="55.0" text-anchor="middle">Partner API</text></g><g class="iff-badge" data-from="client" data-to="fw-in"><circle class="topo-badge" cx="203.10000000000002" cy="51.0" r="11"/><text class="topo-badge-tx" x="203.10000000000002" y="55.0" text-anchor="middle">1</text></g><g class="iff-badge" data-from="fw-in" data-to="web1"><circle class="topo-badge" cx="399.1" cy="51.0" r="11"/><text class="topo-badge-tx" x="399.1" y="55.0" text-anchor="middle">2</text></g><g class="iff-badge" data-from="web1" data-to="app1"><circle class="topo-badge" cx="595.1000000000001" cy="51.0" r="11"/><text class="topo-badge-tx" x="595.1000000000001" y="55.0" text-anchor="middle">3</text></g><g class="iff-badge" data-from="app1" data-to="fw-out"><circle class="topo-badge" cx="791.1000000000001" cy="51.0" r="11"/><text class="topo-badge-tx" x="791.1000000000001" y="55.0" text-anchor="middle">4</text></g><g class="iff-badge" data-from="fw-out" data-to="partner"><circle class="topo-badge" cx="987.1000000000001" cy="51.0" r="11"/><text class="topo-badge-tx" x="987.1000000000001" y="55.0" text-anchor="middle">5</text></g><text class="topo-legend-h" x="26" y="120">흐름 설명</text><text class="topo-legend-tx" x="26" y="143">1. 인바운드 요청</text><text class="topo-legend-tx" x="26" y="164">2. 인바운드 방화벽 통과</text><text class="topo-legend-tx" x="26" y="185">3. 내부 호출</text><text class="topo-legend-tx" x="26" y="206">4. 아웃바운드 요청</text><text class="topo-legend-tx" x="26" y="227">5. 아웃바운드 방화벽 통과</text></svg></div>
+  </section>
+</main>
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+  });
+})();
+</script>
+<script>
+(function () {
+  function edgePt(n, tx, ty) {
+    var cx = n.cx + n.tx, cy = n.cy + n.ty, dx = tx - cx, dy = ty - cy;
+    if (!dx && !dy) return [cx, cy];
+    var sx = dx ? (n.w / 2) / Math.abs(dx) : 1e9, sy = dy ? (n.h / 2) / Math.abs(dy) : 1e9;
+    var s = Math.min(sx, sy);
+    return [cx + dx * s, cy + dy * s];
+  }
+  function initSvg(svg) {
+    var nodes = {};
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      nodes[g.getAttribute('data-id')] = {
+        g: g, cx: +g.getAttribute('data-cx'), cy: +g.getAttribute('data-cy'),
+        w: +g.getAttribute('data-w'), h: +g.getAttribute('data-h'), tx: 0, ty: 0
+      };
+    });
+    function refresh(id) {
+      svg.querySelectorAll('[data-self="' + id + '"]').forEach(function (el) {
+        var n = nodes[id]; el.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+      });
+      svg.querySelectorAll('[data-from],[data-to]').forEach(function (el) {
+        if (el.getAttribute('data-self')) return;
+        var f = el.getAttribute('data-from'), t = el.getAttribute('data-to');
+        if (f !== id && t !== id) return;
+        var a = nodes[f], b = nodes[t]; if (!a || !b) return;
+        var ca = [a.cx + a.tx, a.cy + a.ty], cb = [b.cx + b.tx, b.cy + b.ty];
+        if (el.tagName === 'path') {
+          var p1 = edgePt(a, cb[0], cb[1]), p2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('d', 'M' + p1[0] + ',' + p1[1] + ' L' + p2[0] + ',' + p2[1]);
+        } else if (el.tagName === 'line') {
+          var q1 = edgePt(a, cb[0], cb[1]), q2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('x1', q1[0]); el.setAttribute('y1', q1[1]);
+          el.setAttribute('x2', q2[0]); el.setAttribute('y2', q2[1]);
+        } else {
+          el.setAttribute('transform', 'translate(' + ((a.tx + b.tx) / 2) + ',' + ((a.ty + b.ty) / 2) + ')');
+        }
+      });
+    }
+    function nodeRect(id) { var n = nodes[id]; return { x: n.cx + n.tx - n.w / 2, y: n.cy + n.ty - n.h / 2, w: n.w, h: n.h }; }
+    function zoneRecompute(zg) {
+      var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+      if (!mem.length) return;
+      var pad = +zg.getAttribute('data-pad'), lbl = +zg.getAttribute('data-lbl'), lp = zg.getAttribute('data-lblpos');
+      var rs = mem.map(nodeRect);
+      var zx1 = Math.min.apply(null, rs.map(function (r) { return r.x; })) - pad;
+      var zy1 = Math.min.apply(null, rs.map(function (r) { return r.y; })) - pad - lbl;
+      var zx2 = Math.max.apply(null, rs.map(function (r) { return r.x + r.w; })) + pad;
+      var zy2 = Math.max.apply(null, rs.map(function (r) { return r.y + r.h; })) + pad;
+      var rect = zg.querySelector('rect'), txt = zg.querySelector('text');
+      rect.setAttribute('x', zx1); rect.setAttribute('y', zy1);
+      rect.setAttribute('width', zx2 - zx1); rect.setAttribute('height', zy2 - zy1);
+      if (lp === 'tr') { txt.setAttribute('x', zx2 - 12); txt.setAttribute('y', zy1 + 15); }
+      else { txt.setAttribute('x', zx1 + 10); txt.setAttribute('y', zy1 + 13); }
+    }
+    function recomputeZones() { svg.querySelectorAll('.iff-zone').forEach(zoneRecompute); }
+    var active = null, start = null;
+    function toSvg(evt) {
+      var pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      g.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        active = nodes[g.getAttribute('data-id')];
+        var p = toSvg(evt); start = { x: p.x, y: p.y, tx: active.tx, ty: active.ty };
+        g.setPointerCapture(evt.pointerId);
+      });
+      g.addEventListener('pointermove', function (evt) {
+        if (!active) return;
+        var p = toSvg(evt);
+        active.tx = start.tx + (p.x - start.x); active.ty = start.ty + (p.y - start.y);
+        active.g.setAttribute('transform', 'translate(' + active.tx + ',' + active.ty + ')');
+        refresh(active.g.getAttribute('data-id'));
+        recomputeZones();
+      });
+      g.addEventListener('pointerup', function () { active = null; });
+      g.addEventListener('pointercancel', function () { active = null; });
+    });
+    var zdrag = null;
+    svg.querySelectorAll('.iff-zone').forEach(function (zg) {
+      zg.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+        var p = toSvg(evt);
+        zdrag = { x: p.x, y: p.y, base: mem.map(function (id) { return { id: id, tx: nodes[id].tx, ty: nodes[id].ty }; }) };
+        zg.setPointerCapture(evt.pointerId);
+      });
+      zg.addEventListener('pointermove', function (evt) {
+        if (!zdrag) return;
+        var p = toSvg(evt), ddx = p.x - zdrag.x, ddy = p.y - zdrag.y;
+        zdrag.base.forEach(function (b) {
+          var n = nodes[b.id]; n.tx = b.tx + ddx; n.ty = b.ty + ddy;
+          n.g.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+          refresh(b.id);
+        });
+        recomputeZones();
+      });
+      zg.addEventListener('pointerup', function () { zdrag = null; });
+      zg.addEventListener('pointercancel', function () { zdrag = null; });
+    });
+    return function () {
+      var out = {};
+      Object.keys(nodes).forEach(function (id) {
+        var n = nodes[id];
+        out[id] = { x: Math.round(n.cx + n.tx - n.w / 2), y: Math.round(n.cy + n.ty - n.h / 2) };
+      });
+      return out;
+    };
+  }
+  document.querySelectorAll('.sheet').forEach(function (sheet) {
+    var svg = sheet.querySelector('svg'); if (!svg) return;
+    var exporter = initSvg(svg);
+    var btn = sheet.querySelector('.iff-export');
+    if (btn) btn.addEventListener('click', function () {
+      var json = JSON.stringify(exporter(), null, 2);
+      window.__iffExport = json;
+      if (navigator.clipboard) navigator.clipboard.writeText(json);
+      btn.textContent = '✅ 좌표 복사됨 (JSON nodes의 x/y에 반영)';
+      setTimeout(function () { btn.textContent = '📋 좌표 복사'; }, 1800);
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -18,7 +18,8 @@ allowed-tools: Bash, Read, Write, Edit
 ## 스키마 필드 (`view: topology`)
 
 - `nodes[]`: `{ id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }` — x/y가 있으면 그리드보다 우선
-- `kind`: `srv`(기본) · `ext`(외부, 앰버) · `gear`(네트워크 장비, 점선)
+- `kind`: `srv`(기본) · `ext`(외부, 앰버) · `gear`(네트워크 장비, 점선) · `fw`(방화벽/L4 경계, 벽돌)
+  - **VIP/L4/방화벽은 `fw`** — 트래픽이 통과하는 경계. 인바운드 방화벽은 흐름 왼쪽, 아웃바운드는 오른쪽에 배치해 좌→우로 통과하게 그린다(세그먼트가 fw 노드를 지나가도록).
 - `zones[]`: `{ id, name }` — 소속 노드를 감싸는 **자동 bounding box**
 - `links[]`: `{ from, to }` — 번호·화살촉 없는 정적 배선(회색)
 - `scenarios[].segments[]`: `{ n?, from, to|self, label?, rail? }` — 번호 구간 오버레이
@@ -26,7 +27,7 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## 매핑 결정 지점 (데이터 → JSON, 순서대로)
 
-1. **노드 목록**과 각 노드 `kind`? (서버=srv / 외부 액터·시스템=ext / 라우터·방화벽 등 장비=gear)
+1. **노드 목록**과 각 노드 `kind`? (서버=srv / 외부 액터·시스템=ext / 라우터 등 장비=gear / **방화벽·VIP·L4 경계=fw**)
 2. **배치** — 그리드(`col`/`row`) or 절대(`x`/`y`)? (원본 도형 좌표 있으면 스케일 배치)
 3. **존(배경 박스)** 있나? 각 존 소속 노드?
 4. **정적 배선(`links`)** 있나? — 번호·방향 없는 상시 연결의 `from`→`to` 쌍.
