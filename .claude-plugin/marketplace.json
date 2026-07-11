@@ -1,0 +1,35 @@
+{
+  "name": "flowcast",
+  "id": "flowcast",
+  "owner": {
+    "name": "SeokRae",
+    "email": "kslbsh@gmail.com"
+  },
+  "metadata": {
+    "description": "IF/서비스 흐름도 생성 하네스 — 데이터를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하는 Claude Code 플러그인",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "flowcast",
+      "source": "./",
+      "description": "IF/서비스 흐름도 생성 하네스 — 데이터를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링",
+      "version": "0.1.0",
+      "author": {
+        "name": "SeokRae",
+        "email": "kslbsh@gmail.com"
+      },
+      "keywords": [
+        "flowcast",
+        "diagram",
+        "sequence-diagram",
+        "topology",
+        "component-diagram",
+        "fan-out",
+        "orchestration",
+        "claude-code",
+        "claude-code-plugin"
+      ]
+    }
+  ]
+}

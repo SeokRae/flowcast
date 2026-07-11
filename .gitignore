@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+
+# 내부 planning 문서 — 공개하지 않음
+PLAN.md

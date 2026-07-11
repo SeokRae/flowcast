@@ -1,0 +1,41 @@
+{
+  "system": "Web Platform",
+  "source": "flowcast 합성 예제 (topology)",
+  "view": "topology",
+  "zones": [
+    { "id": "dmz", "name": "DMZ" },
+    { "id": "app", "name": "App Tier" },
+    { "id": "data", "name": "Data Tier" }
+  ],
+  "nodes": [
+    { "id": "client", "name": "Client", "kind": "ext", "col": 0, "row": 1 },
+    { "id": "lb", "name": "Load Balancer", "kind": "gear", "zone": "dmz", "col": 1, "row": 1 },
+    { "id": "web1", "name": "Web 1", "zone": "app", "col": 2, "row": 0 },
+    { "id": "web2", "name": "Web 2", "zone": "app", "col": 2, "row": 2 },
+    { "id": "app1", "name": "App Server", "zone": "app", "col": 3, "row": 1 },
+    { "id": "db", "name": "Database", "zone": "data", "col": 4, "row": 0 },
+    { "id": "cache", "name": "Cache", "zone": "data", "col": 4, "row": 2 }
+  ],
+  "links": [
+    { "from": "client", "to": "lb" },
+    { "from": "lb", "to": "web1" },
+    { "from": "lb", "to": "web2" },
+    { "from": "web1", "to": "app1" },
+    { "from": "web2", "to": "app1" },
+    { "from": "app1", "to": "db" },
+    { "from": "app1", "to": "cache" }
+  ],
+  "scenarios": [
+    { "title": "인프라 구성도" },
+    {
+      "title": "요청 처리 FLOW",
+      "segments": [
+        { "n": 1, "from": "client", "to": "lb", "label": "HTTPS 요청" },
+        { "n": 2, "from": "lb", "to": "web1", "label": "부하 분산" },
+        { "n": 3, "from": "web1", "to": "app1", "label": "API 호출" },
+        { "n": 4, "from": "app1", "to": "db", "label": "데이터 조회" },
+        { "n": 5, "from": "app1", "to": "cache", "label": "캐시 갱신" }
+      ]
+    }
+  ]
+}

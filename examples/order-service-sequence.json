@@ -1,0 +1,42 @@
+{
+  "system": "Order Service",
+  "source": "flowcast 합성 예제 (sequence)",
+  "zones": [
+    { "id": "front", "name": "Frontend" },
+    { "id": "back", "name": "Backend" }
+  ],
+  "actors": [
+    { "id": "buyer", "name": "Buyer" },
+    { "id": "web", "name": "Web Store", "zone": "front" },
+    { "id": "api", "name": "Order API", "zone": "back", "port": "8080" },
+    { "id": "pay", "name": "Payment Gateway", "zone": "back" },
+    { "id": "bank", "name": "Bank" }
+  ],
+  "scenarios": [
+    {
+      "title": "주문 결제 FLOW",
+      "steps": [
+        { "n": 1, "from": "buyer", "to": "web", "label": "상품 주문", "kind": "req" },
+        { "n": 2, "from": "web", "to": "api", "label": "결제 요청", "kind": "req", "protocol": "HTTPS" },
+        { "n": 3, "from": "api", "to": "pay", "label": "승인 요청", "kind": "req" },
+        { "n": 4, "from": "pay", "to": "bank", "label": "카드 승인", "kind": "req" },
+        { "n": 5, "from": "bank", "to": "pay", "label": "승인 응답", "kind": "res" },
+        { "n": 6, "from": "pay", "to": "api", "label": "승인 결과", "kind": "res" },
+        { "n": 7, "from": "api", "to": "web", "label": "결제 완료", "kind": "res" },
+        { "n": 8, "from": "web", "to": "buyer", "label": "주문 완료", "kind": "res" }
+      ]
+    },
+    {
+      "title": "주문 취소 FLOW",
+      "steps": [
+        { "n": 1, "from": "buyer", "to": "web", "label": "취소 요청", "kind": "req" },
+        { "n": 2, "from": "web", "to": "api", "label": "취소 요청", "kind": "req" },
+        { "n": 3, "from": "api", "to": "pay", "label": "취소 승인", "kind": "req" },
+        { "n": 4, "from": "pay", "to": "bank", "label": "카드 취소", "kind": "req" },
+        { "n": 5, "from": "bank", "to": "pay", "label": "취소 응답", "kind": "res" },
+        { "n": 6, "from": "pay", "to": "api", "label": "취소 결과", "kind": "res" },
+        { "n": 7, "from": "api", "to": "web", "label": "취소 완료", "kind": "res" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "system": "Microservice Platform",
+  "source": "flowcast 합성 예제 (component)",
+  "view": "component",
+  "scenarios": [
+    {
+      "title": "결제 처리 Process",
+      "zones": [
+        { "id": "internal", "name": "< Internal >" }
+      ],
+      "nodes": [
+        { "id": "gw", "name": "API Gateway", "port": "8080", "zone": "internal", "col": 0, "row": 1 },
+        { "id": "order", "name": "Order Service", "port": "8081", "zone": "internal", "col": 1, "row": 0 },
+        { "id": "pay", "name": "Payment Service", "port": "8082", "zone": "internal", "col": 1, "row": 2 },
+        { "id": "db", "name": "Order DB", "zone": "internal", "col": 2, "row": 0 },
+        { "id": "psp", "name": "Payment Gateway", "kind": "ext", "col": 2, "row": 2 }
+      ],
+      "edges": [
+        { "from": "gw", "to": "order", "n": 1, "label": "주문 생성", "protocol": "http" },
+        { "from": "order", "to": "db", "n": 2, "label": "주문 저장", "protocol": "jdbc" },
+        { "from": "gw", "to": "pay", "n": 3, "label": "결제 요청", "protocol": "http" },
+        { "from": "pay", "to": "psp", "n": 4, "label": "카드 승인", "protocol": "https" }
+      ]
+    },
+    {
+      "title": "알림 발송 Process",
+      "nodes": [
+        { "id": "pay2", "name": "Payment Service", "port": "8082", "col": 0, "row": 0 },
+        { "id": "mq", "name": "Message Queue", "col": 1, "row": 0 },
+        { "id": "noti", "name": "Notification Service", "port": "8083", "col": 2, "row": 0 },
+        { "id": "mail", "name": "Mail Server", "kind": "ext", "col": 3, "row": 0 }
+      ],
+      "edges": [
+        { "from": "pay2", "to": "mq", "n": 1, "label": "이벤트 발행" },
+        { "from": "mq", "to": "noti", "n": 2, "label": "구독" },
+        { "from": "noti", "to": "mail", "n": 3, "label": "메일 발송", "protocol": "smtp" }
+      ]
+    }
+  ]
+}
