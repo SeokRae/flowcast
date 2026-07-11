@@ -8,12 +8,11 @@ python-pptx 는 **export 경로 전용 선택적 의존성**이다(코어 render
 HTML/PDF 와 동일한 위치로 도형을 찍는다(재구현 금지). px → EMU(×9525) 변환.
 
 사용법:
-    python3 scripts/pptx_export.py {component.json} [-o {out.pptx}]
+    python3 scripts/pptx_export.py {view.json} [-o {out.pptx}]
 
-지원: component 뷰. (topology·sequence 는 후속 Issue)
-- 노드 → 둥근 사각형 도형 + 텍스트(name, port 2단)
-- 존   → 배경 사각형(소속 노드 bounding box)
-- 엣지 → 직선 커넥터 + 라벨/번호 텍스트박스, bidir 은 양방향 화살촉
+지원: sequence · component · topology 3뷰 (view 필드로 디스패치, 미지정=sequence).
+- component/topology: 노드 → 둥근 사각형 + 텍스트, 존 → 배경 사각형, 엣지 → 커넥터 + 라벨
+- sequence: 액터 박스 + 라이프라인 + 액티베이션 바 + 메시지 커넥터(kind별 색) + note 박스
 """
 
 import argparse
@@ -31,6 +30,20 @@ LINE = {"comp": (0x2C, 0x7A, 0x7B), "ext": (0xB7, 0x79, 0x1F)}
 # topology kind: srv(기본) · ext(외부, 앰버) · gear(장비, 점선)
 TOPO_FILL = {"srv": (0xF8, 0xFA, 0xFC), "ext": (0xFD, 0xF3, 0xE7), "gear": (0xF8, 0xFA, 0xFC)}
 TOPO_LINE = {"srv": (0x64, 0x74, 0x8B), "ext": (0xB7, 0x79, 0x1F), "gear": (0x94, 0xA3, 0xB8)}
+
+# sequence kind: req/self(accent) · res/relay(muted) — render.py LIGHT 테마 흰배경 솔리드 근사
+SEQ_ARROW = {"req": (0x1F, 0x6F, 0xD0), "self": (0x1F, 0x6F, 0xD0),
+             "res": (0x54, 0x66, 0x7E), "relay": (0x54, 0x66, 0x7E)}
+SEQ_ACTOR_FILL = (0xEF, 0xF5, 0xFC)   # --zone-bg over white
+SEQ_ACTOR_LINE = (0x1F, 0x6F, 0xD0)   # --accent
+SEQ_ACT_FILL = (0xE4, 0xEE, 0xF9)     # --act-bg over white
+SEQ_ACT_LINE = (0xB7, 0xD1, 0xF0)     # --act-bd over white
+SEQ_NOTE_FILL = (0xFA, 0xF6, 0xEE)    # --note-bg over white
+SEQ_NOTE_LINE = (0xE0, 0xC9, 0x98)    # --note-bd over white
+SEQ_TEXT = (0x1B, 0x26, 0x35)         # --text
+SEQ_MUTED = (0x54, 0x66, 0x7E)        # --muted
+SEQ_WARN = (0x8A, 0x62, 0x10)         # --warn
+SEQ_LIFELINE = (0x9C, 0xA3, 0xAF)     # 회색 점선
 
 
 def _load_render():
@@ -327,9 +340,176 @@ def export_topology(data, out_path):
     return len(scenarios)
 
 
+def export_sequence(data, out_path):
+    """sequence 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장).
+
+    render.py 의 layout_sequence() 기하를 그대로 소비 — actor 박스·라이프라인·
+    activation bar·message(kind별 색)·note 를 px→EMU(×9525)로 배치(재구현 금지).
+    self·note 는 render 와 동일 좌표에 배치하되 self-loop 는 엘보 커넥터로 근사.
+    """
+    from pptx import Presentation
+    from pptx.util import Emu, Pt
+    from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.dml import MSO_LINE_DASH_STYLE
+    from pptx.dml.color import RGBColor
+    from pptx.oxml.ns import qn
+
+    R = _load_render()
+    scenarios = data.get("scenarios") or []
+    layouts = [R.layout_sequence(data, sc) for sc in scenarios]
+    max_w = max((L["width"] for L in layouts), default=400)
+    max_h = max((L["height"] for L in layouts), default=300)
+    emu = lambda px: Emu(int(round(px * PX_TO_EMU)))
+    BOX_W, BOX_H, ACT_W, ZONE_H = R.BOX_W, R.BOX_H, R.ACT_W, R.ZONE_H
+
+    prs = Presentation()
+    prs.slide_width = emu(max_w)
+    prs.slide_height = emu(max_h)
+    blank = prs.slide_layouts[6]
+
+    def _labels(shapes, x, y, w, h, specs, align, anchor):
+        """specs: [(text, size_pt, rgb, bold)] → 문단별 텍스트박스."""
+        tb = shapes.add_textbox(emu(x), emu(y), emu(w), emu(h))
+        tf = tb.text_frame
+        tf.word_wrap = True
+        tf.vertical_anchor = anchor
+        for i, (text, size, rgb, bold) in enumerate(specs):
+            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            p.alignment = align
+            r = p.add_run()
+            r.text = text
+            r.font.size = Pt(size)
+            r.font.color.rgb = RGBColor(*rgb)
+            r.font.bold = bold
+
+    def _arrow(conn, rgb):
+        conn.line.color.rgb = RGBColor(*rgb)
+        ln = conn.line._get_or_add_ln()
+        ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
+
+    for L in layouts:
+        slide = prs.slides.add_slide(blank)
+        shapes = slide.shapes
+        zone_y, box_y, bottom = L["zone_y"], L["box_y"], L["bottom"]
+
+        # 존 밴드(배경)
+        for z in L["zones"]:
+            zx1, zx2 = z["x1"], z["x2"]
+            zb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(zx1), emu(zone_y),
+                                  emu(zx2 - zx1), emu(ZONE_H))
+            zb.fill.solid()
+            zb.fill.fore_color.rgb = RGBColor(*SEQ_ACTOR_FILL)
+            zb.line.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
+            zb.shadow.inherit = False
+            tf = zb.text_frame
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            tf.text = z["name"]
+            tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+            tf.paragraphs[0].runs[0].font.size = Pt(9)
+            tf.paragraphs[0].runs[0].font.bold = True
+            tf.paragraphs[0].runs[0].font.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
+
+        # 라이프라인(세로 점선)
+        for a in L["actors"]:
+            x = a["x"]
+            ll = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(x), emu(box_y + BOX_H),
+                                      emu(x), emu(bottom))
+            ll.line.color.rgb = RGBColor(*SEQ_LIFELINE)
+            ll.line.width = Pt(1)
+            ll.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+
+        # 액티베이션 바
+        for b in L["bars"]:
+            ab = shapes.add_shape(MSO_SHAPE.RECTANGLE, emu(b["x"]), emu(b["y"]),
+                                  emu(ACT_W), emu(b["h"]))
+            ab.fill.solid()
+            ab.fill.fore_color.rgb = RGBColor(*SEQ_ACT_FILL)
+            ab.line.color.rgb = RGBColor(*SEQ_ACT_LINE)
+            ab.shadow.inherit = False
+
+        # 액터 박스(포트/라인 2단)
+        for a in L["actors"]:
+            x = a["x"]
+            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x - BOX_W / 2), emu(box_y),
+                                   emu(BOX_W), emu(BOX_H))
+            box.fill.solid()
+            box.fill.fore_color.rgb = RGBColor(*SEQ_ACTOR_FILL)
+            box.line.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
+            box.shadow.inherit = False
+            tf = box.text_frame
+            tf.word_wrap = True
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            tf.text = a["name"]
+            p0 = tf.paragraphs[0]
+            p0.alignment = PP_ALIGN.CENTER
+            p0.runs[0].font.size = Pt(11)
+            p0.runs[0].font.bold = True
+            p0.runs[0].font.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
+            if a["attrs"]:
+                pp = tf.add_paragraph()
+                pp.alignment = PP_ALIGN.CENTER
+                r = pp.add_run()
+                r.text = a["attrs"]
+                r.font.size = Pt(8)
+                r.font.color.rgb = RGBColor(*SEQ_MUTED)
+
+        # 메시지 / 노트
+        for st in L["steps"]:
+            if st["type"] == "note":
+                x1, x2, y, h, lines = st["x1"], st["x2"], st["y"], st["h"], st["lines"]
+                nb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x1), emu(y),
+                                      emu(x2 - x1), emu(h))
+                nb.fill.solid()
+                nb.fill.fore_color.rgb = RGBColor(*SEQ_NOTE_FILL)
+                nb.line.color.rgb = RGBColor(*SEQ_NOTE_LINE)
+                nb.shadow.inherit = False
+                if lines:
+                    _labels(shapes, x1, y, x2 - x1, h,
+                            [(ln, 9, SEQ_TEXT, False) for ln in lines],
+                            PP_ALIGN.LEFT, MSO_ANCHOR.MIDDLE)
+                continue
+
+            kind, y, lines, mid = st["kind"], st["y"], st["lines"], st["mid"]
+            rgb = SEQ_ARROW.get(kind, SEQ_ARROW["req"])
+            bold = kind in ("req", "self")
+            if st["self"]:
+                sx = st["self_x"]
+                conn = shapes.add_connector(MSO_CONNECTOR.ELBOW, emu(sx), emu(y - 14),
+                                            emu(sx + 44), emu(y))
+                _arrow(conn, rgb)
+                lbl_x, lbl_align = sx + 52, PP_ALIGN.LEFT
+            else:
+                x1, x2 = st["x1"], st["x2"]
+                conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(x1), emu(y),
+                                            emu(x2), emu(y))
+                _arrow(conn, rgb)
+                lbl_x, lbl_align = mid - 70, PP_ALIGN.CENTER
+
+            # 메시지 라벨(번호 인라인 포함) — 화살표 위
+            if lines:
+                lh = 15 * len(lines)
+                _labels(shapes, lbl_x, y - 6 - lh, 140, lh + 4,
+                        [(ln, 9, rgb, bold) for ln in lines],
+                        lbl_align, MSO_ANCHOR.BOTTOM)
+            # protocol / sub — 화살표 아래
+            extra_specs = []
+            for cls, val in st["extras"]:
+                if cls == "proto":
+                    extra_specs.append((f"( {val} )", 8, SEQ_MUTED, False))
+                else:
+                    extra_specs.append((val, 8, SEQ_WARN, False))
+            if extra_specs:
+                _labels(shapes, mid - 70, y + 2, 140, 15 * len(extra_specs) + 4,
+                        extra_specs, PP_ALIGN.CENTER, MSO_ANCHOR.TOP)
+
+    prs.save(str(out_path))
+    return len(layouts)
+
+
 def main():
-    ap = argparse.ArgumentParser(description="flowcast 흐름도 → 편집가능 .pptx export (component·topology)")
-    ap.add_argument("data", help="component 뷰 JSON 경로")
+    ap = argparse.ArgumentParser(description="flowcast 흐름도 → 편집가능 .pptx export (sequence·component·topology)")
+    ap.add_argument("data", help="흐름도 뷰 JSON 경로 (view: sequence|component|topology)")
     ap.add_argument("-o", "--out", help="출력 .pptx (기본: 입력과 같은 위치 .pptx)")
     args = ap.parse_args()
 
@@ -343,11 +523,13 @@ def main():
         print(f"파일 없음: {path}", file=sys.stderr)
         return 1
     data = json.loads(path.read_text(encoding="utf-8"))
-    dispatch = {"component": export_component, "topology": export_topology}
-    view = data.get("view")
+    dispatch = {"sequence": export_sequence, "component": export_component,
+                "topology": export_topology}
+    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주
+    view = data.get("view", "sequence")
     if view not in dispatch:
-        print(f"이 export 는 component·topology 뷰를 지원합니다 (view={view!r}). "
-              "sequence 는 후속 예정.", file=sys.stderr)
+        print(f"이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
+              file=sys.stderr)
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".pptx")
