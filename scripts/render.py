@@ -16,7 +16,7 @@
 
     view      : "sequence"(기본) | "topology" | "component"
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
-                    kind: srv(기본) | ext(외부) | gear(네트워크 장비)
+                    kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽/L4 경계, 벽돌)
                     links[]: { from, to } — 번호·화살촉 없는 정적 배선(토폴로지 공통)
                     scenarios[].segments[]: { n?, from, to|self, label?, rail? } — 번호 구간 오버레이
                     segments 없는 시나리오 = 순수 인프라 구성도
@@ -133,6 +133,7 @@ def validate_topology(data):
     for z in data.get("zones") or []:
         if not z.get("id") or not z.get("name"):
             errors.append(f"zone에 id/name 누락: {z}")
+    TOPO_KINDS = {"srv", "ext", "gear", "fw"}
     for n in nodes:
         if not n.get("id") or not n.get("name"):
             errors.append(f"node에 id/name 누락: {n}")
@@ -142,6 +143,8 @@ def validate_topology(data):
         has_abs = n.get("x") is not None and n.get("y") is not None
         if not (has_grid or has_abs):
             errors.append(f"node '{n.get('id')}'에 위치 없음 (col/row 또는 x/y 필요)")
+        if n.get("kind") and n["kind"] not in TOPO_KINDS:
+            warnings.append(f"node '{n.get('id')}': 알 수 없는 kind '{n['kind']}' (허용: {sorted(TOPO_KINDS)})")
     idset = set(ids)
     for li, lk in enumerate(data.get("links") or []):
         for key in ("from", "to"):
@@ -502,6 +505,8 @@ def render_svg_topology(data, scenario):
             cls += " topo-ext"
         elif kind == "gear":
             cls += " topo-gear"
+        elif kind == "fw":
+            cls += " topo-fw"
         cls += state
         node_body.append(f'<g class="iff-node" data-id="{esc(nd["id"])}" data-cx="{x + w / 2}" data-cy="{y + h / 2}" data-w="{w}" data-h="{h}">')
         node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
@@ -584,9 +589,14 @@ def render_svg_topology(data, scenario):
 
     marker = ('<marker id="mk-topo" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto">'
               '<path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker>')
+    # fw(방화벽) 노드용 벽돌 패턴 — running bond
+    brick = ('<pattern id="fw-brick" width="16" height="12" patternUnits="userSpaceOnUse">'
+             '<rect class="fw-brick-bg" width="16" height="12"/>'
+             '<path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/>'
+             '</pattern>')
     svg = (f'<svg viewBox="{vb_x} {vb_y} {vb_w} {vb_h}" style="width:100%;display:block;" '
            f'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{esc(scenario["title"])}">'
-           f'<defs>{marker}</defs>'
+           f'<defs>{marker}{brick}</defs>'
            f'{"".join(zone_body)}{"".join(link_body)}{"".join(seg_paths)}{"".join(node_body)}{"".join(badges)}{"".join(leg_lines)}</svg>')
     return svg, vb_w, vb_h
 
@@ -801,6 +811,10 @@ CSS = """
     .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
     .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
     .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
+    .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
+    .fw-brick-bg{fill:var(--surface);}
+    .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
     .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
     .topo-tx.on{fill:var(--accent);}
     .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}

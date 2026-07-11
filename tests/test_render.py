@@ -442,3 +442,30 @@ def test_topology_badge_spread_antiparallel_roundtrip():
     assert len(pts) == 2
     (x1, y1), (x2, y2) = pts
     assert ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 >= 22
+
+
+# ── fw(방화벽) kind ────────────────────────────────────────────
+
+def test_topology_fw_kind_validates_ok():
+    data = _topo()
+    data["nodes"][1]["kind"] = "fw"
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert warnings == []
+
+
+def test_topology_unknown_kind_warns():
+    data = _topo()
+    data["nodes"][1]["kind"] = "bogus"
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert any("알 수 없는 kind 'bogus'" in w for w in warnings)
+
+
+def test_topology_fw_node_renders_brick():
+    data = _topo()
+    data["nodes"][1]["kind"] = "fw"  # r1 → 방화벽
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "topo-fw" in svg            # fw 클래스 적용
+    assert 'id="fw-brick"' in svg      # 벽돌 패턴 정의(defs)
+    assert 'class="fw-mortar"' in svg  # 벽돌 mortar 패턴 내용 출력
