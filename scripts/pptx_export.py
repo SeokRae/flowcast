@@ -29,6 +29,7 @@ from pathlib import Path
 PX_TO_EMU = 9525   # 1px @96dpi
 PAD_PX = 20        # auto(content-fit) 슬라이드 여백(px)
 FIT_MARGIN = 60    # 고정 캔버스 fit 여백(px)
+TITLE_H = 112      # 상단 타이틀 밴드 높이(px, 콘텐츠 위 예약) — render.py hero 헤더 pptx 대응
 SLIDE_PRESETS = {"wide": (1920, 1080)}   # 캔버스 프리셋 (px) — 기본 wide
 ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 
@@ -123,6 +124,35 @@ def _fill_lines(tf, name, s, size=10, sub_size=8,
         r.font.color.rgb = RGBColor(*(color if first else sub_color))
 
 
+def _draw_title(shapes, left_emu, top_emu, width_emu, height_emu, s, system, title, source):
+    """상단 타이틀 밴드 — render.py hero 헤더 대응: eyebrow(system · IF 흐름도) + h1(title) + sub(source).
+
+    콘텐츠와 같은 배율 s 로 폰트 스케일(_fpt) → HTML/PDF 와 시각 비례 일치. 좌상단 정렬.
+    """
+    from pptx.util import Pt
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    tb = shapes.add_textbox(left_emu, top_emu, width_emu, height_emu)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    tf.margin_left = tf.margin_top = 0
+    specs = []
+    if system:
+        specs.append((f"{system} · IF 흐름도", 11, (0x1F, 0x6F, 0xD0), True))
+    specs.append((str(title), 22, (0x1B, 0x26, 0x35), True))
+    if source:
+        specs.append((str(source), 11, (0x54, 0x66, 0x7E), False))
+    for i, (text, size, rgb, bold) in enumerate(specs):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        r = p.add_run()
+        r.text = text
+        r.font.size = Pt(_fpt(size, s))
+        r.font.bold = bold
+        r.font.color.rgb = RGBColor(*rgb)
+
+
 def _scene_geometry(R, scenario):
     """시나리오의 노드 사각형·존 박스·전체 bounding box (px)."""
     nodes = scenario.get("nodes") or []
@@ -165,7 +195,7 @@ def export_component(data, out_path, slide_size="wide"):
     geoms = [_scene_geometry(R, sc) for sc in scenarios]
     max_w = max(((b[2] - b[0]) for _, _, b in geoms), default=400)
     max_h = max(((b[3] - b[1]) for _, _, b in geoms), default=300)
-    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
+    SW, SH, s, dx, dy = _fit(max_w, max_h + TITLE_H, _parse_slide_size(slide_size))
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
 
     prs = Presentation()
@@ -182,9 +212,12 @@ def export_component(data, out_path, slide_size="wide"):
 
     for scenario, (rects, zone_boxes, bbox) in zip(scenarios, geoms):
         minx, miny = bbox[0], bbox[1]
-        ox, oy = -minx + dx, -miny + dy   # 원점 이동 + 중앙 배치
+        ox, oy = -minx + dx, -miny + dy + TITLE_H   # 원점 이동 + 중앙 배치(타이틀 밴드만큼 하강)
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
+
+        _draw_title(shapes, emu(dx), emu(dy), emu(bbox[2] - bbox[0]), emu(TITLE_H), s,
+                    data.get("system", ""), scenario.get("title", ""), data.get("source", ""))
 
         # 존 배경 먼저(뒤에 깔림)
         for z, zx1, zy1, zx2, zy2 in zone_boxes:
@@ -330,8 +363,8 @@ def export_topology(data, out_path, slide_size="wide"):
         maxy = leg_y + (max_leg + 1) * R.T_LEG_LH + 8   # 헤더 1줄 + 본문
         maxx = max(maxx, leg_x + longest * 7.2)
 
-    SW, SH, s, dx, dy = _fit(maxx - minx, maxy - miny, _parse_slide_size(slide_size))
-    ox, oy = -minx + dx, -miny + dy
+    SW, SH, s, dx, dy = _fit(maxx - minx, (maxy - miny) + TITLE_H, _parse_slide_size(slide_size))
+    ox, oy = -minx + dx, -miny + dy + TITLE_H   # 타이틀 밴드만큼 하강
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
     prs = Presentation()
     prs.slide_width = Emu(SW * PX_TO_EMU)
@@ -367,6 +400,9 @@ def export_topology(data, out_path, slide_size="wide"):
         segments = scenario.get("segments") or []
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
+
+        _draw_title(shapes, emu(dx), emu(dy), emu(maxx - minx), emu(TITLE_H), s,
+                    data.get("system", ""), scenario.get("title", ""), data.get("source", ""))
 
         for z, zx1, zy1, zx2, zy2 in zone_boxes:
             zb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(zx1 + ox), emu(zy1 + oy),
@@ -474,10 +510,10 @@ def export_sequence(data, out_path, slide_size="wide"):
     layouts = [R.layout_sequence(data, sc) for sc in scenarios]
     max_w = max((L["width"] for L in layouts), default=400)
     max_h = max((L["height"] for L in layouts), default=300)
-    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
+    SW, SH, s, dx, dy = _fit(max_w, max_h + TITLE_H, _parse_slide_size(slide_size))
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))   # 크기·길이
     X = lambda px: emu(px + dx)                            # 위치(x) — 중앙 배치 오프셋
-    Y = lambda px: emu(px + dy)                            # 위치(y)
+    Y = lambda px: emu(px + dy + TITLE_H)                  # 위치(y) — 타이틀 밴드만큼 하강
     BOX_W, BOX_H, ACT_W, ZONE_H = R.BOX_W, R.BOX_H, R.ACT_W, R.ZONE_H
 
     prs = Presentation()
@@ -505,9 +541,13 @@ def export_sequence(data, out_path, slide_size="wide"):
         ln = conn.line._get_or_add_ln()
         ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
 
-    for L in layouts:
+    for sc, L in zip(scenarios, layouts):
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
+
+        _draw_title(shapes, emu(dx), emu(dy), emu(max_w), emu(TITLE_H), s,
+                    data.get("system", ""), sc.get("title", ""), data.get("source", ""))
+
         zone_y, box_y, bottom = L["zone_y"], L["box_y"], L["bottom"]
 
         # 존 밴드(배경)

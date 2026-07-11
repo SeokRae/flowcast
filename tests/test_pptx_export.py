@@ -241,6 +241,55 @@ def test_slide_size_auto_is_content_fit(tmp_path):
     assert (prs.slide_width, prs.slide_height) != (1920 * EMU_PX, 1080 * EMU_PX)
 
 
+# ── 상단 타이틀 밴드 (render.py hero 헤더 대응: eyebrow + h1(scenario title) + sub(source)) ──
+
+def test_title_header_component(tmp_path):
+    data, out, _ = _export(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert f"{data['system']} · IF 흐름도" in text
+    for sc in data["scenarios"]:
+        assert sc["title"] in text
+    if data.get("source"):
+        assert data["source"] in text
+
+
+def test_title_header_topology(tmp_path):
+    data, out, _ = _export_topo(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert f"{data['system']} · IF 흐름도" in text
+    for sc in data["scenarios"]:
+        assert sc["title"] in text
+
+
+def test_title_header_sequence(tmp_path):
+    data, out, _ = _export_seq(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert f"{data['system']} · IF 흐름도" in text
+    for sc in data["scenarios"]:
+        assert sc["title"] in text
+
+
+def test_title_header_auto_mode(tmp_path):
+    data = json.loads(SRC.read_text(encoding="utf-8"))
+    out = tmp_path / "ca.pptx"
+    export_component(data, out, slide_size="auto")
+    text = _all_text(Presentation(str(out)))
+    assert f"{data['system']} · IF 흐름도" in text
+
+
+def test_title_band_above_content(tmp_path):
+    # 타이틀 밴드는 콘텐츠(노드) 위에 예약된다 — 겹침 방지
+    data, out, _ = _export(tmp_path)
+    slide = Presentation(str(out)).slides[0]
+    node_names = {nd["name"].split("\n")[0] for sc in data["scenarios"] for nd in sc["nodes"]}
+    title_tops = [sh.top for sh in slide.shapes
+                  if sh.has_text_frame and "IF 흐름도" in sh.text_frame.text]
+    node_tops = [sh.top for sh in slide.shapes
+                 if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_names]
+    assert title_tops and node_tops
+    assert min(title_tops) < min(node_tops)
+
+
 def test_slide_size_custom(tmp_path):
     data = json.loads(SEQ.read_text(encoding="utf-8"))
     out = tmp_path / "c1280.pptx"
