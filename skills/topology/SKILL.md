@@ -23,7 +23,8 @@ allowed-tools: Bash, Read, Write, Edit
   - **`fw`는 실제 방화벽 경계**에만. 인바운드 L4는 흐름 왼쪽, 아웃바운드 L4는 오른쪽에 배치해 좌→우로 통과하게 그린다(세그먼트가 노드를 지나가도록).
 - `zones[]`: `{ id, name }` — 소속 노드를 감싸는 **자동 bounding box**
 - `links[]`: `{ from, to }` — 번호·화살촉 없는 정적 배선(회색)
-- `scenarios[].segments[]`: `{ n?, from, to|self, label?, rail? }` — 번호 구간 오버레이
+- `scenarios[].segments[]`: `{ n?, from, to|self, label?, meta?, rail? }` — 번호 구간 오버레이
+  - **`label`=업무 흐름(무엇을 하는가), `meta`=기술 상세(프로토콜·포트·FW)**. 범례에서 label은 주 라인, meta는 흐린 부라인으로 분리 렌더 → 흐름 핵심이 기술 detail에 묻히지 않게. 프로토콜/포트/FW는 label에 섞지 말고 meta로.
 - `segments` 없는 시나리오 = **순수 구성도**(전 노드 중립). 있으면 경로 노드 강조 / 나머지 흐림.
 
 ## 매핑 결정 지점 (데이터 → JSON, 순서대로)

@@ -18,7 +18,8 @@
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
                     kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽, 벽돌) | l4(L4/VIP 로드밸런서, fan-out)
                     links[]: { from, to } — 번호·화살촉 없는 정적 배선(토폴로지 공통)
-                    scenarios[].segments[]: { n?, from, to|self, label?, rail? } — 번호 구간 오버레이
+                    scenarios[].segments[]: { n?, from, to|self, label?, meta?, rail? } — 번호 구간 오버레이
+                        label=업무 흐름(주), meta=기술 상세(프로토콜·포트·FW, 범례 흐린 부라인)
                     segments 없는 시나리오 = 순수 인프라 구성도
     [component 전용] 노드/존/엣지를 시나리오별로 선언(각 다이어그램 독립)
                     scenarios[].nodes[]: { id, name, port?, zone?, col/row 또는 x/y, kind? }
@@ -391,8 +392,24 @@ def _edge_pt(rect, tx, ty):
 
 
 def _wrap(text, width):
-    """긴 흐름 설명을 문자 수 기준 하드 줄바꿈 (한글은 공백이 적어 char 기준)."""
-    return [text[i:i + width] for i in range(0, len(text), width)] or [""]
+    """흐름 설명 줄바꿈 — 공백(단어) 경계 우선. width 초과 단어만 하드 분할해
+    'returnUrl'·'AJP 9109' 같은 토큰이 중간에서 끊기지 않게 한다."""
+    lines, cur = [], ""
+    for word in str(text).split(" "):
+        while len(word) > width:            # 단어 자체가 너무 길면 그 단어만 하드 분할
+            if cur:
+                lines.append(cur); cur = ""
+            lines.append(word[:width]); word = word[width:]
+        cand = word if not cur else cur + " " + word
+        if len(cand) <= width:
+            cur = cand
+        else:
+            if cur:
+                lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines or [""]
 
 
 def _t_badge_geom(sg, rects):
@@ -586,6 +603,12 @@ def render_svg_topology(data, scenario):
                 longest = max(longest, len(ln))
                 leg_lines.append(f'<text class="topo-legend-tx" x="{leg_x}" y="{ly}">{esc(ln)}</text>')
                 ly += T_LEG_LH
+            # meta = 기술 상세(프로토콜·포트·FW) — 업무 라인 아래 흐린 부라인
+            if sg.get("meta"):
+                for ln in _wrap(sg["meta"], T_LEG_WRAP - 3):
+                    longest = max(longest, len(ln) + 3)
+                    leg_lines.append(f'<text class="topo-legend-meta" x="{leg_x + 16}" y="{ly}">{esc(ln)}</text>')
+                    ly += T_LEG_LH - 3
             ly += 2
         maxy = ly
     else:
@@ -838,6 +861,7 @@ CSS = """
     .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
     .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
     .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    .topo-legend-meta{fill:var(--muted);font-size:10px;}
     /* ── 컴포넌트 뷰 ── */
     .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
     .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}

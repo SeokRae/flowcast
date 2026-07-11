@@ -508,3 +508,24 @@ def test_topology_l4_box_is_narrower_than_srv():
         m = re.search(r'data-id="' + nid + r'".*?<rect class="[^"]*"[^>]*width="([\d.]+)"', svg)
         return float(m.group(1))
     assert width_of("r1") < width_of("r2")  # l4 폭 < srv 폭
+
+
+# ── 흐름 설명 범례: 단어경계 줄바꿈 + meta 부라인 ──────────────
+
+def test_wrap_keeps_words_intact():
+    lines = _mod._wrap("가맹점 returnUrl 회신", 14)   # width가 단어를 담을 만큼 큼
+    toks = [t for l in lines for t in l.split(" ")]
+    assert "returnUrl" in toks               # 단어 중간에서 안 끊김
+
+
+def test_wrap_hard_splits_only_overlong_word():
+    lines = _mod._wrap("abcdefghij", 4)      # 한 단어가 width 초과 → 그것만 하드 분할
+    assert lines == ["abcd", "efgh", "ij"]
+
+
+def test_topology_meta_renders_muted_subline():
+    data = _topo()
+    data["scenarios"][1]["segments"][0]["meta"] = "HTTPS 443 · FW 09"
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "topo-legend-meta" in svg          # 흐린 부라인 클래스
+    assert "HTTPS 443" in svg                  # meta 내용 렌더
