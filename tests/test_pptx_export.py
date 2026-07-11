@@ -216,3 +216,83 @@ def test_sequence_self_and_note_render(tmp_path):
     assert export_sequence(data, out) == 1
     text = _all_text(Presentation(str(out)))
     assert "1. 요청" in text and "내부 처리" in text and "메모" in text
+
+
+# ── #17: 멀티라인 스타일 · topology 배지/범례 · 슬라이드 캔버스 ──
+
+EMU_PX = 9525
+
+
+def test_default_slide_size_wide_16_9(tmp_path):
+    for fn, src in ((export_component, SRC), (export_topology, TOPO), (export_sequence, SEQ)):
+        data = json.loads(src.read_text(encoding="utf-8"))
+        out = tmp_path / f"w-{src.stem}.pptx"
+        fn(data, out)
+        prs = Presentation(str(out))
+        assert prs.slide_width == 1920 * EMU_PX
+        assert prs.slide_height == 1080 * EMU_PX
+
+
+def test_slide_size_auto_is_content_fit(tmp_path):
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    out = tmp_path / "a.pptx"
+    export_topology(data, out, slide_size="auto")
+    prs = Presentation(str(out))
+    assert (prs.slide_width, prs.slide_height) != (1920 * EMU_PX, 1080 * EMU_PX)
+
+
+def test_slide_size_custom(tmp_path):
+    data = json.loads(SEQ.read_text(encoding="utf-8"))
+    out = tmp_path / "c1280.pptx"
+    export_sequence(data, out, slide_size="1280x720")
+    prs = Presentation(str(out))
+    assert prs.slide_width == 1280 * EMU_PX and prs.slide_height == 720 * EMU_PX
+
+
+def test_multiline_node_name_all_runs_styled(tmp_path):
+    # 멀티라인 이름 둘째 줄이 템플릿 기본값(18pt)으로 새지 않아야 — 전 문단 명시 스타일
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    data["nodes"][0]["name"] = "Alpha\n(부가 설명)"
+    out = tmp_path / "m.pptx"
+    export_topology(data, out)
+    prs = Presentation(str(out))
+    target = [sh for s in prs.slides for sh in s.shapes
+              if sh.has_text_frame and sh.text_frame.text.startswith("Alpha")]
+    assert target
+    for sh in target:
+        paras = sh.text_frame.paragraphs
+        assert len(paras) == 2
+        for p in paras:
+            assert p.runs and all(r.font.size is not None for r in p.runs)
+        assert paras[1].runs[0].font.size < paras[0].runs[0].font.size
+
+
+def test_topology_badges_and_legend(tmp_path):
+    # 세그먼트 라벨 전문은 엣지 중점이 아니라 번호 배지 + 하단 범례로
+    data, out, _ = _export_topo(tmp_path)
+    prs = Presentation(str(out))
+    text = _all_text(prs)
+    assert "흐름 설명" in text
+    for i, sc in enumerate(data["scenarios"]):
+        numbered = [sg for sg in (sc.get("segments") or []) if sg.get("n") is not None]
+        badges = [sh for sh in prs.slides[i].shapes
+                  if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and sh.has_text_frame
+                  and sh.text_frame.text.strip().isdigit()]
+        assert len(badges) == len(numbered)
+        for sg in numbered:
+            if sg.get("label"):
+                # 범례 prefix "n. 라벨" — wrap(46자) 감안 앞부분만 확인
+                assert f'{sg["n"]}. {sg["label"]}'[:20] in text
+
+
+def test_font_scale_follows_canvas(tmp_path):
+    # 작은 예제 → wide 캔버스 업스케일 — 노드 폰트가 base(10pt)보다 커져야
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    out = tmp_path / "f.pptx"
+    export_topology(data, out)
+    prs = Presentation(str(out))
+    node_names = {n["name"] for n in data["nodes"]}
+    sizes = [sh.text_frame.paragraphs[0].runs[0].font.size.pt
+             for s in prs.slides for sh in s.shapes
+             if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_names]
+    assert sizes and all(sz > 10 for sz in sizes)

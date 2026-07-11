@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""flowcast PPT export (B-out) — component 뷰 JSON → 편집 가능한 네이티브 .pptx.
+"""flowcast PPT export (B-out) — 흐름도 뷰 JSON → 편집 가능한 네이티브 .pptx.
 
 python-pptx 는 **export 경로 전용 선택적 의존성**이다(코어 render/import 는 stdlib 유지).
 미설치 시 친절히 안내하고 종료한다.
 
-좌표는 render.py 의 component 배치 로직(`_c_rect`·`_edge_pt`·`C_*` 상수)을 **그대로 재사용**해
-HTML/PDF 와 동일한 위치로 도형을 찍는다(재구현 금지). px → EMU(×9525) 변환.
+좌표는 render.py 의 배치 로직(`_c_rect`·`_t_rect`·`_edge_pt`·`layout_sequence`)을 **그대로
+재사용**해 HTML/PDF 와 동일한 상대 위치로 도형을 찍는다(재구현 금지). px → EMU(×9525) 변환.
+
+슬라이드 캔버스(기본 `wide` = 1920×1080px, 16:9): 콘텐츠를 uniform scale 로 fit(업스케일
+포함)하고 중앙 배치한다. 폰트도 같은 배율로 스케일(0.5pt 반올림, 최소 6pt).
+`--slide-size auto` 는 기존 content-fit(콘텐츠 크기 = 슬라이드 크기) 동작.
 
 사용법:
-    python3 scripts/pptx_export.py {view.json} [-o {out.pptx}]
+    python3 scripts/pptx_export.py {view.json} [-o {out.pptx}] [--slide-size wide|auto|{W}x{H}]
 
 지원: sequence · component · topology 3뷰 (view 필드로 디스패치, 미지정=sequence).
-- component/topology: 노드 → 둥근 사각형 + 텍스트, 존 → 배경 사각형, 엣지 → 커넥터 + 라벨
+- component: 노드 → 둥근 사각형 + 텍스트, 존 → 배경 사각형, 엣지 → 커넥터 + 라벨
+- topology: 위와 동일 + 세그먼트 라벨은 번호 배지(원) + 하단 "흐름 설명" 범례 (render.py 패리티)
 - sequence: 액터 박스 + 라이프라인 + 액티베이션 바 + 메시지 커넥터(kind별 색) + note 박스
 """
 
@@ -22,7 +27,10 @@ import sys
 from pathlib import Path
 
 PX_TO_EMU = 9525   # 1px @96dpi
-PAD_PX = 20        # 슬라이드 여백(px)
+PAD_PX = 20        # auto(content-fit) 슬라이드 여백(px)
+FIT_MARGIN = 60    # 고정 캔버스 fit 여백(px)
+SLIDE_PRESETS = {"wide": (1920, 1080)}   # 캔버스 프리셋 (px) — 기본 wide
+ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 
 FILL = {"comp": (0xE6, 0xF4, 0xF1), "ext": (0xFD, 0xF3, 0xE7)}
 LINE = {"comp": (0x2C, 0x7A, 0x7B), "ext": (0xB7, 0x79, 0x1F)}
@@ -62,6 +70,59 @@ def _import_pptx():
         return False
 
 
+def _parse_slide_size(opt):
+    """'wide'|'auto'|'{W}x{H}' → (W, H) px. auto 는 None(content-fit)."""
+    if opt == "auto":
+        return None
+    if opt in SLIDE_PRESETS:
+        return SLIDE_PRESETS[opt]
+    try:
+        w, h = str(opt).lower().split("x", 1)
+        return int(w), int(h)
+    except ValueError:
+        raise SystemExit(f"--slide-size 형식 오류: {opt!r} (wide|auto|{{W}}x{{H}})")
+
+
+def _fit(content_w, content_h, size):
+    """콘텐츠(px)를 캔버스에 uniform scale 로 fit — (slide_w, slide_h, scale, dx, dy).
+
+    dx/dy 는 콘텐츠-px 단위 중앙 배치 오프셋: 스케일된 emu 변환에서 (좌표 + dx) * scale.
+    size=None(auto) 은 content-fit — scale 1, 여백 PAD_PX.
+    """
+    if size is None:
+        return content_w + 2 * PAD_PX, content_h + 2 * PAD_PX, 1.0, PAD_PX, PAD_PX
+    W, H = size
+    s = min((W - 2 * FIT_MARGIN) / max(content_w, 1),
+            (H - 2 * FIT_MARGIN) / max(content_h, 1))
+    return W, H, s, (W / s - content_w) / 2, (H / s - content_h) / 2
+
+
+def _fpt(base, s):
+    """폰트 pt 를 배율 s 로 스케일 — 0.5pt 반올림, 최소 6pt."""
+    return max(6.0, round(base * s * 2) / 2)
+
+
+def _fill_lines(tf, name, s, size=10, sub_size=8,
+                color=(0x1A, 0x20, 0x2C), sub_color=(0x4B, 0x55, 0x63), bold=True):
+    """멀티라인 이름을 문단별로 채움 — 모든 문단에 명시적 스타일(첫 줄 base·bold, 이후 sub).
+
+    `tf.text = "a\\nb"` 는 문단을 쪼개는데 기존 코드가 paragraphs[0]만 스타일링해
+    둘째 줄부터 템플릿 기본값(18pt)으로 새던 버그의 공통 해소 지점.
+    """
+    from pptx.util import Pt
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN
+    for i, ln in enumerate(str(name).split("\n")):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.CENTER
+        r = p.add_run()
+        r.text = ln
+        first = i == 0
+        r.font.size = Pt(_fpt(size if first else sub_size, s))
+        r.font.bold = bold and first
+        r.font.color.rgb = RGBColor(*(color if first else sub_color))
+
+
 def _scene_geometry(R, scenario):
     """시나리오의 노드 사각형·존 박스·전체 bounding box (px)."""
     nodes = scenario.get("nodes") or []
@@ -88,7 +149,7 @@ def _scene_geometry(R, scenario):
     return rects, zone_boxes, bbox
 
 
-def export_component(data, out_path):
+def export_component(data, out_path, slide_size="wide"):
     """component 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장)."""
     from pptx import Presentation
     from pptx.util import Emu, Pt
@@ -100,15 +161,16 @@ def export_component(data, out_path):
     R = _load_render()
     scenarios = data.get("scenarios") or []
 
-    # 슬라이드 크기 = 시나리오 중 최대 bounding box + 여백 (px→EMU)
+    # 캔버스 = 시나리오 중 최대 bounding box 를 fit (좌표·크기는 스케일된 emu 로 변환)
     geoms = [_scene_geometry(R, sc) for sc in scenarios]
     max_w = max(((b[2] - b[0]) for _, _, b in geoms), default=400)
     max_h = max(((b[3] - b[1]) for _, _, b in geoms), default=300)
-    emu = lambda px: Emu(int(round(px * PX_TO_EMU)))
+    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
+    emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
 
     prs = Presentation()
-    prs.slide_width = emu(max_w + 2 * PAD_PX)
-    prs.slide_height = emu(max_h + 2 * PAD_PX)
+    prs.slide_width = Emu(SW * PX_TO_EMU)
+    prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
 
     def _arrow(connector, tail=True, head=False):
@@ -120,7 +182,7 @@ def export_component(data, out_path):
 
     for scenario, (rects, zone_boxes, bbox) in zip(scenarios, geoms):
         minx, miny = bbox[0], bbox[1]
-        ox, oy = -minx + PAD_PX, -miny + PAD_PX   # 원점 이동
+        ox, oy = -minx + dx, -miny + dy   # 원점 이동 + 중앙 배치
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
 
@@ -136,7 +198,7 @@ def export_component(data, out_path):
             tf = zb.text_frame
             tf.text = z["name"]
             tf.paragraphs[0].alignment = PP_ALIGN.RIGHT
-            tf.paragraphs[0].runs[0].font.size = Pt(9)
+            tf.paragraphs[0].runs[0].font.size = Pt(_fpt(9, s))
             tf.paragraphs[0].runs[0].font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
             tf.word_wrap = True
             zb.text_frame.vertical_anchor = MSO_ANCHOR.TOP
@@ -155,18 +217,13 @@ def export_component(data, out_path):
             tf = box.text_frame
             tf.word_wrap = True
             tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-            tf.text = nd["name"]
-            p0 = tf.paragraphs[0]
-            p0.alignment = PP_ALIGN.CENTER
-            p0.runs[0].font.size = Pt(11)
-            p0.runs[0].font.bold = True
-            p0.runs[0].font.color.rgb = RGBColor(0x1A, 0x20, 0x2C)  # 밝은 fill 위 가독성
+            _fill_lines(tf, nd["name"], s, size=11)   # 밝은 fill 위 가독성
             if nd.get("port"):
                 pp = tf.add_paragraph()
                 pp.alignment = PP_ALIGN.CENTER
                 r = pp.add_run()
                 r.text = f"Port: {nd['port']}"
-                r.font.size = Pt(8)
+                r.font.size = Pt(_fpt(8, s))
                 r.font.color.rgb = RGBColor(0x4B, 0x55, 0x63)
 
         # 엣지: 경계 앵커 사이 직선 커넥터 + 라벨
@@ -200,20 +257,23 @@ def export_component(data, out_path):
                 tf.word_wrap = True
                 tf.text = " ".join(parts)
                 tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-                tf.paragraphs[0].runs[0].font.size = Pt(9)
+                tf.paragraphs[0].runs[0].font.size = Pt(_fpt(9, s))
                 if proto:
                     pp = tf.add_paragraph()
                     pp.alignment = PP_ALIGN.CENTER
                     r = pp.add_run()
                     r.text = proto
-                    r.font.size = Pt(8)
+                    r.font.size = Pt(_fpt(8, s))
 
     prs.save(str(out_path))
     return len(scenarios)
 
 
-def export_topology(data, out_path):
-    """topology 뷰 JSON → .pptx. nodes/links/zones 공유(모든 슬라이드) + 시나리오별 segments 오버레이."""
+def export_topology(data, out_path, slide_size="wide"):
+    """topology 뷰 JSON → .pptx. nodes/links/zones 공유(모든 슬라이드) + 시나리오별 segments 오버레이.
+
+    세그먼트 라벨은 render.py 패리티 — 엣지엔 원형 번호 배지만, 전문은 하단 "흐름 설명" 범례.
+    """
     from pptx import Presentation
     from pptx.util import Emu, Pt
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
@@ -248,12 +308,30 @@ def export_topology(data, out_path):
         ys += [zy1, zy2]
     minx, miny = (min(xs), min(ys)) if xs else (0, 0)
     maxx, maxy = (max(xs), max(ys)) if xs else (0, 0)
-    ox, oy = -minx + PAD_PX, -miny + PAD_PX
 
-    emu = lambda px: Emu(int(round(px * PX_TO_EMU)))
+    # 흐름 설명 범례(시나리오별) — render.py 와 동일한 줄바꿈, 최대 시나리오 기준 높이 선반영
+    leg_x, leg_y = minx, maxy + 30
+    legends, longest = [], 0
+    for sc in scenarios:
+        lines = []
+        for sg in sc.get("segments") or []:
+            if not sg.get("label"):
+                continue
+            prefix = f'{sg["n"]}. ' if sg.get("n") is not None else ""
+            lines += R._wrap(prefix + sg["label"], R.T_LEG_WRAP)
+        legends.append(lines)
+        longest = max([longest] + [len(ln) for ln in lines])
+    max_leg = max((len(ls) for ls in legends), default=0)
+    if max_leg:
+        maxy = leg_y + (max_leg + 1) * R.T_LEG_LH + 8   # 헤더 1줄 + 본문
+        maxx = max(maxx, leg_x + longest * 7.2)
+
+    SW, SH, s, dx, dy = _fit(maxx - minx, maxy - miny, _parse_slide_size(slide_size))
+    ox, oy = -minx + dx, -miny + dy
+    emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
     prs = Presentation()
-    prs.slide_width = emu((maxx - minx) + 2 * PAD_PX)
-    prs.slide_height = emu((maxy - miny) + 2 * PAD_PX)
+    prs.slide_width = Emu(SW * PX_TO_EMU)
+    prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
 
     def _anchor(r1, r2):
@@ -261,15 +339,27 @@ def export_topology(data, out_path):
         c2 = (r2[0] + r2[2] / 2, r2[1] + r2[3] / 2)
         return R._edge_pt(r1, *c2), R._edge_pt(r2, *c1)
 
-    def _label(mx, my, text):
-        tb = shapes.add_textbox(emu(mx + ox - 60), emu(my + oy - 10), emu(120), emu(20))
-        tf = tb.text_frame
-        tf.word_wrap = True
-        tf.text = text
-        tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-        tf.paragraphs[0].runs[0].font.size = Pt(9)
+    def _badge(bx, by, n):
+        """원형 번호 배지 (render.py r=11 패리티) — accent 채움 + 흰 숫자."""
+        b = shapes.add_shape(MSO_SHAPE.OVAL, emu(bx + ox - 11), emu(by + oy - 11),
+                             emu(22), emu(22))
+        b.fill.solid()
+        b.fill.fore_color.rgb = RGBColor(*ACCENT)
+        b.line.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        b.shadow.inherit = False
+        tf = b.text_frame
+        tf.word_wrap = False
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        r = p.add_run()
+        r.text = str(n)
+        r.font.size = Pt(_fpt(8, s))
+        r.font.bold = True
+        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
-    for scenario in scenarios:
+    for scenario, leg_lines in zip(scenarios, legends):
         segments = scenario.get("segments") or []
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
@@ -280,10 +370,13 @@ def export_topology(data, out_path):
             zb.fill.background()
             zb.line.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
             zb.shadow.inherit = False
-            zb.text_frame.text = z["name"]
-            zb.text_frame.vertical_anchor = MSO_ANCHOR.TOP
-            zb.text_frame.paragraphs[0].runs[0].font.size = Pt(9)
-            zb.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+            tf = zb.text_frame
+            tf.text = z["name"]
+            tf.vertical_anchor = MSO_ANCHOR.TOP
+            p0 = tf.paragraphs[0]
+            p0.alignment = PP_ALIGN.LEFT   # render.py 존 라벨 top-left 패리티
+            p0.runs[0].font.size = Pt(_fpt(9, s))
+            p0.runs[0].font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
 
         for nid, (x, y, w, h) in rects.items():
             nd = node_by_id[nid]
@@ -296,11 +389,7 @@ def export_topology(data, out_path):
             tf = box.text_frame
             tf.word_wrap = True
             tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-            tf.text = nd["name"]
-            tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-            tf.paragraphs[0].runs[0].font.size = Pt(10)
-            tf.paragraphs[0].runs[0].font.bold = True
-            tf.paragraphs[0].runs[0].font.color.rgb = RGBColor(0x1A, 0x20, 0x2C)
+            _fill_lines(tf, nd["name"], s, size=10)
 
         # 정적 배선(links) — 화살촉 없는 회색선, 모든 슬라이드 공통
         for lk in links:
@@ -312,19 +401,16 @@ def export_topology(data, out_path):
                                       emu(bx + ox), emu(by + oy))
             ln.line.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
 
-        # 구간 오버레이(segments) — 화살촉 + 번호 라벨
+        # 구간 오버레이(segments) — 화살촉 + 원형 번호 배지 (전문 라벨은 범례로)
         for sg in segments:
             r1 = rects.get(sg.get("from"))
             if not r1:
                 continue
-            parts = ([f"({sg['n']})"] if sg.get("n") is not None else []) + \
-                    ([sg["label"]] if sg.get("label") else [])
-            label = " ".join(parts)
             to = sg.get("to")
             if sg.get("self") or not to or to not in rects:
-                # self·대상없음 → 노드 위 라벨만 (rail/self 고급 라우팅은 범위 밖)
-                if label:
-                    _label(r1[0] + r1[2] / 2, r1[1] - 10, label)
+                # self·대상없음 → 배지만 노드 위에 (rail/self 커넥터 라우팅은 범위 밖)
+                if sg.get("n") is not None:
+                    _badge(r1[0] + r1[2] / 2, r1[1] - 34, sg["n"])
                 continue
             r2 = rects[to]
             (ax, ay), (bx, by) = _anchor(r1, r2)
@@ -333,14 +419,38 @@ def export_topology(data, out_path):
             conn.line.color.rgb = RGBColor(0x33, 0x41, 0x55)
             ln = conn.line._get_or_add_ln()
             ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
-            if label:
-                _label((ax + bx) / 2, (ay + by) / 2, label)
+            if sg.get("n") is not None:
+                if sg.get("rail") is not None:
+                    _badge((ax + bx) / 2, float(sg["rail"]), sg["n"])
+                else:
+                    # render.py 패리티 — 중점이 아닌 0.45/0.55 보간(교차 구간 배지 분산)
+                    _badge(ax * 0.45 + bx * 0.55, ay * 0.45 + by * 0.55, sg["n"])
+
+        # 흐름 설명 범례 (render.py 패리티 — 다이어그램 하단)
+        if leg_lines:
+            tb = shapes.add_textbox(emu(leg_x + ox), emu(leg_y + oy - 14),
+                                    emu(max(longest * 7.2, 200)),
+                                    emu((len(leg_lines) + 1) * R.T_LEG_LH + 12))
+            tf = tb.text_frame
+            tf.word_wrap = True
+            hp = tf.paragraphs[0]
+            hr = hp.add_run()
+            hr.text = "흐름 설명"
+            hr.font.size = Pt(_fpt(9, s))
+            hr.font.bold = True
+            hr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
+            for ln_txt in leg_lines:
+                p = tf.add_paragraph()
+                r = p.add_run()
+                r.text = ln_txt
+                r.font.size = Pt(_fpt(9, s))
+                r.font.color.rgb = RGBColor(0x1B, 0x26, 0x35)
 
     prs.save(str(out_path))
     return len(scenarios)
 
 
-def export_sequence(data, out_path):
+def export_sequence(data, out_path, slide_size="wide"):
     """sequence 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장).
 
     render.py 의 layout_sequence() 기하를 그대로 소비 — actor 박스·라이프라인·
@@ -360,17 +470,20 @@ def export_sequence(data, out_path):
     layouts = [R.layout_sequence(data, sc) for sc in scenarios]
     max_w = max((L["width"] for L in layouts), default=400)
     max_h = max((L["height"] for L in layouts), default=300)
-    emu = lambda px: Emu(int(round(px * PX_TO_EMU)))
+    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
+    emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))   # 크기·길이
+    X = lambda px: emu(px + dx)                            # 위치(x) — 중앙 배치 오프셋
+    Y = lambda px: emu(px + dy)                            # 위치(y)
     BOX_W, BOX_H, ACT_W, ZONE_H = R.BOX_W, R.BOX_H, R.ACT_W, R.ZONE_H
 
     prs = Presentation()
-    prs.slide_width = emu(max_w)
-    prs.slide_height = emu(max_h)
+    prs.slide_width = Emu(SW * PX_TO_EMU)
+    prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
 
     def _labels(shapes, x, y, w, h, specs, align, anchor):
         """specs: [(text, size_pt, rgb, bold)] → 문단별 텍스트박스."""
-        tb = shapes.add_textbox(emu(x), emu(y), emu(w), emu(h))
+        tb = shapes.add_textbox(X(x), Y(y), emu(w), emu(h))
         tf = tb.text_frame
         tf.word_wrap = True
         tf.vertical_anchor = anchor
@@ -379,7 +492,7 @@ def export_sequence(data, out_path):
             p.alignment = align
             r = p.add_run()
             r.text = text
-            r.font.size = Pt(size)
+            r.font.size = Pt(_fpt(size, s))
             r.font.color.rgb = RGBColor(*rgb)
             r.font.bold = bold
 
@@ -396,7 +509,7 @@ def export_sequence(data, out_path):
         # 존 밴드(배경)
         for z in L["zones"]:
             zx1, zx2 = z["x1"], z["x2"]
-            zb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(zx1), emu(zone_y),
+            zb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, X(zx1), Y(zone_y),
                                   emu(zx2 - zx1), emu(ZONE_H))
             zb.fill.solid()
             zb.fill.fore_color.rgb = RGBColor(*SEQ_ACTOR_FILL)
@@ -406,22 +519,22 @@ def export_sequence(data, out_path):
             tf.vertical_anchor = MSO_ANCHOR.MIDDLE
             tf.text = z["name"]
             tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-            tf.paragraphs[0].runs[0].font.size = Pt(9)
+            tf.paragraphs[0].runs[0].font.size = Pt(_fpt(9, s))
             tf.paragraphs[0].runs[0].font.bold = True
             tf.paragraphs[0].runs[0].font.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
 
         # 라이프라인(세로 점선)
         for a in L["actors"]:
             x = a["x"]
-            ll = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(x), emu(box_y + BOX_H),
-                                      emu(x), emu(bottom))
+            ll = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, X(x), Y(box_y + BOX_H),
+                                      X(x), Y(bottom))
             ll.line.color.rgb = RGBColor(*SEQ_LIFELINE)
-            ll.line.width = Pt(1)
+            ll.line.width = Pt(max(0.75, s))
             ll.line.dash_style = MSO_LINE_DASH_STYLE.DASH
 
         # 액티베이션 바
         for b in L["bars"]:
-            ab = shapes.add_shape(MSO_SHAPE.RECTANGLE, emu(b["x"]), emu(b["y"]),
+            ab = shapes.add_shape(MSO_SHAPE.RECTANGLE, X(b["x"]), Y(b["y"]),
                                   emu(ACT_W), emu(b["h"]))
             ab.fill.solid()
             ab.fill.fore_color.rgb = RGBColor(*SEQ_ACT_FILL)
@@ -431,7 +544,7 @@ def export_sequence(data, out_path):
         # 액터 박스(포트/라인 2단)
         for a in L["actors"]:
             x = a["x"]
-            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x - BOX_W / 2), emu(box_y),
+            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, X(x - BOX_W / 2), Y(box_y),
                                    emu(BOX_W), emu(BOX_H))
             box.fill.solid()
             box.fill.fore_color.rgb = RGBColor(*SEQ_ACTOR_FILL)
@@ -440,25 +553,21 @@ def export_sequence(data, out_path):
             tf = box.text_frame
             tf.word_wrap = True
             tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-            tf.text = a["name"]
-            p0 = tf.paragraphs[0]
-            p0.alignment = PP_ALIGN.CENTER
-            p0.runs[0].font.size = Pt(11)
-            p0.runs[0].font.bold = True
-            p0.runs[0].font.color.rgb = RGBColor(*SEQ_ACTOR_LINE)
+            _fill_lines(tf, a["name"], s, size=11, sub_size=8,
+                        color=SEQ_ACTOR_LINE, sub_color=SEQ_MUTED)
             if a["attrs"]:
                 pp = tf.add_paragraph()
                 pp.alignment = PP_ALIGN.CENTER
                 r = pp.add_run()
                 r.text = a["attrs"]
-                r.font.size = Pt(8)
+                r.font.size = Pt(_fpt(8, s))
                 r.font.color.rgb = RGBColor(*SEQ_MUTED)
 
         # 메시지 / 노트
         for st in L["steps"]:
             if st["type"] == "note":
                 x1, x2, y, h, lines = st["x1"], st["x2"], st["y"], st["h"], st["lines"]
-                nb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x1), emu(y),
+                nb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, X(x1), Y(y),
                                       emu(x2 - x1), emu(h))
                 nb.fill.solid()
                 nb.fill.fore_color.rgb = RGBColor(*SEQ_NOTE_FILL)
@@ -475,14 +584,14 @@ def export_sequence(data, out_path):
             bold = kind in ("req", "self")
             if st["self"]:
                 sx = st["self_x"]
-                conn = shapes.add_connector(MSO_CONNECTOR.ELBOW, emu(sx), emu(y - 14),
-                                            emu(sx + 44), emu(y))
+                conn = shapes.add_connector(MSO_CONNECTOR.ELBOW, X(sx), Y(y - 14),
+                                            X(sx + 44), Y(y))
                 _arrow(conn, rgb)
                 lbl_x, lbl_align = sx + 52, PP_ALIGN.LEFT
             else:
                 x1, x2 = st["x1"], st["x2"]
-                conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(x1), emu(y),
-                                            emu(x2), emu(y))
+                conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, X(x1), Y(y),
+                                            X(x2), Y(y))
                 _arrow(conn, rgb)
                 lbl_x, lbl_align = mid - 70, PP_ALIGN.CENTER
 
@@ -511,6 +620,8 @@ def main():
     ap = argparse.ArgumentParser(description="flowcast 흐름도 → 편집가능 .pptx export (sequence·component·topology)")
     ap.add_argument("data", help="흐름도 뷰 JSON 경로 (view: sequence|component|topology)")
     ap.add_argument("-o", "--out", help="출력 .pptx (기본: 입력과 같은 위치 .pptx)")
+    ap.add_argument("--slide-size", default="wide",
+                    help="슬라이드 캔버스: wide(1920x1080, 기본)|auto(content-fit)|{W}x{H} px")
     args = ap.parse_args()
 
     if not _import_pptx():
@@ -533,7 +644,7 @@ def main():
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".pptx")
-    n = dispatch[view](data, out)
+    n = dispatch[view](data, out, slide_size=args.slide_size)
     print(f"pptx: {out} (슬라이드 {n})")
     return 0
 
