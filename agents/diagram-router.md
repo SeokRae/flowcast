@@ -27,23 +27,26 @@ model: opus
 
 ## PPT 입력 (.pptx)
 
-`source`가 `.pptx` 경로면, 수동 판독 대신 번들 파서로 draft를 먼저 뽑는다:
+`source`가 `.pptx` 경로면, 수동 판독 대신 번들 파서로 draft를 먼저 뽑는다. draft는 `{out_dir}/_workspace/`에 남긴다 — 고정 `/tmp` 경로는 동시 세션·다중 덱에서 충돌한다. (`${CLAUDE_PLUGIN_ROOT}` 미설정 환경이면 플러그인 설치 루트를 직접 찾아 쓴다.)
 
 ```bash
-python3 "{플러그인루트}/scripts/pptx_import.py" "{deck.pptx}" -o /tmp/flowcast-draft.json
+mkdir -p "{out_dir}/_workspace"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_import.py" "{deck.pptx}" -o "{out_dir}/_workspace/draft.json"
 ```
 
-draft는 슬라이드별 `shapes[]`(sid·text·x·y·w·h) + `connectors[]`(glue로 방향이 확증된 것). 이를 근거로:
+draft는 슬라이드별 `shapes[]`(sid·text·x·y·w·h — 그룹 좌표 보정 완료) + `connectors[]`(glue로 방향이 확증된 것) + `connectors_loose[]`(glue 미확증 — 시작→끝점 좌표 x1·y1·x2·y2, 부분 glue st/en). 이를 근거로:
 
 - **슬라이드 1장 = 다이어그램 단위 1개**(기본)로 쪼갠다.
 - 각 슬라이드의 shapes/connectors 성격으로 뷰 판별(시간순 배치→sequence, 존/공간 배치→topology, 포트·프로토콜 박스→component).
-- shapes/connectors 원문을 unit의 `data`에 담아 drawer가 좌표·라벨을 정제하게 한다.
-- glue 없는 커넥터는 draft에서 빠진다 → 방향은 drawer가 기하/라벨로 보완(애매하면 확인).
+- shapes/connectors/connectors_loose 원문을 unit의 `data`에 담아 drawer가 좌표·라벨을 정제하게 한다.
+- `connectors_loose`의 연결·방향은 drawer가 끝점-도형 근접 매칭과 라벨로 보완(애매하면 확인).
 
 ## 입력 프로토콜
 
 ```
-{ "source": "원문 텍스트 또는 파일 경로(.pptx 포함)", "hint": "사용자가 준 패턴/뷰 힌트(선택)" }
+{ "source": "원문 텍스트 또는 파일 경로(.pptx 포함)",
+  "hint": "사용자가 준 패턴/뷰 힌트(선택)",
+  "out_dir": "중간 산출물(_workspace) 기준 디렉토리(절대경로)" }
 ```
 
 ## 출력 프로토콜 (drawer 입력과 정합 — 스키마 고정)

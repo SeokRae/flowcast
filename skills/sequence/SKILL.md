@@ -41,10 +41,10 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## 렌더
 
-플러그인 루트(이 SKILL.md 기준 두 단계 상위)의 렌더러를 쓴다:
+플러그인 렌더러를 쓴다 — `${CLAUDE_PLUGIN_ROOT}`(플러그인 설치 루트 환경변수)가 있으면 그대로, 없으면 이 SKILL.md 기준 두 단계 상위가 플러그인 루트다:
 
 ```bash
-python3 "{플러그인루트}/scripts/render.py" "{out_dir}/{name}.json" --pdf
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json" --pdf
 ```
 
 검증 에러(exit 1)면 메시지대로 JSON 수정 후 재렌더. 번호 중복 등 warning은 원문 보존 시 허용.

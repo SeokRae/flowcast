@@ -17,6 +17,8 @@ model: opus
 - 스키마·질의 대본·렌더·파일링 절차는 **전적으로 그 뷰 스킬을 따른다**.
 - **라벨·포트·프로토콜은 원문 그대로 보존**(오타 포함). 축약·병합·추정 금지.
 - 원본 파일이 있으면 뷰 스킬의 **원본 대조 검증** 루프를 수행한다.
+- PPT draft의 `connectors_loose[]`(glue 미확증 커넥터)는 끝점-도형 근접 매칭과 주변 라벨(별도 텍스트박스 shape)로 연결·방향을 추정한다 — 애매하면 `needs_input`으로 확인을 넘긴다.
+- **재호출(편집)**: 기존 `{out_dir}/{name}.json`이 이미 있으면 처음부터 새로 쓰지 않는다 — 그 JSON을 기준으로 요청된 수정만 반영해 재렌더한다.
 
 ## 입력 프로토콜 (router 출력 units[] 원소 + 실행 파라미터)
 
@@ -34,10 +36,10 @@ model: opus
 
 ## PPT export (선택 — `export: true`)
 
-render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치):
+render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치). `${CLAUDE_PLUGIN_ROOT}` 미설정 환경이면 로드한 뷰 스킬의 SKILL.md 기준 두 단계 상위가 플러그인 루트다:
 
 ```bash
-python3 "{플러그인루트}/scripts/pptx_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.pptx"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.pptx"
 ```
 
 `pptx_export.py`는 render.py 좌표를 재사용해 3뷰 모두 편집가능 도형으로 찍는다. **python-pptx는 export 전용 선택적 의존성**이라 미설치 환경에선 exit 2 + 안내를 낸다 — 이때는 export만 건너뛰고(`pptx: null`, `warnings`에 "python-pptx 미설치로 export 생략") **unit 을 실패로 보지 않는다**(html/md 는 이미 생성됨). exit 0이면 `pptx` 경로를 반환에 담는다.

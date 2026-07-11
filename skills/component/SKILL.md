@@ -41,8 +41,10 @@ allowed-tools: Bash, Read, Write, Edit
 ## 렌더
 
 ```bash
-python3 "{플러그인루트}/scripts/render.py" "{out_dir}/{name}.json" --pdf
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json" --pdf
 ```
+
+(`${CLAUDE_PLUGIN_ROOT}` 미설정 시 이 SKILL.md 기준 두 단계 상위가 플러그인 루트.)
 
 검증 에러(exit 1)면 수정 후 재렌더. component HTML도 노드 드래그 → 📋 좌표 복사 → `x`/`y` 반영 재렌더로 배치 재현.
 
