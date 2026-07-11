@@ -10,11 +10,18 @@
 
 draft 스키마:
     { source, slide_size:{cx,cy}, scale,
-      slides:[ { index, shapes:[{sid,text,x,y,w,h}], connectors:[{from,to}] } ] }
+      slides:[ { index,
+                 shapes:[{sid,text,x,y,w,h}],
+                 connectors:[{from,to}],
+                 connectors_loose:[{sid,x1,y1,x2,y2,st?,en?}] } ] }
 
 - 좌표/크기 단위는 원본 EMU에 scale 을 곱한 값. scale 미지정 시 canvas/slide_cx 로 auto-fit.
-- connectors 는 커넥터 도형(p:cxnSp)의 stCxn/endCxn glue(도형 id 참조)에서만 확정한다
-  (방향이 XML로 확증되는 경우). glue 없는 커넥터는 방향 불명이라 제외 — drawer 가 기하로 보완.
+- connectors 는 커넥터 도형(p:cxnSp)의 stCxn/endCxn glue(도형 id 참조)가 양쪽 다 있어
+  방향이 XML로 확증되는 것. glue 가 없거나 한쪽뿐인 커넥터는 connectors_loose 로 낸다 —
+  bbox+flipH/flipV 로 계산한 시작(x1,y1)→끝(x2,y2) 점과 부분 glue(st/en)를 담아,
+  drawer 가 끝점-도형 근접 매칭과 라벨(별도 텍스트박스 shape)로 방향·연결을 보완한다.
+- 그룹(p:grpSp) 내부 도형·커넥터는 그룹 자식 좌표계(chOff/chExt) 변환을 보정해
+  슬라이드 절대 좌표로 낸다(중첩 그룹 포함).
 """
 
 import argparse
@@ -45,15 +52,19 @@ def _text_of(sp):
     return "\n".join(x for x in paras).strip()
 
 
-def _xfrm(sp):
-    """도형 위치/크기 (EMU) — a:off/a:ext. 없으면 None."""
-    off = sp.find(f".//{{{A}}}off")
-    ext = sp.find(f".//{{{A}}}ext")
+def _xfrm(el):
+    """도형/커넥터 위치·크기·반전 (EMU) — (x, y, w, h, flipH, flipV). 없으면 None."""
+    xf = el.find(f".//{{{A}}}xfrm")
+    if xf is None:
+        return None
+    off = xf.find(f"{{{A}}}off")
+    ext = xf.find(f"{{{A}}}ext")
     if off is None or ext is None:
         return None
     return (
         int(off.get("x", 0)), int(off.get("y", 0)),
         int(ext.get("cx", 0)), int(ext.get("cy", 0)),
+        xf.get("flipH") == "1", xf.get("flipV") == "1",
     )
 
 
@@ -62,32 +73,95 @@ def _shape_id(el):
     return cnv.get("id") if cnv is not None else None
 
 
+def _group_xfrm(grp):
+    """그룹 좌표 변환 성분 (gx, gy, cx0, cy0, kx, ky) — 자식 좌표 → 부모 좌표.
+
+    x' = gx + (x - cx0) * kx. chOff/chExt 가 없으면 자식 좌표 = 부모 좌표(항등)로 본다.
+    """
+    xf = grp.find(f"{{{P}}}grpSpPr/{{{A}}}xfrm")
+    if xf is None:
+        return None
+    off = xf.find(f"{{{A}}}off")
+    ext = xf.find(f"{{{A}}}ext")
+    if off is None or ext is None:
+        return None
+    gx, gy = int(off.get("x", 0)), int(off.get("y", 0))
+    gcx, gcy = int(ext.get("cx", 0)), int(ext.get("cy", 0))
+    ch_off = xf.find(f"{{{A}}}chOff")
+    ch_ext = xf.find(f"{{{A}}}chExt")
+    cx0 = int(ch_off.get("x", 0)) if ch_off is not None else gx
+    cy0 = int(ch_off.get("y", 0)) if ch_off is not None else gy
+    ccx = int(ch_ext.get("cx", 0)) if ch_ext is not None else gcx
+    ccy = int(ch_ext.get("cy", 0)) if ch_ext is not None else gcy
+    kx = gcx / ccx if ccx else 1.0
+    ky = gcy / ccy if ccy else 1.0
+    return gx, gy, cx0, cy0, kx, ky
+
+
+def _walk(parent, tf, scale, shapes, connectors, loose):
+    """spTree 를 순회하며 도형·커넥터 수집. tf=(ox,oy,sx,sy): X = ox + sx*x (그룹 변환 합성)."""
+    ox, oy, sx, sy = tf
+    for el in parent:
+        tag = el.tag
+        if tag == f"{{{P}}}sp":
+            box = _xfrm(el)
+            if box is None:
+                continue
+            x, y, w, h, _, _ = box
+            shapes.append({
+                "sid": _shape_id(el),
+                "text": _text_of(el),
+                "x": round((ox + sx * x) * scale, 1),
+                "y": round((oy + sy * y) * scale, 1),
+                "w": round(sx * w * scale, 1),
+                "h": round(sy * h * scale, 1),
+            })
+        elif tag == f"{{{P}}}grpSp":
+            g = _group_xfrm(el)
+            if g is None:
+                child_tf = tf
+            else:
+                gx, gy, cx0, cy0, kx, ky = g
+                child_tf = (
+                    ox + sx * (gx - kx * cx0), oy + sy * (gy - ky * cy0),
+                    sx * kx, sy * ky,
+                )
+            _walk(el, child_tf, scale, shapes, connectors, loose)
+        elif tag == f"{{{P}}}cxnSp":
+            st = el.find(f".//{{{A}}}stCxn")
+            en = el.find(f".//{{{A}}}endCxn")
+            if st is not None and en is not None:
+                # glue 양쪽 → 방향 XML 확증
+                connectors.append({"from": st.get("id"), "to": en.get("id")})
+                continue
+            box = _xfrm(el)
+            if box is None:
+                continue
+            # glue 미확증 → bbox+flip 으로 시작/끝점 계산 (drawer 가 근접 매칭으로 보완)
+            x, y, w, h, fh, fv = box
+            x1, x2 = (x + w, x) if fh else (x, x + w)
+            y1, y2 = (y + h, y) if fv else (y, y + h)
+            c = {
+                "sid": _shape_id(el),
+                "x1": round((ox + sx * x1) * scale, 1),
+                "y1": round((oy + sy * y1) * scale, 1),
+                "x2": round((ox + sx * x2) * scale, 1),
+                "y2": round((oy + sy * y2) * scale, 1),
+            }
+            if st is not None:
+                c["st"] = st.get("id")
+            if en is not None:
+                c["en"] = en.get("id")
+            loose.append(c)
+
+
 def _parse_slide(xml_bytes, scale):
     root = ET.fromstring(xml_bytes)
-    shapes, connectors = [], []
-
-    for sp in root.iter(f"{{{P}}}sp"):
-        box = _xfrm(sp)
-        if box is None:
-            continue
-        x, y, w, h = box
-        shapes.append({
-            "sid": _shape_id(sp),
-            "text": _text_of(sp),
-            "x": round(x * scale, 1),
-            "y": round(y * scale, 1),
-            "w": round(w * scale, 1),
-            "h": round(h * scale, 1),
-        })
-
-    # 커넥터: stCxn/endCxn glue 로 방향이 확증되는 것만
-    for cxn in root.iter(f"{{{P}}}cxnSp"):
-        st = cxn.find(f".//{{{A}}}stCxn")
-        en = cxn.find(f".//{{{A}}}endCxn")
-        if st is not None and en is not None:
-            connectors.append({"from": st.get("id"), "to": en.get("id")})
-
-    return shapes, connectors
+    tree = root.find(f"{{{P}}}cSld/{{{P}}}spTree")
+    shapes, connectors, loose = [], [], []
+    if tree is not None:
+        _walk(tree, (0.0, 0.0, 1.0, 1.0), scale, shapes, connectors, loose)
+    return shapes, connectors, loose
 
 
 def _slide_size(zf):
@@ -113,8 +187,11 @@ def import_pptx(path, canvas=DEFAULT_CANVAS, scale=None):
         )
         slides = []
         for i, name in enumerate(slide_files, 1):
-            shapes, connectors = _parse_slide(zf.read(name), scale)
-            slides.append({"index": i, "shapes": shapes, "connectors": connectors})
+            shapes, connectors, loose = _parse_slide(zf.read(name), scale)
+            slides.append({
+                "index": i, "shapes": shapes,
+                "connectors": connectors, "connectors_loose": loose,
+            })
 
     return {
         "source": Path(path).name,
