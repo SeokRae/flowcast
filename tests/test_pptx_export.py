@@ -322,3 +322,30 @@ def test_topology_badge_overlap_spread(tmp_path):
     assert len(centers) == 2
     d = ((centers[0][0] - centers[1][0]) ** 2 + (centers[0][1] - centers[1][1]) ** 2) ** 0.5
     assert d >= 22 * 9525   # 지름 22px 이상 (EMU)
+
+
+# ── #25: z-순서 패리티 — 노드가 커넥터를 가림 (HTML과 동일) ──
+
+def _zorder_conn_under_nodes(prs, node_first_lines):
+    """모든 슬라이드에서 LINE(커넥터) 도형이 노드 박스보다 먼저(아래) 삽입됐는지."""
+    for slide in prs.slides:
+        idx_conn = [i for i, sh in enumerate(slide.shapes)
+                    if sh.shape_type == MSO_SHAPE_TYPE.LINE]
+        idx_node = [i for i, sh in enumerate(slide.shapes)
+                    if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_first_lines]
+        if idx_conn and idx_node:
+            assert max(idx_conn) < min(idx_node)
+
+
+def test_topology_zorder_nodes_over_connectors(tmp_path):
+    data, out, _ = _export_topo(tmp_path)
+    prs = Presentation(str(out))
+    names = {str(n["name"]).split("\n")[0] for n in data["nodes"]}
+    _zorder_conn_under_nodes(prs, names)
+
+
+def test_component_zorder_nodes_over_connectors(tmp_path):
+    data, out, _ = _export(tmp_path)
+    prs = Presentation(str(out))
+    names = {str(nd["name"]).split("\n")[0] for sc in data["scenarios"] for nd in sc["nodes"]}
+    _zorder_conn_under_nodes(prs, names)

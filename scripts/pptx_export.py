@@ -203,7 +203,34 @@ def export_component(data, out_path, slide_size="wide"):
             tf.word_wrap = True
             zb.text_frame.vertical_anchor = MSO_ANCHOR.TOP
 
-        # 노드
+        # 엣지 커넥터 — 노드보다 먼저 (render.py z-순서 패리티: 노드가 선을 가림, #25)
+        pending_labels = []
+        for e in scenario.get("edges") or []:
+            r1, r2 = rects.get(e["from"]), rects.get(e["to"])
+            if not r1 or not r2:
+                continue
+            c1 = (r1[0] + r1[2] / 2, r1[1] + r1[3] / 2)
+            c2 = (r2[0] + r2[2] / 2, r2[1] + r2[3] / 2)
+            ax, ay = R._edge_pt(r1, *c2)
+            bx, by = R._edge_pt(r2, *c1)
+            conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+                                        emu(ax + ox), emu(ay + oy),
+                                        emu(bx + ox), emu(by + oy))
+            conn.line.color.rgb = RGBColor(0x4B, 0x55, 0x63)
+            _arrow(conn, tail=True, head=bool(e.get("bidir")))
+
+            parts = []
+            if e.get("n") is not None:
+                parts.append(f"({e['n']})")
+            if e.get("label"):
+                parts.append(e["label"])
+            proto = f"( {e['protocol']} )" if e.get("protocol") else ""
+            if parts or proto:
+                mx = (e["lx"] if e.get("lx") is not None else (ax + bx) / 2)
+                my = (e["ly"] if e.get("ly") is not None else (ay + by) / 2)
+                pending_labels.append((mx, my, " ".join(parts), proto))
+
+        # 노드 (커넥터 위)
         node_by_id = {n["id"]: n for n in scenario.get("nodes") or []}
         for nid, (x, y, w, h) in rects.items():
             nd = node_by_id[nid]
@@ -226,44 +253,21 @@ def export_component(data, out_path, slide_size="wide"):
                 r.font.size = Pt(_fpt(8, s))
                 r.font.color.rgb = RGBColor(0x4B, 0x55, 0x63)
 
-        # 엣지: 경계 앵커 사이 직선 커넥터 + 라벨
-        for e in scenario.get("edges") or []:
-            r1, r2 = rects.get(e["from"]), rects.get(e["to"])
-            if not r1 or not r2:
-                continue
-            c1 = (r1[0] + r1[2] / 2, r1[1] + r1[3] / 2)
-            c2 = (r2[0] + r2[2] / 2, r2[1] + r2[3] / 2)
-            ax, ay = R._edge_pt(r1, *c2)
-            bx, by = R._edge_pt(r2, *c1)
-            conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
-                                        emu(ax + ox), emu(ay + oy),
-                                        emu(bx + ox), emu(by + oy))
-            conn.line.color.rgb = RGBColor(0x4B, 0x55, 0x63)
-            _arrow(conn, tail=True, head=bool(e.get("bidir")))
-
-            # 라벨(번호 인라인 + 프로토콜)
-            parts = []
-            if e.get("n") is not None:
-                parts.append(f"({e['n']})")
-            if e.get("label"):
-                parts.append(e["label"])
-            proto = f"( {e['protocol']} )" if e.get("protocol") else ""
-            if parts or proto:
-                mx = (e["lx"] if e.get("lx") is not None else (ax + bx) / 2)
-                my = (e["ly"] if e.get("ly") is not None else (ay + by) / 2)
-                tb = shapes.add_textbox(emu(mx + ox - 60), emu(my + oy - 12),
-                                        emu(140), emu(30))
-                tf = tb.text_frame
-                tf.word_wrap = True
-                tf.text = " ".join(parts)
-                tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-                tf.paragraphs[0].runs[0].font.size = Pt(_fpt(9, s))
-                if proto:
-                    pp = tf.add_paragraph()
-                    pp.alignment = PP_ALIGN.CENTER
-                    r = pp.add_run()
-                    r.text = proto
-                    r.font.size = Pt(_fpt(8, s))
+        # 엣지 라벨 (번호 인라인 + 프로토콜) — 최상위
+        for mx, my, text, proto in pending_labels:
+            tb = shapes.add_textbox(emu(mx + ox - 60), emu(my + oy - 12),
+                                    emu(140), emu(30))
+            tf = tb.text_frame
+            tf.word_wrap = True
+            tf.text = text
+            tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+            tf.paragraphs[0].runs[0].font.size = Pt(_fpt(9, s))
+            if proto:
+                pp = tf.add_paragraph()
+                pp.alignment = PP_ALIGN.CENTER
+                r = pp.add_run()
+                r.text = proto
+                r.font.size = Pt(_fpt(8, s))
 
     prs.save(str(out_path))
     return len(scenarios)
@@ -378,20 +382,7 @@ def export_topology(data, out_path, slide_size="wide"):
             p0.runs[0].font.size = Pt(_fpt(9, s))
             p0.runs[0].font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
 
-        for nid, (x, y, w, h) in rects.items():
-            nd = node_by_id[nid]
-            kind = nd.get("kind", "srv")
-            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox), emu(y + oy), emu(w), emu(h))
-            box.fill.solid()
-            box.fill.fore_color.rgb = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
-            box.line.color.rgb = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
-            box.shadow.inherit = False
-            tf = box.text_frame
-            tf.word_wrap = True
-            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-            _fill_lines(tf, nd["name"], s, size=10)
-
-        # 정적 배선(links) — 화살촉 없는 회색선, 모든 슬라이드 공통
+        # 정적 배선(links) — 화살촉 없는 회색선. 노드보다 먼저 (HTML z-순서 패리티, #25)
         for lk in links:
             r1, r2 = rects.get(lk.get("from")), rects.get(lk.get("to"))
             if not r1 or not r2:
@@ -401,7 +392,7 @@ def export_topology(data, out_path, slide_size="wide"):
                                       emu(bx + ox), emu(by + oy))
             ln.line.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
 
-        # 구간 오버레이(segments) — 화살촉 커넥터. 배지는 아래에서 spread 후 일괄 배치.
+        # 구간 오버레이(segments) — 화살촉 커넥터. 배지는 노드 위에 spread 후 일괄 배치.
         badge_sgs = []
         for sg in segments:
             r1 = rects.get(sg.get("from"))
@@ -419,6 +410,20 @@ def export_topology(data, out_path, slide_size="wide"):
             conn.line.color.rgb = RGBColor(0x33, 0x41, 0x55)
             ln = conn.line._get_or_add_ln()
             ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
+
+        # 노드 — 커넥터 위 (관통 선을 가림)
+        for nid, (x, y, w, h) in rects.items():
+            nd = node_by_id[nid]
+            kind = nd.get("kind", "srv")
+            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox), emu(y + oy), emu(w), emu(h))
+            box.fill.solid()
+            box.fill.fore_color.rgb = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
+            box.line.color.rgb = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
+            box.shadow.inherit = False
+            tf = box.text_frame
+            tf.word_wrap = True
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            _fill_lines(tf, nd["name"], s, size=10)
 
         # 번호 배지 — render.py 공용 헬퍼(_t_badge_geom/_t_spread_badges)로 겹침 자동 회피
         spread = R._t_spread_badges([R._t_badge_geom(sg, rects) for sg in badge_sgs])
