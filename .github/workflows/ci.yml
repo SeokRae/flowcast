@@ -18,8 +18,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install pytest + python-pptx (export 테스트용)
+        run: pip install pytest python-pptx
 
       - name: Tests
         run: python -m pytest tests/ -q
