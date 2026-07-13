@@ -463,3 +463,63 @@ def test_content_below_header_band(tmp_path):
     node_tops = [sh.top for sh in slide.shapes
                  if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in names]
     assert node_tops and min(node_tops) >= rule_y
+
+
+# ── #43: 긴 sequence 자동 페이지네이션 (읽히는 범위 + 다음 슬라이드 연장) ──
+
+def _long_seq(n):
+    return {
+        "system": "S",
+        "actors": [{"id": "a", "name": "Alpha"}, {"id": "b", "name": "Beta"},
+                   {"id": "c", "name": "Gamma"}],
+        "scenarios": [{"title": "Long", "steps": [
+            {"n": i, "from": ("a" if i % 2 else "b"), "to": ("b" if i % 2 else "c"),
+             "label": f"step {i}", "kind": "req", "protocol": "HTTPS"}
+            for i in range(1, n + 1)]}],
+    }
+
+
+def test_long_sequence_paginates(tmp_path):
+    out = tmp_path / "lng.pptx"
+    n = export_sequence(_long_seq(30), out)
+    assert n > 1
+    assert len(Presentation(str(out)).slides) == n
+
+
+def test_short_sequence_single_slide(tmp_path):
+    assert export_sequence(_long_seq(4), tmp_path / "sht.pptx") == 1
+
+
+def test_pagination_can_be_disabled(tmp_path):
+    # paginate=False → 길어도 한 장(기존 축소 동작)
+    assert export_sequence(_long_seq(30), tmp_path / "nop.pptx", paginate=False) == 1
+
+
+def test_pagination_skipped_in_auto_mode(tmp_path):
+    # auto=content-fit → 캔버스가 늘어나 분할 불필요
+    assert export_sequence(_long_seq(30), tmp_path / "au.pptx", slide_size="auto") == 1
+
+
+def test_paginated_actors_repeat_each_slide(tmp_path):
+    # 액터 헤더·라이프라인이 매 슬라이드 재렌더(연장선)
+    out = tmp_path / "rep.pptx"
+    export_sequence(_long_seq(30), out)
+    prs = Presentation(str(out))
+    for slide in prs.slides:
+        text = "\n".join(sh.text_frame.text for sh in slide.shapes if sh.has_text_frame)
+        assert all(name in text for name in ("Alpha", "Beta", "Gamma"))
+
+
+def test_paginated_step_numbers_continuous(tmp_path):
+    # step.n 유지 → 페이지 넘어 번호 연속 (첫·끝 모두 존재)
+    out = tmp_path / "num.pptx"
+    export_sequence(_long_seq(30), out)
+    text = _all_text(Presentation(str(out)))
+    assert "1. step 1" in text and "30. step 30" in text
+
+
+def test_paginated_title_has_page_index(tmp_path):
+    out = tmp_path / "idx.pptx"
+    n = export_sequence(_long_seq(30), out)
+    text = _all_text(Presentation(str(out)))
+    assert f"(1/{n})" in text and "이어서" in text
