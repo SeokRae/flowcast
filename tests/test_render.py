@@ -5,7 +5,11 @@
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 _spec = importlib.util.spec_from_file_location(
     "flowcast_render",
@@ -50,6 +54,97 @@ def test_validate_ok():
     errors, warnings = validate(_base())
     assert errors == []
     assert warnings == []
+
+
+@pytest.mark.parametrize("validator", [validate, validate_topology, validate_component])
+def test_validate_requires_nonempty_system(validator):
+    data = _base(system="")
+    errors, _ = validator(data)
+    assert any("system" in error for error in errors)
+
+
+@pytest.mark.parametrize("validator", [validate, validate_topology, validate_component])
+def test_validators_require_system_key(validator):
+    data = _base()
+    del data["system"]
+    errors, _ = validator(data)
+    assert any("system" in error for error in errors)
+
+
+@pytest.mark.parametrize("validator", [validate, validate_topology, validate_component])
+def test_validators_require_nonempty_scenarios_list(validator):
+    data = _base()
+    data["scenarios"] = []
+    errors, _ = validator(data)
+    assert any("scenarios" in error and "비어" in error for error in errors)
+
+
+@pytest.mark.parametrize("validator", [validate, validate_topology, validate_component])
+@pytest.mark.parametrize("data", [None, [], "malformed", 3, True])
+def test_validators_are_total_for_non_object_json(validator, data):
+    errors, warnings = validator(data)
+    assert errors
+    assert warnings == []
+
+
+def test_validate_rejects_non_list_scenarios():
+    errors, _ = validate(_base(scenarios={"title": "not a list"}))
+    assert any("scenarios" in error for error in errors)
+
+
+def test_validate_rejects_malformed_nested_objects_without_throwing():
+    data = _base(
+        zones=[None, {"name": "id 없음"}],
+        actors=["actor 아님"],
+        scenarios=[None, {"title": "시나리오", "steps": ["step 아님"]}],
+    )
+    errors, _ = validate(data)
+    assert any("zone" in error for error in errors)
+    assert any("actor" in error for error in errors)
+    assert any("scenario" in error for error in errors)
+    assert any("step" in error for error in errors)
+
+
+def test_validate_sequence_requires_steps_list():
+    data = _base()
+    del data["scenarios"][0]["steps"]
+    errors, _ = validate(data)
+    assert any("steps" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("owner", "field"),
+    [
+        ("root", "source"),
+        ("actor", "port"),
+        ("actor", "line"),
+        ("step", "label"),
+        ("step", "sub"),
+        ("step", "protocol"),
+    ],
+)
+def test_validate_rejects_non_string_sequence_text(owner, field):
+    data = _base()
+    target = {
+        "root": data,
+        "actor": data["actors"][0],
+        "step": data["scenarios"][0]["steps"][0],
+    }[owner]
+    target[field] = ["문자열 아님"]
+
+    errors, _ = validate(data)
+
+    assert any(field in error and "문자열" in error for error in errors)
+
+
+def test_validate_allows_empty_optional_sequence_text():
+    data = _base(source="")
+    data["actors"][0].update(port="", line="")
+    data["scenarios"][0]["steps"][0].update(label="", sub="", protocol="")
+
+    errors, _ = validate(data)
+
+    assert errors == []
 
 
 def test_validate_unknown_actor_ref():
@@ -125,6 +220,49 @@ def test_topology_validate_ok():
     errors, warnings = validate_topology(_topo())
     assert errors == []
     assert warnings == []
+
+
+def test_topology_rejects_malformed_zone_without_throwing():
+    data = _topo(zones=["zone 아님", {"name": "id 없음"}])
+    errors, _ = validate_topology(data)
+    assert any("zone" in error for error in errors)
+
+
+@pytest.mark.parametrize("value", [True, "10", float("nan"), float("inf"), float("-inf")])
+def test_topology_rejects_non_finite_or_non_numeric_coordinates(value):
+    data = _topo()
+    data["nodes"][0] = {"id": "m", "name": "클라이언트", "x": value, "y": 10}
+    errors, _ = validate_topology(data)
+    assert any("x" in error and "유한한 숫자" in error for error in errors)
+
+
+def test_topology_rejects_invalid_grid_coordinates():
+    data = _topo()
+    data["nodes"][0]["col"] = False
+    data["nodes"][0]["row"] = float("nan")
+    errors, _ = validate_topology(data)
+    assert any("col" in error and "유한한 숫자" in error for error in errors)
+    assert any("row" in error and "유한한 숫자" in error for error in errors)
+
+
+@pytest.mark.parametrize(("owner", "field"), [("root", "source"), ("segment", "label"), ("segment", "meta")])
+def test_topology_rejects_non_string_text(owner, field):
+    data = _topo()
+    target = data if owner == "root" else data["scenarios"][1]["segments"][0]
+    target[field] = {"문자열": "아님"}
+
+    errors, _ = validate_topology(data)
+
+    assert any(field in error and "문자열" in error for error in errors)
+
+
+def test_topology_allows_empty_optional_text():
+    data = _topo(source="")
+    data["scenarios"][1]["segments"][0].update(label="", meta="")
+
+    errors, _ = validate_topology(data)
+
+    assert errors == []
 
 
 def test_topology_pure_diagram_no_segments_ok():
@@ -296,6 +434,95 @@ def test_component_validate_ok():
     assert warnings == []
 
 
+def test_component_rejects_malformed_nested_objects_without_throwing():
+    data = _comp(scenarios=[{
+        "title": "카드결제",
+        "zones": [None],
+        "nodes": ["node 아님"],
+        "edges": ["edge 아님"],
+    }])
+    errors, _ = validate_component(data)
+    assert any("zone" in error for error in errors)
+    assert any("node" in error for error in errors)
+    assert any("edge" in error for error in errors)
+
+
+@pytest.mark.parametrize("value", [True, "10", float("nan"), float("inf"), float("-inf")])
+def test_component_rejects_non_finite_or_non_numeric_coordinates(value):
+    data = _comp()
+    data["scenarios"][0]["nodes"][0]["x"] = value
+    errors, _ = validate_component(data)
+    assert any("x" in error and "유한한 숫자" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    "via",
+    [
+        [100],
+        [100, 200, 300],
+        [True, 200],
+        [float("nan"), 200],
+        ['0" onload="alert(1)', 200],
+    ],
+)
+def test_component_rejects_malformed_via(via):
+    data = _comp()
+    data["scenarios"][0]["edges"][0]["via"] = via
+    errors, _ = validate_component(data)
+    assert any("via" in error for error in errors)
+
+
+@pytest.mark.parametrize(("field", "value"), [("lx", True), ("ly", float("inf"))])
+def test_component_rejects_invalid_label_coordinates(field, value):
+    data = _comp()
+    data["scenarios"][0]["edges"][0][field] = value
+    errors, _ = validate_component(data)
+    assert any(field in error and "유한한 숫자" in error for error in errors)
+
+
+def test_component_accepts_numeric_lpos_interpolation():
+    data = _comp()
+    data["scenarios"][0]["edges"][0]["lpos"] = 0.25
+    errors, _ = validate_component(data)
+    assert errors == []
+
+
+@pytest.mark.parametrize("value", ["left", True, float("inf"), -0.1, 1.1])
+def test_component_rejects_invalid_lpos_interpolation(value):
+    data = _comp()
+    data["scenarios"][0]["edges"][0]["lpos"] = value
+    errors, _ = validate_component(data)
+    assert any("lpos" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("owner", "field"),
+    [("root", "source"), ("node", "port"), ("edge", "label"), ("edge", "protocol")],
+)
+def test_component_rejects_non_string_text(owner, field):
+    data = _comp()
+    target = {
+        "root": data,
+        "node": data["scenarios"][0]["nodes"][0],
+        "edge": data["scenarios"][0]["edges"][0],
+    }[owner]
+    target[field] = ["문자열 아님"]
+
+    errors, _ = validate_component(data)
+
+    assert any(field in error and "문자열" in error for error in errors)
+
+
+def test_component_allows_empty_optional_text():
+    data = _comp(source="")
+    data["scenarios"][0]["nodes"][0]["port"] = ""
+    data["scenarios"][0]["edges"][0].update(label="", protocol="")
+
+    errors, _ = validate_component(data)
+
+    assert errors == []
+
+
 def test_component_node_missing_position():
     data = _comp()
     del data["scenarios"][0]["nodes"][0]["x"]
@@ -369,6 +596,146 @@ def test_sequence_html_has_no_drag():
     assert 'iff-node' not in out          # sequence는 드래그 미적용
     assert 'setPointerCapture' not in out
     assert 'iff-export' not in out
+
+
+# ── main view dispatch ────────────────────────────────────────
+
+@pytest.mark.parametrize("view", ["unknown", None, []])
+def test_main_rejects_unknown_view(view, tmp_path, monkeypatch, capsys):
+    data_path = tmp_path / "unknown.json"
+    out_path = tmp_path / "unknown.html"
+    data_path.write_text(json.dumps(_base(view=view)), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["render.py", str(data_path), "-o", str(out_path)])
+
+    with pytest.raises(SystemExit) as exc:
+        _mod.main()
+
+    assert exc.value.code == 1
+    assert "알 수 없는 view" in capsys.readouterr().err
+    assert not out_path.exists()
+
+
+def test_main_missing_view_defaults_to_sequence(tmp_path, monkeypatch):
+    data_path = tmp_path / "sequence.json"
+    out_path = tmp_path / "sequence.html"
+    data_path.write_text(json.dumps(_base()), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["render.py", str(data_path), "-o", str(out_path)])
+
+    _mod.main()
+
+    assert out_path.exists()
+    assert "액터A" in out_path.read_text(encoding="utf-8")
+
+
+def test_pdf_dependency_failure_uses_partial_success_exit_code(tmp_path, monkeypatch, capsys):
+    html_path = tmp_path / "diagram.html"
+    pdf_path = tmp_path / "diagram.pdf"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    monkeypatch.setattr(_mod, "CHROME_CANDIDATES", [])
+
+    with pytest.raises(SystemExit) as exc:
+        _mod.to_pdf(html_path, pdf_path)
+
+    assert exc.value.code == 2
+    assert "Chrome" in capsys.readouterr().err
+    assert not pdf_path.exists()
+
+
+def _configure_fake_chrome(tmp_path, monkeypatch):
+    chrome = tmp_path / "chrome"
+    chrome.write_text("fake", encoding="utf-8")
+    monkeypatch.setattr(_mod, "CHROME_CANDIDATES", [str(chrome)])
+
+
+def test_pdf_subprocess_start_failure_exits_two_and_preserves_target(
+        tmp_path, monkeypatch, capsys):
+    _configure_fake_chrome(tmp_path, monkeypatch)
+    html_path = tmp_path / "diagram.html"
+    pdf_path = tmp_path / "diagram.pdf"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    pdf_path.write_bytes(b"previous")
+
+    def fail_to_start(*args, **kwargs):
+        raise OSError("spawn failed")
+
+    monkeypatch.setattr(_mod.subprocess, "run", fail_to_start)
+
+    with pytest.raises(SystemExit) as exc:
+        _mod.to_pdf(html_path, pdf_path)
+
+    assert exc.value.code == 2
+    assert "spawn failed" in capsys.readouterr().err
+    assert pdf_path.read_bytes() == b"previous"
+
+
+def test_pdf_does_not_accept_stale_target_or_temporary_output(tmp_path, monkeypatch):
+    _configure_fake_chrome(tmp_path, monkeypatch)
+    html_path = tmp_path / "diagram.html"
+    pdf_path = tmp_path / "diagram.pdf"
+    temp_path = pdf_path.with_name(f".{pdf_path.name}.tmp")
+    html_path.write_text("<html></html>", encoding="utf-8")
+    pdf_path.write_bytes(b"previous")
+    temp_path.write_bytes(b"stale")
+    monkeypatch.setattr(
+        _mod.subprocess, "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stderr=""),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        _mod.to_pdf(html_path, pdf_path)
+
+    assert exc.value.code == 2
+    assert pdf_path.read_bytes() == b"previous"
+    assert not temp_path.exists()
+
+
+def test_pdf_rejects_empty_fresh_output_and_preserves_target(
+        tmp_path, monkeypatch, capsys):
+    _configure_fake_chrome(tmp_path, monkeypatch)
+    html_path = tmp_path / "diagram.html"
+    pdf_path = tmp_path / "diagram.pdf"
+    temp_path = pdf_path.with_name(f".{pdf_path.name}.tmp")
+    html_path.write_text("<html></html>", encoding="utf-8")
+    pdf_path.write_bytes(b"previous")
+
+    def create_empty_output(command, **_kwargs):
+        output_arg = next(arg for arg in command if arg.startswith("--print-to-pdf="))
+        Path(output_arg.split("=", 1)[1]).write_bytes(b"")
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(_mod.subprocess, "run", create_empty_output)
+
+    with pytest.raises(SystemExit) as exc_info:
+        _mod.to_pdf(html_path, pdf_path)
+
+    assert exc_info.value.code == 2
+    assert pdf_path.read_bytes() == b"previous"
+    assert not temp_path.exists()
+    assert "PDF 변환 실패" in capsys.readouterr().err
+
+
+def test_pdf_atomically_replaces_target_with_fresh_temporary_output(tmp_path, monkeypatch):
+    _configure_fake_chrome(tmp_path, monkeypatch)
+    html_path = tmp_path / "diagram.html"
+    pdf_path = tmp_path / "diagram.pdf"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    pdf_path.write_bytes(b"previous")
+    produced_paths = []
+
+    def render_to_requested_path(command, **kwargs):
+        output_arg = next(arg for arg in command if arg.startswith("--print-to-pdf="))
+        output_path = Path(output_arg.split("=", 1)[1])
+        produced_paths.append(output_path)
+        output_path.write_bytes(b"fresh")
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(_mod.subprocess, "run", render_to_requested_path)
+
+    _mod.to_pdf(html_path, pdf_path)
+
+    assert produced_paths == [pdf_path.with_name(f".{pdf_path.name}.tmp")]
+    assert pdf_path.read_bytes() == b"fresh"
+    assert not produced_paths[0].exists()
 
 
 # ── 합성 예제 회귀 (examples/*.json) ──────────────────────────
@@ -460,6 +827,26 @@ def test_topology_unknown_kind_warns():
     errors, warnings = validate_topology(data)
     assert errors == []
     assert any("알 수 없는 kind 'bogus'" in w for w in warnings)
+
+
+def test_topology_non_string_kind_is_an_error():
+    data = _topo()
+    data["nodes"][1]["kind"] = ["fw"]
+
+    errors, warnings = validate_topology(data)
+
+    assert any("kind는 문자열" in error for error in errors)
+    assert warnings == []
+
+
+@pytest.mark.parametrize("value", [10 ** 1000, 1e200])
+def test_finite_number_guard_rejects_unsafe_renderer_magnitudes(value):
+    data = _topo()
+    data["nodes"][0]["x"] = value
+
+    errors, _ = validate_topology(data)
+
+    assert any("x" in error and "유한한 숫자" in error for error in errors)
 
 
 def test_topology_fw_node_renders_brick():

@@ -1,20 +1,19 @@
 {
   "name": "flowcast",
-  "id": "flowcast",
   "owner": {
     "name": "SeokRae",
     "email": "kslbsh@gmail.com"
   },
   "metadata": {
-    "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하고, 요청 시 편집가능 .pptx로 export 하는 Claude Code 플러그인",
-    "version": "0.9.0"
+    "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF 또는 편집가능 .pptx로 출력하는 Claude Code 플러그인",
+    "version": "0.9.1"
   },
   "plugins": [
     {
       "name": "flowcast",
       "source": "./",
-      "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하고, 요청 시 편집가능 .pptx로 export",
-      "version": "0.9.0",
+      "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF 또는 편집가능 .pptx로 출력",
+      "version": "0.9.1",
       "author": {
         "name": "SeokRae",
         "email": "kslbsh@gmail.com"

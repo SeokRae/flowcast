@@ -17,9 +17,10 @@ draft 스키마:
 
 - 좌표/크기 단위는 원본 EMU에 scale 을 곱한 값. scale 미지정 시 canvas/slide_cx 로 auto-fit.
 - connectors 는 커넥터 도형(p:cxnSp)의 stCxn/endCxn glue(도형 id 참조)가 양쪽 다 있어
-  방향이 XML로 확증되는 것. glue 가 없거나 한쪽뿐인 커넥터는 connectors_loose 로 낸다 —
+  시작/끝 연결 도형이 확인된 것. glue 가 없거나 한쪽뿐인 커넥터는 connectors_loose 로 낸다 —
   bbox+flipH/flipV 로 계산한 시작(x1,y1)→끝(x2,y2) 점과 부분 glue(st/en)를 담아,
-  drawer 가 끝점-도형 근접 매칭과 라벨(별도 텍스트박스 shape)로 방향·연결을 보완한다.
+  drawer 가 끝점-도형 근접 매칭으로 연결을 보완한다. 두 경우 모두 업무 방향은 화살촉·
+  라벨(별도 텍스트박스 shape)·문맥으로 별도 판별한다.
 - 그룹(p:grpSp) 내부 도형·커넥터는 그룹 자식 좌표계(chOff/chExt) 변환을 보정해
   슬라이드 절대 좌표로 낸다(중첩 그룹 포함).
 """
@@ -131,7 +132,7 @@ def _walk(parent, tf, scale, shapes, connectors, loose):
             st = el.find(f".//{{{A}}}stCxn")
             en = el.find(f".//{{{A}}}endCxn")
             if st is not None and en is not None:
-                # glue 양쪽 → 방향 XML 확증
+                # glue 양쪽 → 시작/끝 연결 도형 확인(업무 방향은 별도 판별)
                 connectors.append({"from": st.get("id"), "to": en.get("id")})
                 continue
             box = _xfrm(el)
