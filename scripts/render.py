@@ -33,6 +33,7 @@ import argparse
 import html
 import json
 import math
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -535,7 +536,7 @@ def _t_rect(nd):
     l4(VIP)는 기본 폭을 좁게(T_L4_W) 잡고, 표준 슬롯 안에서 가운데 정렬해
     화살표 연결점(박스 중심)은 표준 박스와 동일하게 유지한다."""
     dw = T_L4_W if nd.get("kind") == "l4" else T_BOX_W
-    w, h = nd.get("w", dw), nd.get("h", T_BOX_H)
+    w, h = nd.get("w", dw), nd.get("h", 84 if nd.get("dual") else T_BOX_H)
     if nd.get("col") is not None and nd.get("row") is not None:
         x = T_MARGIN + nd["col"] * T_CELL_W + (T_BOX_W - w) / 2
         y = T_MARGIN + nd["row"] * T_CELL_H
@@ -582,48 +583,98 @@ def _wrap(text, width):
     return lines or [""]
 
 
+def _split_dual_ip(name):
+    """이중화 노드 name의 IP range(a.b.c.d~e)를 2대 IP로 분리 — 각 박스에 IP 하나씩.
+
+    "api-WEB\\n172.20.161.233~234" → (["api-WEB","172.20.161.233"], ["api-WEB","172.20.161.234"]).
+    range 가 없으면 두 박스 모두 원본 lines(동일). render/pptx 공용.
+    """
+    lines = str(name).split("\n")
+    for li in range(len(lines) - 1, -1, -1):
+        m = re.search(r'(\d+\.\d+\.\d+\.)(\d+)\s*~\s*(\d+)(.*)', lines[li])
+        if m:
+            base, s, e, tail = m.groups()
+            l1 = lines[:li] + [f"{base}{s}{tail}"] + lines[li + 1:]
+            l2 = lines[:li] + [f"{base}{e}{tail}"] + lines[li + 1:]
+            return l1, l2
+    return lines, lines
+
+
 def _split_step_label(lb):
-    """흐름 설명 label 을 '단계 — 설명' 으로 분리 (em/en 대시, 없으면 전체가 설명)."""
+    """흐름 설명 label 을 '단계 — 설명' 으로 분리 (em/en 대시, 없으면 전체가 설명).
+
+    단계는 맨 앞 짧은 구절(≤12자)일 때만 인정 — label 중간의 보충설명용 대시
+    (예: "pay·api 공용 — pay 전용 VIP 미확정")를 단계 구분자로 오인하지 않는다.
+    """
     for sep in (" — ", " —", "— ", "—", " - "):
         if sep in lb:
             head, tail = lb.split(sep, 1)
-            return head.strip(), tail.strip()
+            head = head.strip()
+            if head and len(head) <= 12:
+                return head, tail.strip()
+            return "", lb.strip()
     return "", lb.strip()
 
 
 def _topo_legend_layout(labelled, leg_x, leg_y, diagram_right):
     """흐름 설명 [번호 배지 | 단계 | 설명 | meta] 표 레이아웃 — render/pptx 공용.
 
-    설명 시작 x(desc_col)를 고정해 열 정렬(규격화)하고, 설명 열은 다이어그램
-    오른쪽 끝까지 폭을 써서 meta 줄바꿈을 최소화한다.
+    항목이 많으면 여러 열로 나눠(다단) 세로 높이를 줄인다 — 슬라이드 fit 시 상단
+    다이어그램이 긴 legend 때문에 축소되는 것을 막기 위함. 각 열 안에서 설명 시작 x
+    를 고정해 열 정렬(규격화)한다.
     반환: (items, maxy, maxx). items 원소 = {kind: badge|step|desc|meta, x, y, ...}.
     """
     rows = [_split_step_label(sg["label"]) for sg in labelled]
-    badge_col = leg_x + 9                          # 배지 원 중심 x
-    step_col  = leg_x + 26                          # 단계 텍스트 시작 x
-    step_w    = max((len(s) for s, _ in rows), default=0)
-    desc_col  = step_col + step_w * 12 + 16         # 단계 열 폭(한글 ~12px/자) 후 설명 시작 x
-    desc_wrap = max(30, min(96, int((diagram_right - desc_col) / 8.4)))
-    items, leg_max_x = [], leg_x
-    ly = leg_y + T_LEG_LH + 8
-    for sg, (step, desc) in zip(labelled, rows):
-        row_top = ly
-        n = sg.get("n")
-        if n is not None:
-            items.append({"kind": "badge", "x": badge_col, "y": ly, "n": n})
-        if step:
-            items.append({"kind": "step", "x": step_col, "y": ly, "text": step})
-        for ln in _wrap(desc, desc_wrap):
-            items.append({"kind": "desc", "x": desc_col, "y": ly, "text": ln})
-            leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.2)
-            ly += T_LEG_LH
-        if sg.get("meta"):
-            for ln in _wrap(sg["meta"], desc_wrap):
-                items.append({"kind": "meta", "x": desc_col, "y": ly, "text": ln})
-                leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.0)
-                ly += T_LEG_LH - 3
-        ly = max(ly, row_top + T_LEG_LH) + 5        # 최소 행 높이 + 행 간격
-    return items, ly, leg_max_x
+    n = len(labelled)
+    avail_w = max(diagram_right - leg_x, 360.0)
+    max_cols = max(1, int(avail_w // 360))          # 열당 최소 ~360px 확보
+    ncol = min(max_cols, max(1, (n + 7) // 8))       # 열당 ~8행 목표 → 세로 높이 억제
+    col_w = avail_w / ncol
+    per_col = (n + ncol - 1) // ncol
+    step_w = max((len(s) for s, _ in rows), default=0)
+    step_off = 26 + step_w * 12 + 16                 # 배지+단계 폭 → 열 내 설명 시작 오프셋
+    desc_wrap = max(20, min(96, int((col_w - step_off) / 8.4)))
+    items, leg_max_x, col_bottoms = [], leg_x, []
+    for col in range(ncol):
+        cx = leg_x + col * col_w
+        badge_col, step_col, desc_col = cx + 9, cx + 26, cx + step_off
+        col_right = cx + col_w - 12
+        col_top = leg_y + T_LEG_LH + 8 - 12
+        colv = [cx, step_col - 6, desc_col - 8, col_right]   # 열 경계 세로선 x
+        # 헤더 행 (# | 단계 | 설명·기술) + 헤더 구분선
+        hy = leg_y + T_LEG_LH + 8
+        items.append({"kind": "gridline", "x1": cx, "y1": col_top, "x2": col_right, "y2": col_top})
+        items.append({"kind": "header", "x": badge_col, "y": hy, "text": "#", "mid": True})
+        items.append({"kind": "header", "x": step_col, "y": hy, "text": "단계"})
+        items.append({"kind": "header", "x": desc_col, "y": hy, "text": "설명 · 기술"})
+        items.append({"kind": "gridline", "x1": cx, "y1": hy + 6, "x2": col_right, "y2": hy + 6})
+        leg_max_x = max(leg_max_x, col_right)
+        ly = hy + T_LEG_LH + 4
+        for sg, (step, desc) in zip(labelled[col * per_col:(col + 1) * per_col],
+                                    rows[col * per_col:(col + 1) * per_col]):
+            row_top = ly
+            nn = sg.get("n")
+            if nn is not None:
+                items.append({"kind": "badge", "x": badge_col, "y": ly, "n": nn})
+            if step:
+                items.append({"kind": "step", "x": step_col, "y": ly, "text": step})
+            for ln in _wrap(desc, desc_wrap):
+                items.append({"kind": "desc", "x": desc_col, "y": ly, "text": ln})
+                leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.2)
+                ly += T_LEG_LH
+            if sg.get("meta"):
+                for ln in _wrap(sg["meta"], desc_wrap):
+                    items.append({"kind": "meta", "x": desc_col, "y": ly, "text": ln})
+                    leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.0)
+                    ly += T_LEG_LH - 3
+            ly = max(ly, row_top + T_LEG_LH) + 6     # 최소 행 높이 + 행 간격
+            items.append({"kind": "gridline", "x1": cx, "y1": ly - 4, "x2": col_right, "y2": ly - 4})
+        col_bottom = ly - 4
+        for vx in colv:   # 외곽 좌우 + 열 구분선 세로
+            items.append({"kind": "gridline", "x1": vx, "y1": col_top, "x2": vx, "y2": col_bottom})
+        col_bottoms.append(ly)
+    maxy = max(col_bottoms) if col_bottoms else leg_y + T_LEG_LH + 8
+    return items, maxy, leg_max_x
 
 
 def _t_badge_geom(sg, rects):
@@ -746,20 +797,33 @@ def render_svg_topology(data, scenario):
             cls += " topo-l4"
         cls += state
         node_body.append(f'<g class="iff-node" data-id="{esc(nd["id"])}" data-cx="{x + w / 2}" data-cy="{y + h / 2}" data-w="{w}" data-h="{h}">')
-        node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
-        if kind == "l4":
-            # L4/VIP = 로드밸런서 fan-out 아이콘(1→N 분배), 좌상단
-            ix, iy = x + 12, y + 13
-            node_body.append(f'<circle class="l4-ico" cx="{ix}" cy="{iy}" r="1.8"/>')
-            node_body.append(f'<path class="l4-ico-l" d="M{ix},{iy} L{ix + 11},{iy - 5} M{ix},{iy} L{ix + 11},{iy} M{ix},{iy} L{ix + 11},{iy + 5}"/>')
         lines = str(nd["name"]).split("\n")
         txcls = "topo-tx on" if state == " on" else "topo-tx"
-        for i, ln in enumerate(lines):
-            ty = y + h / 2 + 4 - (len(lines) - 1) * 6 + i * 12
-            node_body.append(f'<text class="{txcls}" x="{x + w / 2}" y="{ty}" text-anchor="middle">{esc(ln)}</text>')
+        if nd.get("dual"):   # 이중화(2대) — 그룹 테두리 + 위/아래 완전 분리 2박스 (IP 하나씩)
+            g = 7
+            bh = (h - g) / 2
+            box_lines = _split_dual_ip(nd["name"])
+            node_body.append(f'<rect class="topo-dualgrp" x="{x - 5}" y="{y - 5}" width="{w + 10}" height="{h + 10}" rx="12"/>')
+            for bi, by0 in enumerate((y, y + bh + g)):
+                blines = box_lines[bi]
+                node_body.append(f'<rect class="{cls}" x="{x}" y="{by0}" width="{w}" height="{bh}" rx="7"/>')
+                for i, ln in enumerate(blines):
+                    ty = by0 + bh / 2 + 3.5 - (len(blines) - 1) * 5.5 + i * 11
+                    node_body.append(f'<text class="{txcls}" x="{x + w / 2}" y="{ty}" text-anchor="middle">{esc(ln)}</text>')
+        else:
+            node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
+            if kind == "l4":
+                # L4/VIP = 로드밸런서 fan-out 아이콘(1→N 분배), 좌상단
+                ix, iy = x + 12, y + 13
+                node_body.append(f'<circle class="l4-ico" cx="{ix}" cy="{iy}" r="1.8"/>')
+                node_body.append(f'<path class="l4-ico-l" d="M{ix},{iy} L{ix + 11},{iy - 5} M{ix},{iy} L{ix + 11},{iy} M{ix},{iy} L{ix + 11},{iy + 5}"/>')
+            for i, ln in enumerate(lines):
+                ty = y + h / 2 + 4 - (len(lines) - 1) * 6 + i * 12
+                node_body.append(f'<text class="{txcls}" x="{x + w / 2}" y="{ty}" text-anchor="middle">{esc(ln)}</text>')
         node_body.append('</g>')
 
     # 정적 배선 (links, 번호·화살촉 없음) — 토폴로지 공통 배경
+    dual_ids = {n["id"] for n in nodes if n.get("dual")}
     link_body = []
     for lk in data.get("links") or []:
         a = rects.get(lk.get("from"))
@@ -767,10 +831,18 @@ def render_svg_topology(data, scenario):
         if not a or not b:
             continue
         ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
-        bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
-        p1 = _edge_pt(a, bc[0], bc[1])
-        p2 = _edge_pt(b, ac[0], ac[1])
-        link_body.append(f'<line class="topo-link" data-from="{esc(lk["from"])}" data-to="{esc(lk["to"])}" x1="{p1[0]}" y1="{p1[1]}" x2="{p2[0]}" y2="{p2[1]}"/>')
+        # 이중화 서버 진입 = 2박스 양쪽으로 분기(로드밸런싱 표현), 그 외는 단일 배선
+        if lk.get("to") in dual_ids:
+            g = 7
+            bh = (b[3] - g) / 2
+            targets = [(b[0], b[1], b[2], bh), (b[0], b[1] + bh + g, b[2], bh)]
+        else:
+            targets = [b]
+        for bb in targets:
+            bc = (bb[0] + bb[2] / 2, bb[1] + bb[3] / 2)
+            p1 = _edge_pt(a, bc[0], bc[1])
+            p2 = _edge_pt(bb, ac[0], ac[1])
+            link_body.append(f'<line class="topo-link" data-from="{esc(lk["from"])}" data-to="{esc(lk["to"])}" x1="{p1[0]}" y1="{p1[1]}" x2="{p2[0]}" y2="{p2[1]}"/>')
 
     # 구간 오버레이 (화살표 + 번호 배지 — 배지는 _t_badge_geom/_t_spread_badges 로 겹침 회피)
     seg_paths, badges, badge_sgs = [], [], []
@@ -813,7 +885,12 @@ def render_svg_topology(data, scenario):
         diagram_right = (max(xs) + T_BOX_W) if xs else (leg_x + T_LEG_WRAP * 8)
         items, maxy, leg_max_x = _topo_legend_layout(labelled, leg_x, leg_y, diagram_right)
         for it in items:
-            if it["kind"] == "badge":
+            if it["kind"] == "gridline":
+                leg_lines.append(f'<line class="topo-leggrid" x1="{it["x1"]}" y1="{it["y1"]}" x2="{it["x2"]}" y2="{it["y2"]}"/>')
+            elif it["kind"] == "header":
+                anc = ' text-anchor="middle"' if it.get("mid") else ""
+                leg_lines.append(f'<text class="topo-legend-hdr" x="{it["x"]}" y="{it["y"]}"{anc}>{esc(it["text"])}</text>')
+            elif it["kind"] == "badge":
                 leg_lines.append(f'<circle class="topo-legbadge" cx="{it["x"]}" cy="{it["y"] - 4}" r="9"/>')
                 leg_lines.append(f'<text class="topo-legbadge-tx" x="{it["x"]}" y="{it["y"]}" text-anchor="middle">{esc(it["n"])}</text>')
             elif it["kind"] == "step":
@@ -1052,6 +1129,8 @@ CSS = """
     .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
     .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
     .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-dualgrp{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.2;stroke-dasharray:4,3;}
+    .topo-dual{opacity:0.6;}
     .topo-node.dim{opacity:0.5;}
     .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
     .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
@@ -1073,6 +1152,8 @@ CSS = """
     .topo-legbadge{fill:var(--accent);stroke:var(--surface);stroke-width:1.4;}
     .topo-legbadge-tx{fill:#fff;font-size:10px;font-weight:700;}
     .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-hdr{fill:var(--muted);font-size:10.5px;font-weight:700;}
+    .topo-leggrid{stroke:var(--border);stroke-width:0.7;}
     .topo-legend-step{fill:var(--text);font-size:11.5px;font-weight:700;}
     .topo-legend-tx{fill:var(--text);font-size:11.5px;}
     .topo-legend-meta{fill:var(--muted);font-size:10px;}
