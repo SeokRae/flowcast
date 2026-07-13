@@ -29,7 +29,16 @@ from pathlib import Path
 PX_TO_EMU = 9525   # 1px @96dpi
 PAD_PX = 20        # auto(content-fit) 슬라이드 여백(px)
 FIT_MARGIN = 60    # 고정 캔버스 fit 여백(px)
-TITLE_H = 112      # 상단 타이틀 밴드 높이(px, 콘텐츠 위 예약) — render.py hero 헤더 pptx 대응
+# 상단/하단 크롬 — 슬라이드 절대 px(콘텐츠 배율과 무관)로 고정해 뷰 간 상단 일관성 확보.
+# render.py .hero(항상 flush 좌상단) 대응: pptx 는 fit-centering 아티팩트로 어긋나므로 고정 앵커로 정규화.
+HEADER_LEFT = 60   # 제목 좌측 고정 (= FIT_MARGIN, 콘텐츠 영역 좌측과 정렬)
+HEADER_TOP = 42    # 제목 상단 고정
+HEADER_BAND = 150  # 콘텐츠 상단 경계(px) — 제목 밴드/본문 분리선
+FOOTER_BAND = 46   # 하단 푸터 밴드 높이(px) — 본문/푸터 분리선 = SH - FOOTER_BAND
+HEADER_RULE_Y = HEADER_BAND - 6   # 제목/본문 구분 실선 y (콘텐츠 살짝 위)
+TITLE_PT = {"eyebrow": 12.5, "h1": 22, "sub": 12}   # 제목 고정 폰트(pt) — 뷰 무관 통일
+RULE_RGB = (0x2C, 0x7A, 0x7B)     # 구분선 색 (flowcast comp line teal)
+RULE_PX = 1.5                     # 구분선 두께(px)
 SLIDE_PRESETS = {"wide": (1920, 1080)}   # 캔버스 프리셋 (px) — 기본 wide
 ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 
@@ -87,15 +96,23 @@ def _parse_slide_size(opt):
 def _fit(content_w, content_h, size):
     """콘텐츠(px)를 캔버스에 uniform scale 로 fit — (slide_w, slide_h, scale, dx, dy).
 
-    dx/dy 는 콘텐츠-px 단위 중앙 배치 오프셋: 스케일된 emu 변환에서 (좌표 + dx) * scale.
-    size=None(auto) 은 content-fit — scale 1, 여백 PAD_PX.
+    콘텐츠는 상단 HEADER_BAND · 하단 FOOTER_BAND(절대 px) 사이 영역에 fit·중앙배치된다.
+    dx/dy 는 콘텐츠-px 단위 오프셋: 스케일된 emu 변환에서 (좌표 + dx) * scale = 슬라이드-px.
+    호출부는 raw content_w/content_h 를 넘긴다(타이틀 밴드 예약은 여기서 처리).
+    size=None(auto) 은 content-fit — scale 1, 콘텐츠 = 캔버스, 헤더/푸터 밴드만 상하로 예약.
     """
+    cw, ch = max(content_w, 1), max(content_h, 1)
     if size is None:
-        return content_w + 2 * PAD_PX, content_h + 2 * PAD_PX, 1.0, PAD_PX, PAD_PX
+        W = cw + 2 * PAD_PX
+        H = HEADER_BAND + ch + FOOTER_BAND
+        return W, H, 1.0, (W - cw) / 2, HEADER_BAND     # 콘텐츠 좌우 중앙 · 헤더 밴드 아래
     W, H = size
-    s = min((W - 2 * FIT_MARGIN) / max(content_w, 1),
-            (H - 2 * FIT_MARGIN) / max(content_h, 1))
-    return W, H, s, (W / s - content_w) / 2, (H / s - content_h) / 2
+    avail_w = W - 2 * FIT_MARGIN
+    avail_h = H - HEADER_BAND - FOOTER_BAND
+    s = min(avail_w / cw, avail_h / ch)
+    dx = (FIT_MARGIN + (avail_w - cw * s) / 2) / s      # [FIT_MARGIN, W-FIT_MARGIN] 중앙
+    dy = (HEADER_BAND + (avail_h - ch * s) / 2) / s     # [HEADER_BAND, H-FOOTER_BAND] 중앙
+    return W, H, s, dx, dy
 
 
 def _fpt(base, s):
@@ -124,33 +141,80 @@ def _fill_lines(tf, name, s, size=10, sub_size=8,
         r.font.color.rgb = RGBColor(*(color if first else sub_color))
 
 
-def _draw_title(shapes, left_emu, top_emu, width_emu, height_emu, s, system, title, source):
-    """상단 타이틀 밴드 — render.py hero 헤더 대응: eyebrow(system · IF 흐름도) + h1(title) + sub(source).
+def _rule(shapes, x1, x2, y, rgb=RULE_RGB, thick=RULE_PX):
+    """가로 구분 실선 — 얇은 사각형(AUTO_SHAPE)으로 그린다.
 
-    콘텐츠와 같은 배율 s 로 폰트 스케일(_fpt) → HTML/PDF 와 시각 비례 일치. 좌상단 정렬.
+    add_connector(LINE) 를 쓰면 커넥터 수 테스트(=엣지/라이프라인 수)와 충돌하므로 금지.
+    좌표는 슬라이드 절대 px(× PX_TO_EMU, 콘텐츠 배율 s 무관).
     """
-    from pptx.util import Pt
+    from pptx.util import Emu
+    from pptx.dml.color import RGBColor
+    from pptx.enum.shapes import MSO_SHAPE
+    a = lambda px: Emu(int(round(px * PX_TO_EMU)))
+    bar = shapes.add_shape(MSO_SHAPE.RECTANGLE, a(x1), a(y - thick / 2), a(x2 - x1), a(thick))
+    bar.fill.solid()
+    bar.fill.fore_color.rgb = RGBColor(*rgb)
+    bar.line.fill.background()
+    bar.shadow.inherit = False
+    return bar
+
+
+def _draw_chrome(shapes, SW, SH, system, title, source, idx, total):
+    """상단 제목 + 제목/본문·본문/푸터 구분 실선 + 페이지 — 모두 슬라이드 절대 px 고정.
+
+    render.py .hero(flush 좌상단) 대응. 제목은 고정 앵커(HEADER_LEFT/TOP)+고정 폰트로 그려
+    콘텐츠 배율 s 와 무관하게 뷰·슬라이드 상단이 일관된다. 구분선은 _rule(사각형).
+    """
+    from pptx.util import Emu, Pt
     from pptx.dml.color import RGBColor
     from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-    tb = shapes.add_textbox(left_emu, top_emu, width_emu, height_emu)
+    a = lambda px: Emu(int(round(px * PX_TO_EMU)))
+
+    # 제목 밴드 (eyebrow · h1 · sub) — 고정 좌상단·고정 폰트
+    tb = shapes.add_textbox(a(HEADER_LEFT), a(HEADER_TOP),
+                            a(SW - 2 * HEADER_LEFT), a(HEADER_BAND - HEADER_TOP))
     tf = tb.text_frame
     tf.word_wrap = True
     tf.vertical_anchor = MSO_ANCHOR.TOP
     tf.margin_left = tf.margin_top = 0
     specs = []
     if system:
-        specs.append((f"{system} · IF 흐름도", 11, (0x1F, 0x6F, 0xD0), True))
-    specs.append((str(title), 22, (0x1B, 0x26, 0x35), True))
+        specs.append((f"{system} · IF 흐름도", TITLE_PT["eyebrow"], (0x1F, 0x6F, 0xD0), True))
+    specs.append((str(title), TITLE_PT["h1"], (0x1B, 0x26, 0x35), True))
     if source:
-        specs.append((str(source), 11, (0x54, 0x66, 0x7E), False))
+        specs.append((str(source), TITLE_PT["sub"], (0x54, 0x66, 0x7E), False))
     for i, (text, size, rgb, bold) in enumerate(specs):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.alignment = PP_ALIGN.LEFT
         r = p.add_run()
         r.text = text
-        r.font.size = Pt(_fpt(size, s))
+        r.font.size = Pt(size)
         r.font.bold = bold
         r.font.color.rgb = RGBColor(*rgb)
+
+    # 제목/본문 · 본문/푸터 구분 실선
+    _rule(shapes, FIT_MARGIN, SW - FIT_MARGIN, HEADER_RULE_Y)
+    _rule(shapes, FIT_MARGIN, SW - FIT_MARGIN, SH - FOOTER_BAND)
+
+    # 푸터: system(좌) · 페이지(우) — 회색, 작게
+    fy = SH - FOOTER_BAND + 6
+    if system:
+        lt = shapes.add_textbox(a(HEADER_LEFT), a(fy), a(SW - 2 * HEADER_LEFT - 160), a(28))
+        ltf = lt.text_frame
+        ltf.margin_left = ltf.margin_top = 0
+        lr = ltf.paragraphs[0].add_run()
+        lr.text = str(system)
+        lr.font.size = Pt(11)
+        lr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
+    pg = shapes.add_textbox(a(SW - FIT_MARGIN - 160), a(fy), a(160), a(28))
+    ptf = pg.text_frame
+    ptf.margin_left = ptf.margin_right = ptf.margin_top = 0
+    pp = ptf.paragraphs[0]
+    pp.alignment = PP_ALIGN.RIGHT
+    pr = pp.add_run()
+    pr.text = f"{idx} / {total}"
+    pr.font.size = Pt(11)
+    pr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
 
 
 def _scene_geometry(R, scenario):
@@ -195,7 +259,7 @@ def export_component(data, out_path, slide_size="wide"):
     geoms = [_scene_geometry(R, sc) for sc in scenarios]
     max_w = max(((b[2] - b[0]) for _, _, b in geoms), default=400)
     max_h = max(((b[3] - b[1]) for _, _, b in geoms), default=300)
-    SW, SH, s, dx, dy = _fit(max_w, max_h + TITLE_H, _parse_slide_size(slide_size))
+    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
 
     prs = Presentation()
@@ -210,14 +274,14 @@ def export_component(data, out_path, slide_size="wide"):
         if tail:
             ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
 
-    for scenario, (rects, zone_boxes, bbox) in zip(scenarios, geoms):
+    for idx, (scenario, (rects, zone_boxes, bbox)) in enumerate(zip(scenarios, geoms), 1):
         minx, miny = bbox[0], bbox[1]
-        ox, oy = -minx + dx, -miny + dy + TITLE_H   # 원점 이동 + 중앙 배치(타이틀 밴드만큼 하강)
+        ox, oy = -minx + dx, -miny + dy   # 원점 이동 + 중앙 배치(헤더 밴드 아래)
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
 
-        _draw_title(shapes, emu(dx), emu(dy), emu(bbox[2] - bbox[0]), emu(TITLE_H), s,
-                    data.get("system", ""), scenario.get("title", ""), data.get("source", ""))
+        _draw_chrome(shapes, SW, SH, data.get("system", ""), scenario.get("title", ""),
+                     data.get("source", ""), idx, len(scenarios))
 
         # 존 배경 먼저(뒤에 깔림)
         for z, zx1, zy1, zx2, zy2 in zone_boxes:
@@ -363,8 +427,8 @@ def export_topology(data, out_path, slide_size="wide"):
         maxy = leg_y + (max_leg + 1) * R.T_LEG_LH + 8   # 헤더 1줄 + 본문
         maxx = max(maxx, leg_x + longest * 7.2)
 
-    SW, SH, s, dx, dy = _fit(maxx - minx, (maxy - miny) + TITLE_H, _parse_slide_size(slide_size))
-    ox, oy = -minx + dx, -miny + dy + TITLE_H   # 타이틀 밴드만큼 하강
+    SW, SH, s, dx, dy = _fit(maxx - minx, maxy - miny, _parse_slide_size(slide_size))
+    ox, oy = -minx + dx, -miny + dy   # 헤더 밴드 아래 중앙 배치
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
     prs = Presentation()
     prs.slide_width = Emu(SW * PX_TO_EMU)
@@ -396,13 +460,13 @@ def export_topology(data, out_path, slide_size="wide"):
         r.font.bold = True
         r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
-    for scenario, leg_lines in zip(scenarios, legends):
+    for idx, (scenario, leg_lines) in enumerate(zip(scenarios, legends), 1):
         segments = scenario.get("segments") or []
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
 
-        _draw_title(shapes, emu(dx), emu(dy), emu(maxx - minx), emu(TITLE_H), s,
-                    data.get("system", ""), scenario.get("title", ""), data.get("source", ""))
+        _draw_chrome(shapes, SW, SH, data.get("system", ""), scenario.get("title", ""),
+                     data.get("source", ""), idx, len(scenarios))
 
         for z, zx1, zy1, zx2, zy2 in zone_boxes:
             zb = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(zx1 + ox), emu(zy1 + oy),
@@ -510,10 +574,10 @@ def export_sequence(data, out_path, slide_size="wide"):
     layouts = [R.layout_sequence(data, sc) for sc in scenarios]
     max_w = max((L["width"] for L in layouts), default=400)
     max_h = max((L["height"] for L in layouts), default=300)
-    SW, SH, s, dx, dy = _fit(max_w, max_h + TITLE_H, _parse_slide_size(slide_size))
+    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))   # 크기·길이
     X = lambda px: emu(px + dx)                            # 위치(x) — 중앙 배치 오프셋
-    Y = lambda px: emu(px + dy + TITLE_H)                  # 위치(y) — 타이틀 밴드만큼 하강
+    Y = lambda px: emu(px + dy)                            # 위치(y) — 헤더 밴드 아래
     BOX_W, BOX_H, ACT_W, ZONE_H = R.BOX_W, R.BOX_H, R.ACT_W, R.ZONE_H
 
     prs = Presentation()
@@ -541,12 +605,12 @@ def export_sequence(data, out_path, slide_size="wide"):
         ln = conn.line._get_or_add_ln()
         ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
 
-    for sc, L in zip(scenarios, layouts):
+    for idx, (sc, L) in enumerate(zip(scenarios, layouts), 1):
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
 
-        _draw_title(shapes, emu(dx), emu(dy), emu(max_w), emu(TITLE_H), s,
-                    data.get("system", ""), sc.get("title", ""), data.get("source", ""))
+        _draw_chrome(shapes, SW, SH, data.get("system", ""), sc.get("title", ""),
+                     data.get("source", ""), idx, len(layouts))
 
         zone_y, box_y, bottom = L["zone_y"], L["box_y"], L["bottom"]
 

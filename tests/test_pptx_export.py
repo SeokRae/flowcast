@@ -398,3 +398,68 @@ def test_component_zorder_nodes_over_connectors(tmp_path):
     prs = Presentation(str(out))
     names = {str(nd["name"]).split("\n")[0] for sc in data["scenarios"] for nd in sc["nodes"]}
     _zorder_conn_under_nodes(prs, names)
+
+
+# ── #41: 상단 제목영역 일관성(뷰 무관 고정 앵커) + 제목/본문·본문/푸터 구분선 + 페이지 ──
+
+_VIEWS = ((_mod.export_component, SRC), (_mod.export_topology, TOPO),
+          (_mod.export_sequence, SEQ))
+
+
+def _first_slide(fn, src, tmp_path):
+    data = json.loads(src.read_text(encoding="utf-8"))
+    out = tmp_path / f"h-{src.stem}.pptx"
+    fn(data, out)
+    return Presentation(str(out)).slides[0]
+
+
+def _title_box(slide):
+    return next(sh for sh in slide.shapes
+               if sh.has_text_frame and "IF 흐름도" in sh.text_frame.text)
+
+
+def _rules(slide):
+    """제목/본문·본문/푸터 구분선 = 얇은(≤3px) 텍스트 없는 사각형(AUTO_SHAPE)."""
+    return [sh for sh in slide.shapes
+            if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE
+            and not sh.text_frame.text.strip() and sh.height <= 3 * EMU_PX]
+
+
+def test_header_anchor_consistent_across_views(tmp_path):
+    # 제목 좌상단이 sequence·component·topology 에서 동일 (fit-centering 아티팩트 제거)
+    boxes = [_title_box(_first_slide(fn, src, tmp_path)) for fn, src in _VIEWS]
+    assert len({b.left for b in boxes}) == 1
+    assert len({b.top for b in boxes}) == 1
+
+
+def test_header_h1_font_consistent_across_views(tmp_path):
+    # h1 = eyebrow 다음 문단. 콘텐츠 배율 s 와 무관하게 뷰 간 동일해야
+    sizes = {_title_box(_first_slide(fn, src, tmp_path))
+             .text_frame.paragraphs[1].runs[0].font.size.pt for fn, src in _VIEWS}
+    assert len(sizes) == 1
+
+
+def test_divider_rules_are_shapes_not_connectors(tmp_path):
+    # 구분선 2개(제목/본문·본문/푸터). LINE(커넥터) 아니어야 커넥터 수 테스트 불변
+    for fn, src in _VIEWS:
+        rules = _rules(_first_slide(fn, src, tmp_path))
+        assert len(rules) == 2
+        assert all(r.shape_type != MSO_SHAPE_TYPE.LINE for r in rules)
+
+
+def test_footer_page_number_present(tmp_path):
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    out = tmp_path / "pg.pptx"
+    n = export_topology(data, out)
+    assert f"1 / {n}" in _all_text(Presentation(str(out)))
+
+
+def test_content_below_header_band(tmp_path):
+    # 모든 노드가 헤더 밴드(구분선) 아래 — 제목/본문 겹침 없음
+    slide = _first_slide(export_component, SRC, tmp_path)
+    rule_y = min(r.top for r in _rules(slide))
+    data = json.loads(SRC.read_text(encoding="utf-8"))
+    names = {nd["name"].split("\n")[0] for sc in data["scenarios"] for nd in sc["nodes"]}
+    node_tops = [sh.top for sh in slide.shapes
+                 if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in names]
+    assert node_tops and min(node_tops) >= rule_y
