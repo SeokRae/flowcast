@@ -37,8 +37,16 @@ def _export(tmp_path):
 
 
 def _all_text(prs):
-    return "\n".join(
-        sh.text_frame.text for s in prs.slides for sh in s.shapes if sh.has_text_frame)
+    parts = []
+    for s in prs.slides:
+        for sh in s.shapes:
+            if sh.has_text_frame:
+                parts.append(sh.text_frame.text)
+            elif sh.has_table:   # 흐름 설명 네이티브 표 — 셀 텍스트도 포함
+                for row in sh.table.rows:
+                    for cell in row.cells:
+                        parts.append(cell.text)
+    return "\n".join(parts)
 
 
 def test_slide_per_scenario(tmp_path):
@@ -137,7 +145,7 @@ def test_topology_connector_count(tmp_path):
         if not sg.get("self") and sg.get("to") in ids)
     expected = links * len(data["scenarios"]) + seg_arrows  # 링크는 슬라이드마다 공통
     conns = sum(1 for s in prs.slides for sh in s.shapes
-                if sh.shape_type == MSO_SHAPE_TYPE.LINE and sh.name != "gridline")
+                if sh.shape_type == MSO_SHAPE_TYPE.LINE)
     assert conns == expected
 
 
@@ -334,6 +342,27 @@ def test_topology_badges_and_legend(tmp_path):
                 assert sg["label"][:15] in text
 
 
+def test_topology_legend_native_table(tmp_path):
+    # 흐름 설명 범례 = 네이티브 표(GraphicFrame) — 헤더 [# | 단계 | 설명 · 기술] + 세그먼트당 1행
+    data, out, _ = _export_topo(tmp_path)
+    prs = Presentation(str(out))
+    for i, sc in enumerate(data["scenarios"]):
+        labelled = [sg for sg in (sc.get("segments") or []) if sg.get("label")]
+        tables = [sh.table for sh in prs.slides[i].shapes if sh.has_table]
+        if not labelled:
+            assert not tables            # 라벨 없으면 범례 표 없음
+            continue
+        assert tables
+        for t in tables:
+            assert [t.cell(0, c).text for c in range(3)] == ["#", "단계", "설명 · 기술"]
+        data_rows = sum(len(t.rows) - 1 for t in tables)   # 헤더 제외
+        assert data_rows == len(labelled)
+        cell_text = "\n".join(t.cell(r, c).text
+                              for t in tables for r in range(len(t.rows)) for c in range(3))
+        for sg in labelled:
+            assert sg["label"][:12] in cell_text
+
+
 def test_font_scale_follows_canvas(tmp_path):
     # 작은 예제 → wide 캔버스 업스케일 — 노드 폰트가 base(10pt)보다 커져야
     data = json.loads(TOPO.read_text(encoding="utf-8"))
@@ -379,7 +408,7 @@ def _zorder_conn_under_nodes(prs, node_first_lines):
     """모든 슬라이드에서 LINE(커넥터) 도형이 노드 박스보다 먼저(아래) 삽입됐는지."""
     for slide in prs.slides:
         idx_conn = [i for i, sh in enumerate(slide.shapes)
-                    if sh.shape_type == MSO_SHAPE_TYPE.LINE and sh.name != "gridline"]
+                    if sh.shape_type == MSO_SHAPE_TYPE.LINE]
         idx_node = [i for i, sh in enumerate(slide.shapes)
                     if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_first_lines]
         if idx_conn and idx_node:

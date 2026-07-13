@@ -411,17 +411,17 @@ def export_topology(data, out_path, slide_size="wide"):
     minx, miny = (min(xs), min(ys)) if xs else (0, 0)
     maxx, maxy = (max(xs), max(ys)) if xs else (0, 0)
 
-    # 흐름 설명 범례(시나리오별) — render.py 공용 레이아웃 헬퍼로 [배지|단계|설명|meta] 표 패리티
+    # 흐름 설명 범례(시나리오별) — render.py 공용 표 모델로 네이티브 add_table 렌더
     leg_x, leg_y = minx, maxy + 30
     diagram_right = maxx + R.T_BOX_W                     # 노드 오른쪽 끝 근사 (render.py 와 동일 기준)
     legends, leg_max_x, leg_bottom = [], leg_x, leg_y
     for sc in scenarios:
         labelled = [sg for sg in (sc.get("segments") or []) if sg.get("label")]
         if labelled:
-            items, ly_end, lmx = R._topo_legend_layout(labelled, leg_x, leg_y, diagram_right)
+            tables, ly_end, lmx = R._topo_legend_tables(labelled, leg_x, leg_y, diagram_right)
         else:
-            items, ly_end, lmx = [], leg_y, leg_x
-        legends.append(items)
+            tables, ly_end, lmx = [], leg_y, leg_x
+        legends.append(tables)
         leg_max_x = max(leg_max_x, lmx)
         leg_bottom = max(leg_bottom, ly_end)
     if any(legends):
@@ -462,20 +462,43 @@ def export_topology(data, out_path, slide_size="wide"):
         r.font.bold = True
         r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
-    def _leg_text(x, y, text, bold=False, muted=False, size=9):
-        """흐름 설명 표의 개별 텍스트(단계/설명/meta) — render.py baseline → textbox top 근사."""
-        tb = shapes.add_textbox(emu(x + ox), emu(y + oy - R.T_LEG_LH), emu(680), emu(R.T_LEG_LH + 4))
-        tf = tb.text_frame
-        tf.word_wrap = False
-        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
-        p = tf.paragraphs[0]
-        r = p.add_run()
-        r.text = text
-        r.font.size = Pt(_fpt(size, s))
-        r.font.bold = bold
-        r.font.color.rgb = RGBColor(0x54, 0x66, 0x7E) if muted else RGBColor(0x1B, 0x26, 0x35)
+    def _leg_table_style(gf):
+        """네이티브 표를 'Table Grid'(얇은 회색 괘선·밴딩 없음)로 — 편집가능 깔끔한 표."""
+        tbl = gf._element.graphic.graphicData.tbl
+        tblPr = tbl.find(qn("a:tblPr"))
+        if tblPr is None:
+            tblPr = tbl.makeelement(qn("a:tblPr"), {})
+            tbl.insert(0, tblPr)
+        tblPr.set("firstRow", "1")
+        tblPr.set("bandRow", "0")
+        sid = tblPr.find(qn("a:tableStyleId"))
+        if sid is None:
+            sid = tblPr.makeelement(qn("a:tableStyleId"), {})
+            tblPr.append(sid)
+        sid.text = "{5940675A-B579-460E-94D1-54222C63F5DA}"   # Table Grid
 
-    for idx, (scenario, leg_items) in enumerate(zip(scenarios, legends), 1):
+    def _leg_cell(cell, paras, align=PP_ALIGN.LEFT, fill=None, valign=MSO_ANCHOR.TOP):
+        """표 셀 채우기. paras = [(text, size, bold, (r,g,b)), ...] 문단 목록."""
+        cell.vertical_anchor = valign
+        cell.margin_left = cell.margin_right = emu(4)
+        cell.margin_top = cell.margin_bottom = emu(2)
+        if fill is None:
+            cell.fill.background()
+        else:
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = RGBColor(*fill)
+        tf = cell.text_frame
+        tf.word_wrap = True
+        for i, (text, size, bold, color) in enumerate(paras):
+            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            p.alignment = align
+            r = p.add_run()
+            r.text = text
+            r.font.size = Pt(_fpt(size, s))
+            r.font.bold = bold
+            r.font.color.rgb = RGBColor(*color)
+
+    for idx, (scenario, leg_tables) in enumerate(zip(scenarios, legends), 1):
         segments = scenario.get("segments") or []
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
@@ -574,8 +597,8 @@ def export_topology(data, out_path, slide_size="wide"):
         for sg, (bx, by) in zip(badge_sgs, spread):
             _badge(bx, by, sg["n"])
 
-        # 흐름 설명 범례 (render.py 패리티 — [번호 배지 | 단계 | 설명 | meta] 표)
-        if leg_items:
+        # 흐름 설명 범례 — 네이티브 add_table (편집가능·정렬된 표). 다단이면 열별 표 N개.
+        if leg_tables:
             hb = shapes.add_textbox(emu(leg_x + ox), emu(leg_y + oy - R.T_LEG_LH),
                                     emu(200), emu(R.T_LEG_LH + 6))
             htf = hb.text_frame
@@ -586,23 +609,31 @@ def export_topology(data, out_path, slide_size="wide"):
             hr.font.size = Pt(_fpt(9, s))
             hr.font.bold = True
             hr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
-            for it in leg_items:
-                k = it["kind"]
-                if k == "gridline":
-                    gl = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(it["x1"] + ox), emu(it["y1"] + oy),
-                                              emu(it["x2"] + ox), emu(it["y2"] + oy))
-                    gl.line.color.rgb = RGBColor(0xD5, 0xDB, 0xE3)
-                    gl.name = "gridline"   # 범례 표 괘선 — 배선 커넥터 수/z-순서 검증에서 제외
-                elif k == "header":
-                    _leg_text(it["x"], it["y"], it["text"], bold=True, muted=True, size=8)
-                elif k == "badge":
-                    _badge(it["x"], it["y"] - 4, it["n"], rad=9)
-                elif k == "step":
-                    _leg_text(it["x"], it["y"], it["text"], bold=True)
-                elif k == "desc":
-                    _leg_text(it["x"], it["y"], it["text"])
-                else:  # meta
-                    _leg_text(it["x"], it["y"], it["text"], muted=True, size=8)
+            HDR_FILL = (0xEC, 0xEF, 0xF3)
+            STEP_C, DESC_C, META_C = (0x1B, 0x26, 0x35), (0x1B, 0x26, 0x35), (0x54, 0x66, 0x7E)
+            for tb in leg_tables:
+                gf = shapes.add_table(1 + len(tb["rows"]), 3,
+                                      emu(tb["x"] + ox), emu(tb["y"] + oy),
+                                      emu(tb["w"]), emu(tb["total_h"]))
+                _leg_table_style(gf)
+                table = gf.table
+                bw, sw, dw = tb["col_w"]
+                table.columns[0].width = emu(bw)
+                table.columns[1].width = emu(sw)
+                table.columns[2].width = emu(dw)
+                _leg_cell(table.cell(0, 0), [("#", 8, True, META_C)], PP_ALIGN.CENTER, HDR_FILL, MSO_ANCHOR.MIDDLE)
+                _leg_cell(table.cell(0, 1), [("단계", 8, True, META_C)], PP_ALIGN.CENTER, HDR_FILL, MSO_ANCHOR.MIDDLE)
+                _leg_cell(table.cell(0, 2), [("설명 · 기술", 8, True, META_C)], PP_ALIGN.LEFT, HDR_FILL, MSO_ANCHOR.MIDDLE)
+                table.rows[0].height = emu(tb["header_h"])
+                for ri, row in enumerate(tb["rows"], 1):
+                    num = "" if row["n"] is None else str(row["n"])
+                    _leg_cell(table.cell(ri, 0), [(num, 9, True, ACCENT)], PP_ALIGN.CENTER, None, MSO_ANCHOR.MIDDLE)
+                    _leg_cell(table.cell(ri, 1), [(row["step"] or "", 8.5, True, STEP_C)],
+                              PP_ALIGN.CENTER, None, MSO_ANCHOR.MIDDLE)
+                    paras = [(ln, 8.5, False, DESC_C) for ln in row["desc"]] + \
+                            [(ln, 7.5, False, META_C) for ln in row["meta"]]
+                    _leg_cell(table.cell(ri, 2), paras or [("", 8.5, False, DESC_C)])
+                    table.rows[ri].height = emu(row["h"])
 
     prs.save(str(out_path))
     return len(scenarios)

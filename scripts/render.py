@@ -61,6 +61,10 @@ T_ZONE_PAD = 14       # 존 박스 여백
 T_ZONE_LBL = 18       # 존 라벨 높이
 T_LEG_LH = 19         # 흐름 설명 줄 높이
 T_LEG_WRAP = 46       # 흐름 설명 줄바꿈 문자 수
+T_LEG_HDR_H = 22      # 흐름 설명 표 헤더 행 높이
+T_LEG_ROW_LH = 17     # 흐름 설명 표 설명/메타 줄 높이
+T_LEG_ROW_PAD = 9     # 흐름 설명 표 행 상하 여백
+T_LEG_BADGE_W = 30    # 흐름 설명 표 '#' 열 폭
 
 # ── 컴포넌트 뷰 상수 ──────────────────────────────────────────
 C_MARGIN = 30
@@ -616,65 +620,48 @@ def _split_step_label(lb):
     return "", lb.strip()
 
 
-def _topo_legend_layout(labelled, leg_x, leg_y, diagram_right):
-    """흐름 설명 [번호 배지 | 단계 | 설명 | meta] 표 레이아웃 — render/pptx 공용.
+def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
+    """흐름 설명 표 모델 — SVG(셀 rect)/pptx(네이티브 add_table) 공용.
 
     항목이 많으면 여러 열로 나눠(다단) 세로 높이를 줄인다 — 슬라이드 fit 시 상단
-    다이어그램이 긴 legend 때문에 축소되는 것을 막기 위함. 각 열 안에서 설명 시작 x
-    를 고정해 열 정렬(규격화)한다.
-    반환: (items, maxy, maxx). items 원소 = {kind: badge|step|desc|meta, x, y, ...}.
+    다이어그램이 긴 legend 때문에 축소되는 것을 막기 위함. 각 표는 3열 [# | 단계 | 설명 · 기술].
+    반환: (tables, maxy, maxx). 각 table =
+      {x, y, w, col_w:[badge,step,desc], header_h, total_h,
+       rows:[{n, step, desc:[wrapped lines], meta:[wrapped lines], h}]}.
     """
-    rows = [_split_step_label(sg["label"]) for sg in labelled]
+    parsed = [(_split_step_label(sg["label"]), sg) for sg in labelled]
     n = len(labelled)
     avail_w = max(diagram_right - leg_x, 360.0)
     max_cols = max(1, int(avail_w // 360))          # 열당 최소 ~360px 확보
     ncol = min(max_cols, max(1, (n + 7) // 8))       # 열당 ~8행 목표 → 세로 높이 억제
     col_w = avail_w / ncol
     per_col = (n + ncol - 1) // ncol
-    step_w = max((len(s) for s, _ in rows), default=0)
-    step_off = 26 + step_w * 12 + 16                 # 배지+단계 폭 → 열 내 설명 시작 오프셋
-    desc_wrap = max(20, min(96, int((col_w - step_off) / 8.4)))
-    items, leg_max_x, col_bottoms = [], leg_x, []
+    step_chars = max((len(s) for (s, _), _ in parsed), default=0)
+    badge_w = T_LEG_BADGE_W
+    step_w = min(max(step_chars * 7.4 + 16, 66), 150)
+    desc_w = max(col_w - badge_w - step_w - 8, 120)
+    desc_wrap = max(18, int(desc_w / 6.6))
+    tbl_w = badge_w + step_w + desc_w
+    tbl_y = leg_y + 6
+    tables, maxx, bottoms = [], leg_x, []
     for col in range(ncol):
-        cx = leg_x + col * col_w
-        badge_col, step_col, desc_col = cx + 9, cx + 26, cx + step_off
-        col_right = cx + col_w - 12
-        col_top = leg_y + T_LEG_LH + 8 - 12
-        colv = [cx, step_col - 6, desc_col - 8, col_right]   # 열 경계 세로선 x
-        # 헤더 행 (# | 단계 | 설명·기술) + 헤더 구분선
-        hy = leg_y + T_LEG_LH + 8
-        items.append({"kind": "gridline", "x1": cx, "y1": col_top, "x2": col_right, "y2": col_top})
-        items.append({"kind": "header", "x": badge_col, "y": hy, "text": "#", "mid": True})
-        items.append({"kind": "header", "x": step_col, "y": hy, "text": "단계"})
-        items.append({"kind": "header", "x": desc_col, "y": hy, "text": "설명 · 기술"})
-        items.append({"kind": "gridline", "x1": cx, "y1": hy + 6, "x2": col_right, "y2": hy + 6})
-        leg_max_x = max(leg_max_x, col_right)
-        ly = hy + T_LEG_LH + 4
-        for sg, (step, desc) in zip(labelled[col * per_col:(col + 1) * per_col],
-                                    rows[col * per_col:(col + 1) * per_col]):
-            row_top = ly
-            nn = sg.get("n")
-            if nn is not None:
-                items.append({"kind": "badge", "x": badge_col, "y": ly, "n": nn})
-            if step:
-                items.append({"kind": "step", "x": step_col, "y": ly, "text": step})
-            for ln in _wrap(desc, desc_wrap):
-                items.append({"kind": "desc", "x": desc_col, "y": ly, "text": ln})
-                leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.2)
-                ly += T_LEG_LH
-            if sg.get("meta"):
-                for ln in _wrap(sg["meta"], desc_wrap):
-                    items.append({"kind": "meta", "x": desc_col, "y": ly, "text": ln})
-                    leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.0)
-                    ly += T_LEG_LH - 3
-            ly = max(ly, row_top + T_LEG_LH) + 6     # 최소 행 높이 + 행 간격
-            items.append({"kind": "gridline", "x1": cx, "y1": ly - 4, "x2": col_right, "y2": ly - 4})
-        col_bottom = ly - 4
-        for vx in colv:   # 외곽 좌우 + 열 구분선 세로
-            items.append({"kind": "gridline", "x1": vx, "y1": col_top, "x2": vx, "y2": col_bottom})
-        col_bottoms.append(ly)
-    maxy = max(col_bottoms) if col_bottoms else leg_y + T_LEG_LH + 8
-    return items, maxy, leg_max_x
+        chunk = parsed[col * per_col:(col + 1) * per_col]
+        if not chunk:
+            continue
+        tx = leg_x + col * col_w
+        rows = []
+        for (step, desc), sg in chunk:
+            dlines = _wrap(desc, desc_wrap) if desc else []
+            mlines = _wrap(sg["meta"], desc_wrap) if sg.get("meta") else []
+            rh = max(1, len(dlines) + len(mlines)) * T_LEG_ROW_LH + T_LEG_ROW_PAD
+            rows.append({"n": sg.get("n"), "step": step, "desc": dlines, "meta": mlines, "h": rh})
+        total_h = T_LEG_HDR_H + sum(r["h"] for r in rows)
+        tables.append({"x": tx, "y": tbl_y, "w": tbl_w, "col_w": [badge_w, step_w, desc_w],
+                       "header_h": T_LEG_HDR_H, "total_h": total_h, "rows": rows})
+        maxx = max(maxx, tx + tbl_w)
+        bottoms.append(tbl_y + total_h)
+    maxy = max(bottoms) if bottoms else tbl_y + T_LEG_HDR_H
+    return tables, maxy, maxx
 
 
 def _t_badge_geom(sg, rects):
@@ -883,22 +870,39 @@ def render_svg_topology(data, scenario):
         leg_y = max(ys) + 30
         leg_lines.append(f'<text class="topo-legend-h" x="{leg_x}" y="{leg_y}">흐름 설명</text>')
         diagram_right = (max(xs) + T_BOX_W) if xs else (leg_x + T_LEG_WRAP * 8)
-        items, maxy, leg_max_x = _topo_legend_layout(labelled, leg_x, leg_y, diagram_right)
-        for it in items:
-            if it["kind"] == "gridline":
-                leg_lines.append(f'<line class="topo-leggrid" x1="{it["x1"]}" y1="{it["y1"]}" x2="{it["x2"]}" y2="{it["y2"]}"/>')
-            elif it["kind"] == "header":
-                anc = ' text-anchor="middle"' if it.get("mid") else ""
-                leg_lines.append(f'<text class="topo-legend-hdr" x="{it["x"]}" y="{it["y"]}"{anc}>{esc(it["text"])}</text>')
-            elif it["kind"] == "badge":
-                leg_lines.append(f'<circle class="topo-legbadge" cx="{it["x"]}" cy="{it["y"] - 4}" r="9"/>')
-                leg_lines.append(f'<text class="topo-legbadge-tx" x="{it["x"]}" y="{it["y"]}" text-anchor="middle">{esc(it["n"])}</text>')
-            elif it["kind"] == "step":
-                leg_lines.append(f'<text class="topo-legend-step" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
-            elif it["kind"] == "desc":
-                leg_lines.append(f'<text class="topo-legend-tx" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
-            else:  # meta — 기술 상세(프로토콜·포트·FW), 설명 아래 흐린 부라인
-                leg_lines.append(f'<text class="topo-legend-meta" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
+        tables, maxy, leg_max_x = _topo_legend_tables(labelled, leg_x, leg_y, diagram_right)
+        for tb in tables:
+            tx, ty, tw = tb["x"], tb["y"], tb["w"]
+            bw, sw, _dw = tb["col_w"]
+            hh, th = tb["header_h"], tb["total_h"]
+            cx1, cx2 = tx + bw, tx + bw + sw           # 열 경계 x (# | 단계 | 설명)
+            # 헤더 음영 + 외곽/열 경계
+            leg_lines.append(f'<rect class="topo-legtbl-hdr" x="{tx}" y="{ty}" width="{tw}" height="{hh}"/>')
+            leg_lines.append(f'<rect class="topo-legtbl" x="{tx}" y="{ty}" width="{tw}" height="{th}"/>')
+            for vx in (cx1, cx2):
+                leg_lines.append(f'<line class="topo-leggrid" x1="{vx}" y1="{ty}" x2="{vx}" y2="{ty + th}"/>')
+            # 헤더 텍스트 (# · 단계 = 중앙, 설명 · 기술 = 좌측)
+            step_mid = (cx1 + cx2) / 2
+            leg_lines.append(f'<text class="topo-legend-hdr" x="{tx + bw / 2:.1f}" y="{ty + hh - 7}" text-anchor="middle">#</text>')
+            leg_lines.append(f'<text class="topo-legend-hdr" x="{step_mid:.1f}" y="{ty + hh - 7}" text-anchor="middle">단계</text>')
+            leg_lines.append(f'<text class="topo-legend-hdr" x="{cx2 + 8}" y="{ty + hh - 7}">설명 · 기술</text>')
+            # 데이터 행
+            ry = ty + hh
+            for row in tb["rows"]:
+                leg_lines.append(f'<line class="topo-leggrid" x1="{tx}" y1="{ry}" x2="{tx + tw}" y2="{ry}"/>')
+                mid_y = ry + row["h"] / 2 + 4                # # · 단계 수직 중앙
+                if row["n"] is not None:
+                    leg_lines.append(f'<text class="topo-legnum" x="{tx + bw / 2:.1f}" y="{mid_y:.1f}" text-anchor="middle">{esc(row["n"])}</text>')
+                if row["step"]:
+                    leg_lines.append(f'<text class="topo-legend-step" x="{step_mid:.1f}" y="{mid_y:.1f}" text-anchor="middle">{esc(row["step"])}</text>')
+                ly = ry + 15
+                for ln in row["desc"]:
+                    leg_lines.append(f'<text class="topo-legend-tx" x="{cx2 + 8}" y="{ly}">{esc(ln)}</text>')
+                    ly += T_LEG_ROW_LH
+                for ln in row["meta"]:
+                    leg_lines.append(f'<text class="topo-legend-meta" x="{cx2 + 8}" y="{ly}">{esc(ln)}</text>')
+                    ly += T_LEG_ROW_LH
+                ry += row["h"]
     else:
         maxy = max(ys) if ys else T_MARGIN
 
@@ -1149,8 +1153,9 @@ CSS = """
     .mk-topo{fill:var(--line);}
     .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
     .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
-    .topo-legbadge{fill:var(--accent);stroke:var(--surface);stroke-width:1.4;}
-    .topo-legbadge-tx{fill:#fff;font-size:10px;font-weight:700;}
+    .topo-legtbl{fill:none;stroke:var(--border);stroke-width:1;}
+    .topo-legtbl-hdr{fill:var(--zone-bg);stroke:none;}
+    .topo-legnum{fill:var(--accent);font-size:11px;font-weight:700;}
     .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
     .topo-legend-hdr{fill:var(--muted);font-size:10.5px;font-weight:700;}
     .topo-leggrid{stroke:var(--border);stroke-width:0.7;}
