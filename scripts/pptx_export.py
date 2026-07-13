@@ -39,6 +39,7 @@ HEADER_RULE_Y = HEADER_BAND - 6   # 제목/본문 구분 실선 y (콘텐츠 살
 TITLE_PT = {"eyebrow": 12.5, "h1": 22, "sub": 12}   # 제목 고정 폰트(pt) — 뷰 무관 통일
 RULE_RGB = (0x2C, 0x7A, 0x7B)     # 구분선 색 (flowcast comp line teal)
 RULE_PX = 1.5                     # 구분선 두께(px)
+SEQ_PAGE_MIN_SCALE = 0.8   # 긴 sequence: 한 장 scale 이 이 값 미만이면 페이지 분할(가독 하한)
 SLIDE_PRESETS = {"wide": (1920, 1080)}   # 캔버스 프리셋 (px) — 기본 wide
 ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 
@@ -554,12 +555,53 @@ def export_topology(data, out_path, slide_size="wide"):
     return len(scenarios)
 
 
-def export_sequence(data, out_path, slide_size="wide"):
-    """sequence 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장).
+def _paginate_sequences(R, data, scenarios, size):
+    """긴 시나리오를 읽히는 크기로 페이지 분할 — 한 장 scale < MIN 이면 스텝을 나눠 여러 슬라이드로.
+
+    분할 규칙:
+      - 트리거: 시나리오 전체를 한 장에 넣을 때 s < SEQ_PAGE_MIN_SCALE (짧으면 그대로 1장).
+      - 예산: avail_h / MIN_SCALE 높이까지 스텝을 그리디로 채우고 **스텝 경계에서만** 넘김
+        (note·self 중간 절단 방지). 액터/존/라이프라인은 export 가 슬라이드마다 재렌더 → 연장선.
+      - step.n 은 원본 유지(번호 연속). 제목에 (i/N)·이어서 suffix.
+    고정 캔버스(size!=None)에서만 동작 — auto(content-fit)는 캔버스가 늘어나므로 분할 불필요.
+    """
+    if size is None:
+        return scenarios
+    W, H = size
+    avail_w = W - 2 * FIT_MARGIN
+    avail_h = H - HEADER_BAND - FOOTER_BAND
+    budget = avail_h / SEQ_PAGE_MIN_SCALE
+    out = []
+    for sc in scenarios:
+        steps = sc.get("steps") or []
+        full = R.layout_sequence(data, sc)
+        s = min(avail_w / max(full["width"], 1), avail_h / max(full["height"], 1))
+        if s >= SEQ_PAGE_MIN_SCALE or len(steps) <= 1:
+            out.append(sc)
+            continue
+        chunks, cur = [], []
+        for st in steps:
+            cur.append(st)
+            if R.layout_sequence(data, {**sc, "steps": cur})["height"] > budget and len(cur) > 1:
+                chunks.append(cur[:-1])
+                cur = [st]
+        if cur:
+            chunks.append(cur)
+        base = {k: v for k, v in sc.items() if k != "steps"}
+        n_pages = len(chunks)
+        for i, ch in enumerate(chunks, 1):
+            suffix = f" ({i}/{n_pages})" + (" · 이어서" if i > 1 else "") if n_pages > 1 else ""
+            out.append({**base, "title": base.get("title", "") + suffix, "steps": ch})
+    return out
+
+
+def export_sequence(data, out_path, slide_size="wide", paginate=True):
+    """sequence 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장, 길면 자동 페이지 분할).
 
     render.py 의 layout_sequence() 기하를 그대로 소비 — actor 박스·라이프라인·
     activation bar·message(kind별 색)·note 를 px→EMU(×9525)로 배치(재구현 금지).
     self·note 는 render 와 동일 좌표에 배치하되 self-loop 는 엘보 커넥터로 근사.
+    paginate=True(기본): 한 장에 넣으면 판독 불가하게 축소될 긴 시나리오를 여러 슬라이드로 나눔.
     """
     from pptx import Presentation
     from pptx.util import Emu, Pt
@@ -570,11 +612,14 @@ def export_sequence(data, out_path, slide_size="wide"):
     from pptx.oxml.ns import qn
 
     R = _load_render()
+    size = _parse_slide_size(slide_size)
     scenarios = data.get("scenarios") or []
+    if paginate:
+        scenarios = _paginate_sequences(R, data, scenarios, size)
     layouts = [R.layout_sequence(data, sc) for sc in scenarios]
     max_w = max((L["width"] for L in layouts), default=400)
     max_h = max((L["height"] for L in layouts), default=300)
-    SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
+    SW, SH, s, dx, dy = _fit(max_w, max_h, size)
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))   # 크기·길이
     X = lambda px: emu(px + dx)                            # 위치(x) — 중앙 배치 오프셋
     Y = lambda px: emu(px + dy)                            # 위치(y) — 헤더 밴드 아래
@@ -730,6 +775,8 @@ def main():
     ap.add_argument("-o", "--out", help="출력 .pptx (기본: 입력과 같은 위치 .pptx)")
     ap.add_argument("--slide-size", default="wide",
                     help="슬라이드 캔버스: wide(1920x1080, 기본)|auto(content-fit)|{W}x{H} px")
+    ap.add_argument("--no-paginate", action="store_true",
+                    help="긴 sequence 자동 페이지 분할 비활성화 (기본: 활성)")
     args = ap.parse_args()
 
     if not _import_pptx():
@@ -752,7 +799,10 @@ def main():
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".pptx")
-    n = dispatch[view](data, out, slide_size=args.slide_size)
+    kwargs = {"slide_size": args.slide_size}
+    if view == "sequence":
+        kwargs["paginate"] = not args.no_paginate
+    n = dispatch[view](data, out, **kwargs)
     print(f"pptx: {out} (슬라이드 {n})")
     return 0
 
