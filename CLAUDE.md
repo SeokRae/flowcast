@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> IF/서비스 흐름도 작업 하네스 — Claude Code 플러그인. 데이터·.pptx를 다이어그램 단위로 라우팅하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 편집가능 `.pptx`(B-out)로도 export. (생성·PPT입력(B-in)·PPT출력(B-out, 3뷰)·편집 경로 배선 완료 / 뷰확장 계획)
+> IF/서비스 흐름도 작업 하네스 — Claude Code 플러그인. 데이터·.pptx를 다이어그램 단위로 라우팅하고 검증한 뒤 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF 또는 편집가능 `.pptx`(B-out)로도 출력. (생성·PPT입력(B-in)·PPT출력(B-out, 3뷰)·편집 경로 배선 완료 / 뷰확장 계획)
 
 ## 구조
 
@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `agents/diagram-router.md` | 데이터 → 다이어그램 단위 분할 + 뷰 판별 (그리지 않음) |
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
+| `scripts/validate_manifest.py` | router manifest schema 1.0 검증 — drawer dispatch 전 필수 게이트 |
 | `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
 | `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
@@ -24,7 +25,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 python3 -m pytest tests/          # 테스트
 bash scripts/scan-sensitive.sh    # 실 데이터 스캔 게이트
-python3 scripts/render.py {json} [--pdf]       # 생성 → HTML/PDF
+python3 scripts/render.py {json}               # 기본 → HTML
+python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
+python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
 ```
 
@@ -33,6 +36,8 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 - **실 데이터 절대 금지** (public repo): 파트너·내부 식별자를 커밋하지 않는다. 예제는 전량 합성. 커밋·push 전 `scripts/scan-sensitive.sh`가 0건인지 확인 (CI도 매 push 검사).
 - **원문 보존**: 실제 다이어그램을 옮길 때 라벨·포트·프로토콜을 원문 그대로 — 단, 그 산출물은 이 public repo가 아니라 사용자 로컬 `out_dir`에 파일링한다.
 - **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
+- **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
+- **선택 출력 상태**: `pdf=false`, `export=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다.
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트.
 
 ## 릴리즈
@@ -56,6 +61,7 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 | 2026-07-11 | 워크플로우 게이트 4종 — 소스 게이트(지식 계층: 개념 노트→흐름 문서→다이어그램→PPT)·2축 페어링(sequence+topology 번호 공유)·순서 검증(업무 트리거=n1)·속성 근거 규칙 | `skills/flowcast`·`agents/diagram-router`·`skills/{sequence,topology}` | 실사용 검토에서 업무 순서 어긋남·근거 없는 속성(async 등)·계보 부재 확인 (#23) |
 | 2026-07-11 | pptx z-순서 패리티 — topology·component 드로잉 순서를 존→커넥터→노드(→배지·라벨) 로 (HTML과 동일, 노드가 관통 선을 가림) | `scripts/pptx_export.py` | 같은 행 관통 릴레이(VIP→WEB)가 pptx에서만 노드 위로 노출 (#25) |
 | 2026-07-11 | 소스 게이트 세분화 — 지식 계층에 **시나리오 노트**(업무별: 트리거·전제·정상 흐름·분기·예외) 추가, sequence 소스 요건·분기/예외 복수 슬라이드 규칙 | `skills/flowcast`·`skills/sequence`·`agents/diagram-router` | 시나리오 노트 없이 분석 노트→시퀀스 직행 시 분기·예외 소실 (실사용, #27) |
+| 2026-07-13 | runtime contract 안정화 — manifest schema 1.0 검증 게이트·소스/페어 메타데이터·선택 PDF·partial 상태 | `skills/*`·`agents/*`·plugin manifest | fan-out 전 입력 계약과 선택 출력 실패 의미를 고정 (#39) |
 
 ## 라이선스
 

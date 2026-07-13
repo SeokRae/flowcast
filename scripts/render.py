@@ -32,6 +32,7 @@
 import argparse
 import html
 import json
+import math
 import subprocess
 import sys
 from collections import defaultdict
@@ -70,144 +71,313 @@ C_ZONE_LBL = 20
 C_PAR_GAP = 16        # 평행 엣지 간 오프셋
 C_LBL_LH = 14         # 엣지 라벨 줄 높이
 
+# 좌표 차이를 제곱하는 기하 계산에서 float overflow가 나지 않는 입력 상한.
+# 그리드 좌표는 최대 셀 간격만큼 확대되므로 여유 계수 4를 둔다.
+MAX_RENDER_NUMBER = math.sqrt(sys.float_info.max) / (4 * max(T_CELL_W, C_CELL_W))
+
 
 def esc(s):
     return html.escape(str(s), quote=True)
 
 
 # ── 검증 ──────────────────────────────────────────────────────
-def validate(data):
+def _is_nonempty_text(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _is_finite_number(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        normalized = float(value)
+    except (OverflowError, TypeError, ValueError):
+        return False
+    return math.isfinite(normalized) and abs(normalized) <= MAX_RENDER_NUMBER
+
+
+def _list_field(obj, key, errors, where, *, required=False, nonempty=False):
+    if key not in obj:
+        if required:
+            errors.append(f"{where}.{key}는 list여야 함")
+        return []
+    value = obj[key]
+    if not isinstance(value, list):
+        errors.append(f"{where}.{key}는 list여야 함")
+        return []
+    if nonempty and not value:
+        errors.append(f"{where}.{key}가 비어 있음")
+    return value
+
+
+def _validation_root(data):
     errors, warnings = [], []
-    actors = data.get("actors") or []
-    zones = {z["id"] for z in data.get("zones") or []}
-    ids = [a.get("id") for a in actors]
+    if not isinstance(data, dict):
+        errors.append("최상위 JSON은 object여야 함")
+        return None, [], errors, warnings
+    if not _is_nonempty_text(data.get("system")):
+        errors.append("system은 비어 있지 않은 문자열이어야 함")
+    scenarios = _list_field(
+        data, "scenarios", errors, "최상위", required=True, nonempty=True)
+    return data, scenarios, errors, warnings
+
+
+def _validated_zones(obj, errors, where):
+    zones = _list_field(obj, "zones", errors, where)
+    valid = []
+    for zi, zone in enumerate(zones):
+        zone_where = f"{where}.zones[{zi}]"
+        if not isinstance(zone, dict):
+            errors.append(f"{zone_where}: zone은 object여야 함")
+            continue
+        if not _is_nonempty_text(zone.get("id")) or not _is_nonempty_text(zone.get("name")):
+            errors.append(f"{zone_where}: zone에 id/name 누락")
+            continue
+        valid.append(zone)
+    return valid, {zone["id"] for zone in valid}
+
+
+def _append_duplicate_warning(seen, value, message, warnings):
+    try:
+        if value in seen:
+            warnings.append(message)
+        seen[value] = True
+    except (TypeError, ValueError):
+        # Unhashable JSON values are rendered as text and cannot participate in
+        # duplicate detection; other structural validation still reports them.
+        return
+
+
+def _validate_finite_fields(obj, fields, errors, where):
+    for field in fields:
+        if field in obj and not _is_finite_number(obj[field]):
+            errors.append(f"{where}.{field}는 유한한 숫자여야 함")
+
+
+def _validate_text_fields(obj, fields, errors, where):
+    for field in fields:
+        if field in obj and not isinstance(obj[field], str):
+            errors.append(f"{where}.{field}는 문자열이어야 함")
+
+
+def _valid_id(value):
+    return _is_nonempty_text(value)
+
+
+def validate(data):
+    data, scenarios, errors, warnings = _validation_root(data)
+    if data is None:
+        return errors, warnings
+
+    _validate_text_fields(data, ("source",), errors, "최상위")
+    valid_zones, zones = _validated_zones(data, errors, "최상위")
+    actors = _list_field(data, "actors", errors, "최상위", required=True)
     if not actors:
         errors.append("actors가 비어 있음")
+    valid_actors, ids = [], []
+    for ai, actor in enumerate(actors):
+        if not isinstance(actor, dict):
+            errors.append(f"actors[{ai}]: actor는 object여야 함")
+            continue
+        valid_actors.append(actor)
+        actor_id = actor.get("id")
+        if _valid_id(actor_id):
+            ids.append(actor_id)
     if len(ids) != len(set(ids)):
         errors.append(f"actor id 중복: {sorted({i for i in ids if ids.count(i) > 1})}")
-    for a in actors:
-        if not a.get("id") or not a.get("name"):
+    for ai, a in enumerate(valid_actors):
+        if not _valid_id(a.get("id")) or not _is_nonempty_text(a.get("name")):
             errors.append(f"actor에 id/name 누락: {a}")
-        if a.get("zone") and a["zone"] not in zones:
-            errors.append(f"actor '{a.get('id')}'가 미정의 zone 참조: {a['zone']}")
+        _validate_text_fields(a, ("port", "line"), errors, f"actors[{ai}]")
+        if "zone" in a and a["zone"] is not None:
+            zone_id = a["zone"]
+            if not _valid_id(zone_id) or zone_id not in zones:
+                errors.append(f"actor '{a.get('id')}'가 미정의 zone 참조: {zone_id}")
     # zone 멤버 연속성 (밴드는 연속 레인만 지원)
-    for z in data.get("zones") or []:
-        idx = [i for i, a in enumerate(actors) if a.get("zone") == z["id"]]
+    for z in valid_zones:
+        idx = [i for i, a in enumerate(valid_actors) if a.get("zone") == z["id"]]
         if not idx:
             warnings.append(f"zone '{z['id']}'에 소속 actor 없음")
         elif idx != list(range(idx[0], idx[-1] + 1)):
             errors.append(f"zone '{z['id']}' 소속 actor가 비연속 배치: index {idx}")
-    if not data.get("scenarios"):
-        errors.append("scenarios가 비어 있음")
     idset = set(ids)
-    for si, sc in enumerate(data.get("scenarios") or []):
-        if not sc.get("title"):
+    for si, sc in enumerate(scenarios):
+        if not isinstance(sc, dict):
+            errors.append(f"scenario[{si}]는 object여야 함")
+            continue
+        if not _is_nonempty_text(sc.get("title")):
             errors.append(f"scenario[{si}]에 title 누락")
+        steps = _list_field(sc, "steps", errors, f"scenario[{si}]", required=True)
         seen_n = {}
-        for ti, st in enumerate(sc.get("steps") or []):
+        for ti, st in enumerate(steps):
             where = f"scenario[{si}].steps[{ti}]"
+            if not isinstance(st, dict):
+                errors.append(f"{where}: step은 object여야 함")
+                continue
+            _validate_text_fields(st, ("label", "sub", "protocol"), errors, where)
             kind = st.get("kind")
-            if kind not in KINDS:
+            if not isinstance(kind, str) or kind not in KINDS:
                 errors.append(f"{where}: 잘못된 kind '{kind}' (허용: {sorted(KINDS)})")
             for key in ("from", "to"):
-                if st.get(key) not in idset:
+                if not _valid_id(st.get(key)) or st.get(key) not in idset:
                     errors.append(f"{where}: 미정의 actor 참조 {key}='{st.get(key)}'")
             if kind == "note" and not st.get("label"):
                 errors.append(f"{where}: note에 label 필수")
             n = st.get("n")
             if n is not None:
-                if n in seen_n:
-                    warnings.append(f"{where}: 스텝 번호 {n} 중복 (원문 보존으로 허용)")
-                seen_n[n] = True
+                _append_duplicate_warning(
+                    seen_n, n,
+                    f"{where}: 스텝 번호 {n} 중복 (원문 보존으로 허용)", warnings)
     return errors, warnings
 
 
 def validate_topology(data):
     """구성도 뷰(view: topology) 검증 — 존·노드(그리드 좌표)·구간 오버레이."""
-    errors, warnings = [], []
-    nodes = data.get("nodes") or []
-    zones = {z["id"] for z in data.get("zones") or []}
-    ids = [n.get("id") for n in nodes]
+    data, scenarios, errors, warnings = _validation_root(data)
+    if data is None:
+        return errors, warnings
+
+    _validate_text_fields(data, ("source",), errors, "최상위")
+    _, zones = _validated_zones(data, errors, "최상위")
+    nodes = _list_field(data, "nodes", errors, "최상위", required=True)
     if not nodes:
         errors.append("nodes가 비어 있음")
+    valid_nodes, ids = [], []
+    for ni, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            errors.append(f"nodes[{ni}]: node는 object여야 함")
+            continue
+        valid_nodes.append(node)
+        if _valid_id(node.get("id")):
+            ids.append(node["id"])
     if len(ids) != len(set(ids)):
         errors.append(f"node id 중복: {sorted({i for i in ids if ids.count(i) > 1})}")
-    for z in data.get("zones") or []:
-        if not z.get("id") or not z.get("name"):
-            errors.append(f"zone에 id/name 누락: {z}")
     TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
-    for n in nodes:
-        if not n.get("id") or not n.get("name"):
+    for ni, n in enumerate(valid_nodes):
+        where = f"nodes[{ni}]"
+        if not _valid_id(n.get("id")) or not _is_nonempty_text(n.get("name")):
             errors.append(f"node에 id/name 누락: {n}")
-        if n.get("zone") and n["zone"] not in zones:
-            errors.append(f"node '{n.get('id')}'가 미정의 zone 참조: {n['zone']}")
+        if "zone" in n and n["zone"] is not None:
+            zone_id = n["zone"]
+            if not _valid_id(zone_id) or zone_id not in zones:
+                errors.append(f"node '{n.get('id')}'가 미정의 zone 참조: {zone_id}")
+        _validate_finite_fields(n, ("col", "row", "x", "y", "w", "h"), errors, where)
         has_grid = n.get("col") is not None and n.get("row") is not None
         has_abs = n.get("x") is not None and n.get("y") is not None
         if not (has_grid or has_abs):
             errors.append(f"node '{n.get('id')}'에 위치 없음 (col/row 또는 x/y 필요)")
-        if n.get("kind") and n["kind"] not in TOPO_KINDS:
-            warnings.append(f"node '{n.get('id')}': 알 수 없는 kind '{n['kind']}' (허용: {sorted(TOPO_KINDS)})")
+        kind = n.get("kind")
+        if kind is not None and not isinstance(kind, str):
+            errors.append(f"{where}: kind는 문자열이어야 함")
+        elif kind and kind not in TOPO_KINDS:
+            warnings.append(f"node '{n.get('id')}': 알 수 없는 kind '{kind}' (허용: {sorted(TOPO_KINDS)})")
     idset = set(ids)
-    for li, lk in enumerate(data.get("links") or []):
+    links = _list_field(data, "links", errors, "최상위")
+    for li, lk in enumerate(links):
+        if not isinstance(lk, dict):
+            errors.append(f"links[{li}]: link는 object여야 함")
+            continue
         for key in ("from", "to"):
-            if lk.get(key) not in idset:
+            if not _valid_id(lk.get(key)) or lk.get(key) not in idset:
                 errors.append(f"links[{li}]: 미정의 node 참조 {key}='{lk.get(key)}'")
-    if not data.get("scenarios"):
-        errors.append("scenarios가 비어 있음")
-    for si, sc in enumerate(data.get("scenarios") or []):
-        if not sc.get("title"):
+    for si, sc in enumerate(scenarios):
+        if not isinstance(sc, dict):
+            errors.append(f"scenario[{si}]는 object여야 함")
+            continue
+        if not _is_nonempty_text(sc.get("title")):
             errors.append(f"scenario[{si}]에 title 누락")
+        segments = _list_field(sc, "segments", errors, f"scenario[{si}]")
         seen_n = {}
-        for gi, sg in enumerate(sc.get("segments") or []):
+        for gi, sg in enumerate(segments):
             where = f"scenario[{si}].segments[{gi}]"
-            if sg.get("from") not in idset:
+            if not isinstance(sg, dict):
+                errors.append(f"{where}: segment는 object여야 함")
+                continue
+            _validate_text_fields(sg, ("label", "meta"), errors, where)
+            if not _valid_id(sg.get("from")) or sg.get("from") not in idset:
                 errors.append(f"{where}: 미정의 node 참조 from='{sg.get('from')}'")
-            if not sg.get("self") and sg.get("to") not in idset:
+            if not sg.get("self") and (not _valid_id(sg.get("to")) or sg.get("to") not in idset):
                 errors.append(f"{where}: 미정의 node 참조 to='{sg.get('to')}'")
+            if sg.get("rail") is not None and not _is_finite_number(sg["rail"]):
+                errors.append(f"{where}.rail은 유한한 숫자여야 함")
             n = sg.get("n")
             if n is not None:
-                if n in seen_n:
-                    warnings.append(f"{where}: 구간 번호 {n} 중복 (원문 보존으로 허용)")
-                seen_n[n] = True
+                _append_duplicate_warning(
+                    seen_n, n,
+                    f"{where}: 구간 번호 {n} 중복 (원문 보존으로 허용)", warnings)
     return errors, warnings
 
 
 def validate_component(data):
     """컴포넌트 뷰(view: component) 검증 — 시나리오별 노드(포트)·존·방향 엣지."""
-    errors, warnings = [], []
-    if not data.get("scenarios"):
-        errors.append("scenarios가 비어 있음")
-    for si, sc in enumerate(data.get("scenarios") or []):
-        if not sc.get("title"):
+    data, scenarios, errors, warnings = _validation_root(data)
+    if data is None:
+        return errors, warnings
+
+    _validate_text_fields(data, ("source",), errors, "최상위")
+    for si, sc in enumerate(scenarios):
+        if not isinstance(sc, dict):
+            errors.append(f"scenario[{si}]는 object여야 함")
+            continue
+        if not _is_nonempty_text(sc.get("title")):
             errors.append(f"scenario[{si}]에 title 누락")
-        nodes = sc.get("nodes") or []
+        _, zones = _validated_zones(sc, errors, f"scenario[{si}]")
+        nodes = _list_field(sc, "nodes", errors, f"scenario[{si}]", required=True)
         if not nodes:
             errors.append(f"scenario[{si}]에 nodes 없음")
-        zones = {z["id"] for z in sc.get("zones") or []}
-        ids = [n.get("id") for n in nodes]
+        valid_nodes, ids = [], []
+        for ni, node in enumerate(nodes):
+            if not isinstance(node, dict):
+                errors.append(f"scenario[{si}].nodes[{ni}]: node는 object여야 함")
+                continue
+            valid_nodes.append(node)
+            if _valid_id(node.get("id")):
+                ids.append(node["id"])
         if len(ids) != len(set(ids)):
             errors.append(f"scenario[{si}] node id 중복: {sorted({i for i in ids if ids.count(i) > 1})}")
-        for n in nodes:
-            if not n.get("id") or not n.get("name"):
+        for ni, n in enumerate(valid_nodes):
+            where = f"scenario[{si}].nodes[{ni}]"
+            if not _valid_id(n.get("id")) or not _is_nonempty_text(n.get("name")):
                 errors.append(f"scenario[{si}] node에 id/name 누락: {n}")
-            if n.get("zone") and n["zone"] not in zones:
-                errors.append(f"scenario[{si}] node '{n.get('id')}'가 미정의 zone 참조: {n['zone']}")
+            _validate_text_fields(n, ("port",), errors, where)
+            if "zone" in n and n["zone"] is not None:
+                zone_id = n["zone"]
+                if not _valid_id(zone_id) or zone_id not in zones:
+                    errors.append(f"scenario[{si}] node '{n.get('id')}'가 미정의 zone 참조: {zone_id}")
+            _validate_finite_fields(n, ("col", "row", "x", "y", "w", "h"), errors, where)
             has_grid = n.get("col") is not None and n.get("row") is not None
             has_abs = n.get("x") is not None and n.get("y") is not None
             if not (has_grid or has_abs):
                 errors.append(f"scenario[{si}] node '{n.get('id')}'에 위치 없음 (col/row 또는 x/y 필요)")
+            kind = n.get("kind", "comp")
+            if not isinstance(kind, str) or kind not in {"comp", "ext"}:
+                errors.append(f"{where}: 잘못된 kind '{kind}' (허용: ['comp', 'ext'])")
         idset = set(ids)
         seen_n = {}
-        for ei, e in enumerate(sc.get("edges") or []):
+        edges = _list_field(sc, "edges", errors, f"scenario[{si}]")
+        for ei, e in enumerate(edges):
             where = f"scenario[{si}].edges[{ei}]"
+            if not isinstance(e, dict):
+                errors.append(f"{where}: edge는 object여야 함")
+                continue
+            _validate_text_fields(e, ("label", "protocol"), errors, where)
             for key in ("from", "to"):
-                if e.get(key) not in idset:
+                if not _valid_id(e.get(key)) or e.get(key) not in idset:
                     errors.append(f"{where}: 미정의 node 참조 {key}='{e.get(key)}'")
+            if "via" in e:
+                via = e["via"]
+                if (not isinstance(via, list) or len(via) != 2
+                        or not all(_is_finite_number(value) for value in via)):
+                    errors.append(f"{where}.via는 유한한 숫자 2개의 list여야 함")
+            _validate_finite_fields(e, ("lx", "ly"), errors, where)
+            if "lpos" in e:
+                lpos = e["lpos"]
+                if not _is_finite_number(lpos) or not 0 <= lpos <= 1:
+                    errors.append(f"{where}.lpos는 0 이상 1 이하의 유한한 숫자여야 함")
             n = e.get("n")
             if n is not None:
-                if n in seen_n:
-                    warnings.append(f"{where}: 엣지 번호 {n} 중복 (원문 보존으로 허용)")
-                seen_n[n] = True
+                _append_duplicate_warning(
+                    seen_n, n,
+                    f"{where}: 엣지 번호 {n} 중복 (원문 보존으로 허용)", warnings)
     return errors, warnings
 
 
@@ -1092,18 +1262,63 @@ CHROME_CANDIDATES = [
 
 def to_pdf(html_path, pdf_path):
     import shutil
+    html_path, pdf_path = Path(html_path), Path(pdf_path)
     chrome = next((c for c in CHROME_CANDIDATES
                    if Path(c).exists() or shutil.which(c)), None)
     if not chrome:
-        sys.exit("ERROR: Chrome을 찾을 수 없어 PDF 변환 불가 — HTML은 생성됨")
-    for headless in ("--headless=new", "--headless"):
-        r = subprocess.run(
-            [chrome, headless, "--disable-gpu", "--no-pdf-header-footer",
-             f"--print-to-pdf={pdf_path}", html_path.resolve().as_uri()],
-            capture_output=True, text=True)
-        if r.returncode == 0 and Path(pdf_path).exists():
-            return
-    sys.exit(f"ERROR: Chrome PDF 변환 실패\n{r.stderr[-500:]}")
+        print("ERROR: Chrome을 찾을 수 없어 PDF 변환 불가 — HTML은 생성됨",
+              file=sys.stderr)
+        raise SystemExit(2)
+
+    temp_path = pdf_path.with_name(f".{pdf_path.name}.tmp")
+
+    def remove_temp():
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            print(f"ERROR: PDF 임시 파일 정리 실패: {exc}", file=sys.stderr)
+            raise SystemExit(2)
+
+    last_stderr = ""
+    remove_temp()
+    try:
+        for headless in ("--headless=new", "--headless"):
+            remove_temp()
+            try:
+                result = subprocess.run(
+                    [chrome, headless, "--disable-gpu", "--no-pdf-header-footer",
+                     f"--print-to-pdf={temp_path}", html_path.resolve().as_uri()],
+                    capture_output=True, text=True)
+            except OSError as exc:
+                print(f"ERROR: Chrome PDF 변환 실행 실패: {exc}", file=sys.stderr)
+                raise SystemExit(2)
+
+            last_stderr = result.stderr or ""
+            temp_is_usable = False
+            if result.returncode == 0:
+                try:
+                    temp_is_usable = (
+                        temp_path.is_file() and temp_path.stat().st_size > 0
+                    )
+                except OSError as exc:
+                    print(f"ERROR: PDF 결과 확인 실패: {exc}", file=sys.stderr)
+                    raise SystemExit(2)
+            if temp_is_usable:
+                try:
+                    temp_path.replace(pdf_path)
+                except OSError as exc:
+                    print(f"ERROR: PDF 결과 교체 실패: {exc}", file=sys.stderr)
+                    raise SystemExit(2)
+                return
+        print(f"ERROR: Chrome PDF 변환 실패\n{last_stderr[-500:]}", file=sys.stderr)
+        raise SystemExit(2)
+    finally:
+        try:
+            temp_path.unlink()
+        except OSError:
+            pass
 
 
 # ── main ──────────────────────────────────────────────────────
@@ -1118,8 +1333,16 @@ def main():
     data_path = Path(args.data)
     data = json.loads(data_path.read_text(encoding="utf-8"))
 
-    view = data.get("view", "sequence")
-    validator = {"topology": validate_topology, "component": validate_component}.get(view, validate)
+    view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
+    validators = {
+        "sequence": validate,
+        "topology": validate_topology,
+        "component": validate_component,
+    }
+    if not isinstance(view, str) or view not in validators:
+        print(f"ERROR: 알 수 없는 view '{view}' (허용: {sorted(validators)})", file=sys.stderr)
+        sys.exit(1)
+    validator = validators[view]
     errors, warnings = validator(data)
     for w in warnings:
         print(f"WARNING: {w}", file=sys.stderr)
@@ -1128,7 +1351,11 @@ def main():
             print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    render = {"topology": render_svg_topology, "component": render_svg_component}.get(view, render_svg)
+    render = {
+        "sequence": render_svg,
+        "topology": render_svg_topology,
+        "component": render_svg_component,
+    }[view]
     rendered = [render(data, sc) for sc in data["scenarios"]]
     out = Path(args.out) if args.out else data_path.with_suffix(".html")
     out.write_text(build_html(data, rendered), encoding="utf-8")

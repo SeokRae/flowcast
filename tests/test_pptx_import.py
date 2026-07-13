@@ -128,7 +128,7 @@ def test_multiline_text_joined_with_newline(tmp_path):
     assert s2[0]["text"] == "Alert\nQueue"
 
 
-def test_connector_glue_extracted_with_direction(tmp_path):
+def test_connector_glue_extracts_start_and_end_shapes(tmp_path):
     d = import_pptx(_fixture(tmp_path))
     assert d["slides"][0]["connectors"] == [{"from": "2", "to": "3"}]
     assert d["slides"][0]["connectors_loose"] == []  # 양쪽 glue → loose 아님
