@@ -582,6 +582,50 @@ def _wrap(text, width):
     return lines or [""]
 
 
+def _split_step_label(lb):
+    """흐름 설명 label 을 '단계 — 설명' 으로 분리 (em/en 대시, 없으면 전체가 설명)."""
+    for sep in (" — ", " —", "— ", "—", " - "):
+        if sep in lb:
+            head, tail = lb.split(sep, 1)
+            return head.strip(), tail.strip()
+    return "", lb.strip()
+
+
+def _topo_legend_layout(labelled, leg_x, leg_y, diagram_right):
+    """흐름 설명 [번호 배지 | 단계 | 설명 | meta] 표 레이아웃 — render/pptx 공용.
+
+    설명 시작 x(desc_col)를 고정해 열 정렬(규격화)하고, 설명 열은 다이어그램
+    오른쪽 끝까지 폭을 써서 meta 줄바꿈을 최소화한다.
+    반환: (items, maxy, maxx). items 원소 = {kind: badge|step|desc|meta, x, y, ...}.
+    """
+    rows = [_split_step_label(sg["label"]) for sg in labelled]
+    badge_col = leg_x + 9                          # 배지 원 중심 x
+    step_col  = leg_x + 26                          # 단계 텍스트 시작 x
+    step_w    = max((len(s) for s, _ in rows), default=0)
+    desc_col  = step_col + step_w * 12 + 16         # 단계 열 폭(한글 ~12px/자) 후 설명 시작 x
+    desc_wrap = max(30, min(96, int((diagram_right - desc_col) / 8.4)))
+    items, leg_max_x = [], leg_x
+    ly = leg_y + T_LEG_LH + 8
+    for sg, (step, desc) in zip(labelled, rows):
+        row_top = ly
+        n = sg.get("n")
+        if n is not None:
+            items.append({"kind": "badge", "x": badge_col, "y": ly, "n": n})
+        if step:
+            items.append({"kind": "step", "x": step_col, "y": ly, "text": step})
+        for ln in _wrap(desc, desc_wrap):
+            items.append({"kind": "desc", "x": desc_col, "y": ly, "text": ln})
+            leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.2)
+            ly += T_LEG_LH
+        if sg.get("meta"):
+            for ln in _wrap(sg["meta"], desc_wrap):
+                items.append({"kind": "meta", "x": desc_col, "y": ly, "text": ln})
+                leg_max_x = max(leg_max_x, desc_col + len(ln) * 7.0)
+                ly += T_LEG_LH - 3
+        ly = max(ly, row_top + T_LEG_LH) + 5        # 최소 행 높이 + 행 간격
+    return items, ly, leg_max_x
+
+
 def _t_badge_geom(sg, rects):
     """세그먼트 1개의 배지 위치 + 엣지 단위방향 (bx, by, ux, uy) — render·pptx 공용.
 
@@ -759,33 +803,30 @@ def render_svg_topology(data, scenario):
         badges.append(f'<text class="topo-badge-tx" x="{bx}" y="{by + 4}" text-anchor="middle">{esc(sg["n"])}</text>')
         badges.append('</g>')
 
-    # 흐름 설명 legend (토폴로지 하단)
+    # 흐름 설명 legend — [번호 배지 | 단계 | 설명 | meta] 열 정렬 표 (토폴로지 하단, 공용 레이아웃)
     leg_x = min(xs) if xs else T_MARGIN
-    leg_lines, longest = [], 0
+    leg_lines, leg_max_x = [], leg_x
     labelled = [sg for sg in segments if sg.get("label")]
     if labelled:
         leg_y = max(ys) + 30
         leg_lines.append(f'<text class="topo-legend-h" x="{leg_x}" y="{leg_y}">흐름 설명</text>')
-        ly = leg_y + T_LEG_LH + 4
-        for sg in labelled:
-            prefix = f'{sg["n"]}. ' if sg.get("n") is not None else ""
-            for ln in _wrap(prefix + sg["label"], T_LEG_WRAP):
-                longest = max(longest, len(ln))
-                leg_lines.append(f'<text class="topo-legend-tx" x="{leg_x}" y="{ly}">{esc(ln)}</text>')
-                ly += T_LEG_LH
-            # meta = 기술 상세(프로토콜·포트·FW) — 업무 라인 아래 흐린 부라인
-            if sg.get("meta"):
-                for ln in _wrap(sg["meta"], T_LEG_WRAP - 3):
-                    longest = max(longest, len(ln) + 3)
-                    leg_lines.append(f'<text class="topo-legend-meta" x="{leg_x + 16}" y="{ly}">{esc(ln)}</text>')
-                    ly += T_LEG_LH - 3
-            ly += 2
-        maxy = ly
+        diagram_right = (max(xs) + T_BOX_W) if xs else (leg_x + T_LEG_WRAP * 8)
+        items, maxy, leg_max_x = _topo_legend_layout(labelled, leg_x, leg_y, diagram_right)
+        for it in items:
+            if it["kind"] == "badge":
+                leg_lines.append(f'<circle class="topo-legbadge" cx="{it["x"]}" cy="{it["y"] - 4}" r="9"/>')
+                leg_lines.append(f'<text class="topo-legbadge-tx" x="{it["x"]}" y="{it["y"]}" text-anchor="middle">{esc(it["n"])}</text>')
+            elif it["kind"] == "step":
+                leg_lines.append(f'<text class="topo-legend-step" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
+            elif it["kind"] == "desc":
+                leg_lines.append(f'<text class="topo-legend-tx" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
+            else:  # meta — 기술 상세(프로토콜·포트·FW), 설명 아래 흐린 부라인
+                leg_lines.append(f'<text class="topo-legend-meta" x="{it["x"]}" y="{it["y"]}">{esc(it["text"])}</text>')
     else:
         maxy = max(ys) if ys else T_MARGIN
 
     minx, miny = min(xs), min(ys)
-    maxx = max(max(xs), leg_x + longest * 7.2)
+    maxx = max(max(xs), leg_max_x)
     pad = 14
     vb_x, vb_y = minx - pad, miny - pad
     vb_w = (maxx - minx) + 2 * pad
@@ -1029,7 +1070,10 @@ CSS = """
     .mk-topo{fill:var(--line);}
     .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
     .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legbadge{fill:var(--accent);stroke:var(--surface);stroke-width:1.4;}
+    .topo-legbadge-tx{fill:#fff;font-size:10px;font-weight:700;}
     .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-step{fill:var(--text);font-size:11.5px;font-weight:700;}
     .topo-legend-tx{fill:var(--text);font-size:11.5px;}
     .topo-legend-meta{fill:var(--muted);font-size:10px;}
     /* ── 컴포넌트 뷰 ── */

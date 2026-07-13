@@ -100,7 +100,7 @@ def test_cli_accepts_repository_plugin_metadata():
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout == "plugin metadata valid: flowcast 0.10.0\n"
+    assert result.stdout == "plugin metadata valid: flowcast 0.11.0\n"
     assert result.stderr == ""
 
 
