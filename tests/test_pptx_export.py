@@ -137,7 +137,7 @@ def test_topology_connector_count(tmp_path):
         if not sg.get("self") and sg.get("to") in ids)
     expected = links * len(data["scenarios"]) + seg_arrows  # 링크는 슬라이드마다 공통
     conns = sum(1 for s in prs.slides for sh in s.shapes
-                if sh.shape_type == MSO_SHAPE_TYPE.LINE)
+                if sh.shape_type == MSO_SHAPE_TYPE.LINE and sh.name != "gridline")
     assert conns == expected
 
 
@@ -379,7 +379,7 @@ def _zorder_conn_under_nodes(prs, node_first_lines):
     """모든 슬라이드에서 LINE(커넥터) 도형이 노드 박스보다 먼저(아래) 삽입됐는지."""
     for slide in prs.slides:
         idx_conn = [i for i, sh in enumerate(slide.shapes)
-                    if sh.shape_type == MSO_SHAPE_TYPE.LINE]
+                    if sh.shape_type == MSO_SHAPE_TYPE.LINE and sh.name != "gridline"]
         idx_node = [i for i, sh in enumerate(slide.shapes)
                     if sh.has_text_frame and sh.text_frame.text.split("\n")[0] in node_first_lines]
         if idx_conn and idx_node:

@@ -498,14 +498,22 @@ def export_topology(data, out_path, slide_size="wide"):
             p0.runs[0].font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
 
         # 정적 배선(links) — 화살촉 없는 회색선. 노드보다 먼저 (HTML z-순서 패리티, #25)
+        dual_ids = {n["id"] for n in nodes if n.get("dual")}
         for lk in links:
             r1, r2 = rects.get(lk.get("from")), rects.get(lk.get("to"))
             if not r1 or not r2:
                 continue
-            (ax, ay), (bx, by) = _anchor(r1, r2)
-            ln = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(ax + ox), emu(ay + oy),
-                                      emu(bx + ox), emu(by + oy))
-            ln.line.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
+            if lk.get("to") in dual_ids:   # 이중화 서버 진입 — 2박스 양쪽으로 분기
+                g = 7
+                bh = (r2[3] - g) / 2
+                r2_targets = [(r2[0], r2[1], r2[2], bh), (r2[0], r2[1] + bh + g, r2[2], bh)]
+            else:
+                r2_targets = [r2]
+            for rb in r2_targets:
+                (ax, ay), (bx, by) = _anchor(r1, rb)
+                ln = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(ax + ox), emu(ay + oy),
+                                          emu(bx + ox), emu(by + oy))
+                ln.line.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
 
         # 구간 오버레이(segments) — 화살촉 커넥터. 배지는 노드 위에 spread 후 일괄 배치.
         badge_sgs = []
@@ -530,10 +538,31 @@ def export_topology(data, out_path, slide_size="wide"):
         for nid, (x, y, w, h) in rects.items():
             nd = node_by_id[nid]
             kind = nd.get("kind", "srv")
+            fillc = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
+            linec = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
+            if nd.get("dual"):   # 이중화(2대) — 그룹 테두리 + 위/아래 분리 2박스 (IP 하나씩)
+                g = 7
+                bh = (h - g) / 2
+                box_lines = R._split_dual_ip(nd["name"])
+                grp = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox - 5), emu(y + oy - 5), emu(w + 10), emu(h + 10))
+                grp.fill.background()
+                grp.line.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
+                grp.shadow.inherit = False
+                for bi, by0 in enumerate((y, y + bh + g)):
+                    bx = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox), emu(by0 + oy), emu(w), emu(bh))
+                    bx.fill.solid()
+                    bx.fill.fore_color.rgb = fillc
+                    bx.line.color.rgb = linec
+                    bx.shadow.inherit = False
+                    tf = bx.text_frame
+                    tf.word_wrap = True
+                    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                    _fill_lines(tf, "\n".join(box_lines[bi]), s, size=9)
+                continue
             box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox), emu(y + oy), emu(w), emu(h))
             box.fill.solid()
-            box.fill.fore_color.rgb = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
-            box.line.color.rgb = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
+            box.fill.fore_color.rgb = fillc
+            box.line.color.rgb = linec
             box.shadow.inherit = False
             tf = box.text_frame
             tf.word_wrap = True
@@ -559,7 +588,14 @@ def export_topology(data, out_path, slide_size="wide"):
             hr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
             for it in leg_items:
                 k = it["kind"]
-                if k == "badge":
+                if k == "gridline":
+                    gl = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(it["x1"] + ox), emu(it["y1"] + oy),
+                                              emu(it["x2"] + ox), emu(it["y2"] + oy))
+                    gl.line.color.rgb = RGBColor(0xD5, 0xDB, 0xE3)
+                    gl.name = "gridline"   # 범례 표 괘선 — 배선 커넥터 수/z-순서 검증에서 제외
+                elif k == "header":
+                    _leg_text(it["x"], it["y"], it["text"], bold=True, muted=True, size=8)
+                elif k == "badge":
                     _badge(it["x"], it["y"] - 4, it["n"], rad=9)
                 elif k == "step":
                     _leg_text(it["x"], it["y"], it["text"], bold=True)
