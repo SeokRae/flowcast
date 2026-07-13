@@ -326,12 +326,12 @@ def test_topology_badges_and_legend(tmp_path):
         numbered = [sg for sg in (sc.get("segments") or []) if sg.get("n") is not None]
         badges = [sh for sh in prs.slides[i].shapes
                   if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and sh.has_text_frame
-                  and sh.text_frame.text.strip().isdigit()]
+                  and sh.text_frame.text.strip().isdigit() and sh.name != "legbadge"]
         assert len(badges) == len(numbered)
         for sg in numbered:
             if sg.get("label"):
-                # 범례 prefix "n. 라벨" — wrap(46자) 감안 앞부분만 확인
-                assert f'{sg["n"]}. {sg["label"]}'[:20] in text
+                # 범례는 [배지 | 단계 | 설명] 표 — label 의 단계/설명 텍스트가 본문에 존재
+                assert sg["label"][:15] in text
 
 
 def test_font_scale_follows_canvas(tmp_path):
@@ -367,7 +367,7 @@ def test_topology_badge_overlap_spread(tmp_path):
     centers = [(sh.left + sh.width / 2, sh.top + sh.height / 2)
                for sh in prs.slides[0].shapes
                if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and sh.has_text_frame
-               and sh.text_frame.text.strip().isdigit()]
+               and sh.text_frame.text.strip().isdigit() and sh.name != "legbadge"]
     assert len(centers) == 2
     d = ((centers[0][0] - centers[1][0]) ** 2 + (centers[0][1] - centers[1][1]) ** 2) ** 0.5
     assert d >= 22 * 9525   # 지름 22px 이상 (EMU)

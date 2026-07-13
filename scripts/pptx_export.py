@@ -411,22 +411,22 @@ def export_topology(data, out_path, slide_size="wide"):
     minx, miny = (min(xs), min(ys)) if xs else (0, 0)
     maxx, maxy = (max(xs), max(ys)) if xs else (0, 0)
 
-    # 흐름 설명 범례(시나리오별) — render.py 와 동일한 줄바꿈, 최대 시나리오 기준 높이 선반영
+    # 흐름 설명 범례(시나리오별) — render.py 공용 레이아웃 헬퍼로 [배지|단계|설명|meta] 표 패리티
     leg_x, leg_y = minx, maxy + 30
-    legends, longest = [], 0
+    diagram_right = maxx + R.T_BOX_W                     # 노드 오른쪽 끝 근사 (render.py 와 동일 기준)
+    legends, leg_max_x, leg_bottom = [], leg_x, leg_y
     for sc in scenarios:
-        lines = []
-        for sg in sc.get("segments") or []:
-            if not sg.get("label"):
-                continue
-            prefix = f'{sg["n"]}. ' if sg.get("n") is not None else ""
-            lines += R._wrap(prefix + sg["label"], R.T_LEG_WRAP)
-        legends.append(lines)
-        longest = max([longest] + [len(ln) for ln in lines])
-    max_leg = max((len(ls) for ls in legends), default=0)
-    if max_leg:
-        maxy = leg_y + (max_leg + 1) * R.T_LEG_LH + 8   # 헤더 1줄 + 본문
-        maxx = max(maxx, leg_x + longest * 7.2)
+        labelled = [sg for sg in (sc.get("segments") or []) if sg.get("label")]
+        if labelled:
+            items, ly_end, lmx = R._topo_legend_layout(labelled, leg_x, leg_y, diagram_right)
+        else:
+            items, ly_end, lmx = [], leg_y, leg_x
+        legends.append(items)
+        leg_max_x = max(leg_max_x, lmx)
+        leg_bottom = max(leg_bottom, ly_end)
+    if any(legends):
+        maxy = leg_bottom + 8
+        maxx = max(maxx, leg_max_x)
 
     SW, SH, s, dx, dy = _fit(maxx - minx, maxy - miny, _parse_slide_size(slide_size))
     ox, oy = -minx + dx, -miny + dy   # 헤더 밴드 아래 중앙 배치
@@ -441,10 +441,11 @@ def export_topology(data, out_path, slide_size="wide"):
         c2 = (r2[0] + r2[2] / 2, r2[1] + r2[3] / 2)
         return R._edge_pt(r1, *c2), R._edge_pt(r2, *c1)
 
-    def _badge(bx, by, n):
-        """원형 번호 배지 (render.py r=11 패리티) — accent 채움 + 흰 숫자."""
-        b = shapes.add_shape(MSO_SHAPE.OVAL, emu(bx + ox - 11), emu(by + oy - 11),
-                             emu(22), emu(22))
+    def _badge(bx, by, n, rad=11):
+        """원형 번호 배지 (render.py 패리티) — accent 채움 + 흰 숫자. rad=9 는 흐름 설명 표용."""
+        b = shapes.add_shape(MSO_SHAPE.OVAL, emu(bx + ox - rad), emu(by + oy - rad),
+                             emu(2 * rad), emu(2 * rad))
+        b.name = "legbadge" if rad < 11 else "badge"   # 다이어그램 배지 vs 흐름 설명 표 배지 구분
         b.fill.solid()
         b.fill.fore_color.rgb = RGBColor(*ACCENT)
         b.line.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
@@ -457,11 +458,24 @@ def export_topology(data, out_path, slide_size="wide"):
         p.alignment = PP_ALIGN.CENTER
         r = p.add_run()
         r.text = str(n)
-        r.font.size = Pt(_fpt(8, s))
+        r.font.size = Pt(_fpt(8 if rad >= 11 else 7, s))
         r.font.bold = True
         r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
-    for idx, (scenario, leg_lines) in enumerate(zip(scenarios, legends), 1):
+    def _leg_text(x, y, text, bold=False, muted=False, size=9):
+        """흐름 설명 표의 개별 텍스트(단계/설명/meta) — render.py baseline → textbox top 근사."""
+        tb = shapes.add_textbox(emu(x + ox), emu(y + oy - R.T_LEG_LH), emu(680), emu(R.T_LEG_LH + 4))
+        tf = tb.text_frame
+        tf.word_wrap = False
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+        p = tf.paragraphs[0]
+        r = p.add_run()
+        r.text = text
+        r.font.size = Pt(_fpt(size, s))
+        r.font.bold = bold
+        r.font.color.rgb = RGBColor(0x54, 0x66, 0x7E) if muted else RGBColor(0x1B, 0x26, 0x35)
+
+    for idx, (scenario, leg_items) in enumerate(zip(scenarios, legends), 1):
         segments = scenario.get("segments") or []
         slide = prs.slides.add_slide(blank)
         shapes = slide.shapes
@@ -531,25 +545,28 @@ def export_topology(data, out_path, slide_size="wide"):
         for sg, (bx, by) in zip(badge_sgs, spread):
             _badge(bx, by, sg["n"])
 
-        # 흐름 설명 범례 (render.py 패리티 — 다이어그램 하단)
-        if leg_lines:
-            tb = shapes.add_textbox(emu(leg_x + ox), emu(leg_y + oy - 14),
-                                    emu(max(longest * 7.2, 200)),
-                                    emu((len(leg_lines) + 1) * R.T_LEG_LH + 12))
-            tf = tb.text_frame
-            tf.word_wrap = True
-            hp = tf.paragraphs[0]
-            hr = hp.add_run()
+        # 흐름 설명 범례 (render.py 패리티 — [번호 배지 | 단계 | 설명 | meta] 표)
+        if leg_items:
+            hb = shapes.add_textbox(emu(leg_x + ox), emu(leg_y + oy - R.T_LEG_LH),
+                                    emu(200), emu(R.T_LEG_LH + 6))
+            htf = hb.text_frame
+            htf.word_wrap = False
+            htf.margin_left = htf.margin_right = htf.margin_top = htf.margin_bottom = 0
+            hr = htf.paragraphs[0].add_run()
             hr.text = "흐름 설명"
             hr.font.size = Pt(_fpt(9, s))
             hr.font.bold = True
             hr.font.color.rgb = RGBColor(0x54, 0x66, 0x7E)
-            for ln_txt in leg_lines:
-                p = tf.add_paragraph()
-                r = p.add_run()
-                r.text = ln_txt
-                r.font.size = Pt(_fpt(9, s))
-                r.font.color.rgb = RGBColor(0x1B, 0x26, 0x35)
+            for it in leg_items:
+                k = it["kind"]
+                if k == "badge":
+                    _badge(it["x"], it["y"] - 4, it["n"], rad=9)
+                elif k == "step":
+                    _leg_text(it["x"], it["y"], it["text"], bold=True)
+                elif k == "desc":
+                    _leg_text(it["x"], it["y"], it["text"])
+                else:  # meta
+                    _leg_text(it["x"], it["y"], it["text"], muted=True, size=8)
 
     prs.save(str(out_path))
     return len(scenarios)
