@@ -24,8 +24,20 @@ render_svg_component = _mod.render_svg_component
 render_svg = _mod.render_svg
 render_svg_topology = _mod.render_svg_topology
 build_html = _mod.build_html
+_split_step_label = _mod._split_step_label
 
 EX = Path(__file__).parent.parent / "examples"
+
+
+def test_split_step_label_ignores_mid_dash():
+    """흐름 설명 단계 분리 — label 중간 보충설명 대시를 단계 구분자로 오인하지 않음 (#49)."""
+    # 짧은 앞구절(≤12자) → 단계로 분리
+    assert _split_step_label("주문 접수 — Stripe가 요청") == ("주문 접수", "Stripe가 요청")
+    # 긴 앞부분(보충설명 대시) → 단계 없음, 전체가 설명
+    step, desc = _split_step_label("공인 IP → api VIP (HTTPS 443, pay·api 공용 — pay 전용 VIP 미확정)")
+    assert step == "" and "공인 IP" in desc and "미확정" in desc
+    # 대시 없음 → 전체 설명
+    assert _split_step_label("L4 분배 → 결제창 WEB (443)") == ("", "L4 분배 → 결제창 WEB (443)")
 
 
 def _base(**over):

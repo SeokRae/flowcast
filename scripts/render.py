@@ -583,11 +583,18 @@ def _wrap(text, width):
 
 
 def _split_step_label(lb):
-    """흐름 설명 label 을 '단계 — 설명' 으로 분리 (em/en 대시, 없으면 전체가 설명)."""
+    """흐름 설명 label 을 '단계 — 설명' 으로 분리 (em/en 대시, 없으면 전체가 설명).
+
+    단계는 맨 앞 짧은 구절(≤12자)일 때만 인정 — label 중간의 보충설명용 대시
+    (예: "pay·api 공용 — pay 전용 VIP 미확정")를 단계 구분자로 오인하지 않는다.
+    """
     for sep in (" — ", " —", "— ", "—", " - "):
         if sep in lb:
             head, tail = lb.split(sep, 1)
-            return head.strip(), tail.strip()
+            head = head.strip()
+            if head and len(head) <= 12:
+                return head, tail.strip()
+            return "", lb.strip()
     return "", lb.strip()
 
 
