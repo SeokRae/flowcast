@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/validate_manifest.py` | router manifest schema 1.0 검증 — drawer dispatch 전 필수 게이트 |
 | `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
 | `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
+| `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
 | `tests/test_render.py` | 렌더러 검증·출력 테스트 |
@@ -29,13 +30,14 @@ python3 scripts/render.py {json}               # 기본 → HTML
 python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
 python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
+python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style])
 ```
 
 ## 규칙 (필수)
 
 - **실 데이터 절대 금지** (public repo): 파트너·내부 식별자를 커밋하지 않는다. 예제는 전량 합성. 커밋·push 전 `scripts/scan-sensitive.sh`가 0건인지 확인 (CI도 매 push 검사).
 - **원문 보존**: 실제 다이어그램을 옮길 때 라벨·포트·프로토콜을 원문 그대로 — 단, 그 산출물은 이 public repo가 아니라 사용자 로컬 `out_dir`에 파일링한다.
-- **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
+- **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. PlantUML export(`plantuml_export.py`)는 텍스트 출력이라 **stdlib만**(추가 의존성 없음). 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
 - **선택 출력 상태**: `pdf=false`, `export=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다.
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트.
@@ -62,6 +64,7 @@ python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .ppt
 | 2026-07-11 | pptx z-순서 패리티 — topology·component 드로잉 순서를 존→커넥터→노드(→배지·라벨) 로 (HTML과 동일, 노드가 관통 선을 가림) | `scripts/pptx_export.py` | 같은 행 관통 릴레이(VIP→WEB)가 pptx에서만 노드 위로 노출 (#25) |
 | 2026-07-11 | 소스 게이트 세분화 — 지식 계층에 **시나리오 노트**(업무별: 트리거·전제·정상 흐름·분기·예외) 추가, sequence 소스 요건·분기/예외 복수 슬라이드 규칙 | `skills/flowcast`·`skills/sequence`·`agents/diagram-router` | 시나리오 노트 없이 분석 노트→시퀀스 직행 시 분기·예외 소실 (실사용, #27) |
 | 2026-07-13 | runtime contract 안정화 — manifest schema 1.0 검증 게이트·소스/페어 메타데이터·선택 PDF·partial 상태 | `skills/*`·`agents/*`·plugin manifest | fan-out 전 입력 계약과 선택 출력 실패 의미를 고정 (#39) |
+| 2026-07-14 | B-out PlantUML export — 3뷰 JSON → `.puml`(stdlib·좌표 미사용·검증기 재사용, flowcast 팔레트 skinparam+smetana) + `plantuml` 옵션 배선 | `scripts/plantuml_export.py`·`agents/diagram-drawer`·`skills/flowcast` | PlantUML 계보 다이어그램과 정합·Obsidian 네이티브 렌더 지원 (#53) |
 
 ## 라이선스
 

@@ -40,7 +40,8 @@ model: opus
   "out_dir": "파일링 대상 디렉토리(절대경로)",
   "vault_iframe": null,
   "pdf": false,
-  "export": false
+  "export": false,
+  "plantuml": false
 }
 ```
 
@@ -72,6 +73,16 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -
 
 `pptx_export.py`는 render.py 좌표를 재사용해 3뷰 모두 편집가능 도형으로 찍는다. **python-pptx는 export 전용 선택적 의존성**이라 미설치 환경에선 exit 2 + 안내를 낸다. 이때는 export만 건너뛰고 HTML/MD를 유지하며 `pptx: null`, `error`에 원문 오류 메시지, `status: partial`로 반환한다. exit 0이면 `pptx` 경로를 반환에 담는다.
 
+## PlantUML export (선택 — `plantuml: true`)
+
+render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치). 좌표를 쓰지 않는 텍스트 출력이라 **의존성이 없다**(stdlib만) — pptx/pdf 같은 미설치-partial 케이스가 없다.
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.puml"
+```
+
+`plantuml_export.py`는 render.py의 검증기(`validate`·`validate_topology`·`validate_component`)를 재사용해 검증 통과 시에만 방출하므로, render가 이미 통과시킨 JSON은 보통 성공한다. exit 0이면 `puml` 경로를 반환에 담는다. 예외적으로 실패하면 `puml: null`, `error`에 원문 오류, `status: partial`(HTML/MD는 유효). flowcast 팔레트 skinparam + (topology/component) `!pragma layout smetana`가 baked-in되어 Obsidian PlantUML 플러그인에서 바로 렌더된다.
+
 ## 출력 프로토콜 (오케스트레이터가 취합)
 
 ```json
@@ -86,6 +97,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -
   "md": "{out_dir}/order-service-sequence.md",
   "pdf": null,
   "pptx": null,
+  "puml": null,
   "pair_id": null,
   "segment_numbers": [1, 2],
   "render_exit": 0,
@@ -105,6 +117,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -
 - 데이터가 부족해 필수 필드를 못 채우면 `status: needs_input`, `questions`에 필요한 확인 사항을 반환한다. 임의 값으로 채우지 않는다.
 - `pdf: true`인데 Chrome이 없거나 PDF 변환이 실패하면 `pdf: null`, `status: partial`이다. HTML/MD는 그대로 유효하다.
 - `export: true`인데 python-pptx가 없으면 `pptx: null`, `status: partial`이다. HTML/MD는 그대로 유효하다.
+- `plantuml: true`는 stdlib 텍스트 출력이라 의존성-없음 partial 케이스가 없다. render가 통과시킨 JSON은 보통 성공하며, 예외 실패 시에만 `puml: null`, `status: partial`.
 
 ## 협업
 
