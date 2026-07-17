@@ -129,6 +129,56 @@ def test_no_style_omits_skinparam(tmp_path):
     assert "skinparam" not in out.read_text(encoding="utf-8")
 
 
+# ── 레이아웃 pragma 토글 (dot 기본 ↔ smetana opt-in) ──────────
+_PRAGMA = "!pragma layout smetana"
+
+
+def test_rect_views_use_dot_by_default(tmp_path):
+    """기본은 dot — smetana 는 캔버스를 클리핑하므로 강제하지 않는다(v0.13 에서 뒤집음)."""
+    for export, src in ((export_topology, TOPO), (export_component, COMP)):
+        _, text, _ = _emit(export, src, tmp_path)
+        assert _PRAGMA not in text
+        assert "skinparam" in text             # 팔레트는 직교 — 같이 빠지지 않는다
+
+
+def test_smetana_opt_in_emits_pragma_per_block(tmp_path):
+    for export, src in ((export_topology, TOPO), (export_component, COMP)):
+        _, text, n = _emit(export, src, tmp_path, smetana=True)
+        assert text.count(_PRAGMA) == n        # 블록마다 하나씩
+
+
+def test_pragma_and_style_are_orthogonal(tmp_path):
+    """--no-style 은 pragma 를, --smetana 는 skinparam 을 건드리지 않는다."""
+    _, no_style, _ = _emit(export_topology, TOPO, tmp_path, style=False, smetana=True)
+    assert _PRAGMA in no_style and "skinparam" not in no_style
+    _, neither, _ = _emit(export_topology, TOPO, tmp_path, style=False)
+    assert _PRAGMA not in neither and "skinparam" not in neither
+    assert neither.startswith("@startuml\ntitle ")   # @startuml 직후 바로 title
+
+
+def test_sequence_never_emits_layout_pragma(tmp_path):
+    for kw in ({}, {"style": False}):
+        _, text, _ = _emit(export_sequence, SEQ, tmp_path, **kw)
+        assert "!pragma" not in text
+
+
+def test_cli_smetana_flag(tmp_path):
+    dst = tmp_path / "t.json"
+    dst.write_text(TOPO.read_text(encoding="utf-8"), encoding="utf-8")
+    assert _run([str(dst)]).returncode == 0
+    assert _PRAGMA not in (tmp_path / "t.puml").read_text(encoding="utf-8")
+    r = _run([str(dst), "--smetana"])
+    assert r.returncode == 0
+    assert _PRAGMA in (tmp_path / "t.puml").read_text(encoding="utf-8")
+
+
+def test_cli_smetana_on_sequence_warns_and_succeeds(tmp_path):
+    dst = tmp_path / "s.json"
+    dst.write_text(SEQ.read_text(encoding="utf-8"), encoding="utf-8")
+    r = _run([str(dst), "--smetana"])
+    assert r.returncode == 0 and "무시" in r.stderr
+
+
 # ── CLI 검증 게이트 · 종료코드 ─────────────────────────────────
 def _run(args):
     return subprocess.run([sys.executable, str(SCRIPT), *args],
