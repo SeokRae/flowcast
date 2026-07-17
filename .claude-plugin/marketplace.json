@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력하는 Claude Code 플러그인",
-    "version": "0.13.0"
+    "version": "0.14.0"
   },
   "plugins": [
     {
       "name": "flowcast",
       "source": "./",
       "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력",
-      "version": "0.13.0",
+      "version": "0.14.0",
       "author": {
         "name": "SeokRae",
         "email": "kslbsh@gmail.com"
