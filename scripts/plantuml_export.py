@@ -24,6 +24,7 @@ validate_component)와 의미/텍스트 헬퍼(_split_dual_ip)만 render.py 에�
 import argparse
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -113,6 +114,16 @@ def _line(s):
     return str(s).replace("\r", " ").replace("\n", " ").strip()
 
 
+_ALIAS_RE = re.compile(r"[^0-9A-Za-z_]")
+
+
+def _alias(node_id):
+    """PlantUML 별칭 — 화살표 문법(`-->`)과 충돌하는 문자(하이픈·점·공백 등)를 `_` 로
+    정규화한다. 선언(`as`)·참조(화살표·note over·링크·세그먼트·엣지)에 동일 적용해
+    선언↔참조 매칭을 유지한다. 표시명(따옴표 문자열)은 건드리지 않고 별칭만 바꾼다."""
+    return _ALIAS_RE.sub("_", str(node_id))
+
+
 def _header(system, title, source, style):
     out = ["@startuml"]
     if style:
@@ -157,7 +168,7 @@ def _seq_block(data, sc, style):
                 box_open = True
             cur = az
         indent = "  " if box_open else ""
-        out.append(f'{indent}participant "{_disp(a.get("name", a["id"]), _mk_port(a))}" as {a["id"]}')
+        out.append(f'{indent}participant "{_disp(a.get("name", a["id"]), _mk_port(a))}" as {_alias(a["id"])}')
     if box_open:
         out.append("end box")
     out.append("")
@@ -165,7 +176,7 @@ def _seq_block(data, sc, style):
         kind = st.get("kind")
         frm, to = st.get("from"), st.get("to")
         if kind == "note":
-            targets = frm if frm == to else f"{frm}, {to}"
+            targets = _alias(frm) if frm == to else f"{_alias(frm)}, {_alias(to)}"
             out.append(f"note over {targets}")
             n = st.get("n")
             body = (f"{n}. " if n is not None else "") + (st.get("label") or "")
@@ -175,7 +186,7 @@ def _seq_block(data, sc, style):
         else:
             op = _SEQ_OP.get(kind, "->")
             lbl = _arrow_label(st)
-            out.append(f"{frm} {op} {to}" + (f" : {lbl}" if lbl else ""))
+            out.append(f"{_alias(frm)} {op} {_alias(to)}" + (f" : {lbl}" if lbl else ""))
     out.append("@enduml")
     return "\n".join(out)
 
@@ -205,7 +216,7 @@ def _rect_decl(node, R, indent=""):
         disp = _disp(*l1)
     else:
         disp = _disp(node.get("name", node["id"]), _mk_port(node))
-    return f'{indent}rectangle "{disp}" as {node["id"]}{stereo}'
+    return f'{indent}rectangle "{disp}" as {_alias(node["id"])}{stereo}'
 
 
 def _nodes_with_zones(nodes, zones, R, out):
@@ -278,7 +289,7 @@ def _topo_block(data, sc, R, style):
     seg_pairs = {frozenset(_seg_pair(sg)) for sg in segments}
     for lk in data.get("links", []):
         if frozenset((lk["from"], lk["to"])) not in seg_pairs:
-            out.append(f'{lk["from"]} -- {lk["to"]}')
+            out.append(f'{_alias(lk["from"])} -- {_alias(lk["to"])}')
     # 번호가 있으면 엣지엔 번호만 두고 설명은 legend 로 뺀다 — 한 pair 에 엣지가 몰려도
     # 라벨이 겹쳐 뭉개지지 않는다(#57). 번호 없는 세그먼트는 참조할 키가 없어 라벨 유지.
     numbered = [sg for sg in segments if sg.get("n") is not None]
@@ -287,7 +298,7 @@ def _topo_block(data, sc, R, style):
         for sg in segments:
             frm, to = _seg_pair(sg)
             lbl = str(sg["n"]) if (numbered and sg.get("n") is not None) else _arrow_label(sg)
-            out.append(f"{frm} --> {to}" + (f" : {lbl}" if lbl else ""))
+            out.append(f"{_alias(frm)} --> {_alias(to)}" + (f" : {lbl}" if lbl else ""))
     if numbered:
         out.append("")
         out.extend(_topo_legend(numbered, R))
@@ -311,7 +322,7 @@ def _comp_block(data, sc, R, style):
     for e in sc.get("edges", []):
         op = "<-->" if e.get("bidir") else "-->"
         lbl = _arrow_label(e)
-        out.append(f'{e["from"]} {op} {e["to"]}' + (f" : {lbl}" if lbl else ""))
+        out.append(f'{_alias(e["from"])} {op} {_alias(e["to"])}' + (f" : {lbl}" if lbl else ""))
     out.append("@enduml")
     return "\n".join(out)
 

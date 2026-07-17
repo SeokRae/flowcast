@@ -183,6 +183,48 @@ def test_component_bidir_edge(tmp_path):
     assert "a <--> b : sync" in out.read_text(encoding="utf-8")
 
 
+# ── 별칭 정규화 (하이픈 든 id 가 화살표 `a --> b` 파싱을 깨뜨리던 버그) ──
+def test_topology_hyphenated_ids_sanitized(tmp_path):
+    """`fw-edge` 같은 하이픈 든 id 는 PlantUML 화살표 문법을 깨뜨린다 —
+    선언(`as`)·정적 링크·번호 세그먼트 모두 `_` 로 정규화해 매칭을 유지한다."""
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "fw-edge", "name": "Edge FW", "col": 0, "row": 0},
+                      {"id": "lb-in", "name": "Ingress LB", "col": 1, "row": 0}],
+            "links": [{"from": "fw-edge", "to": "lb-in"}],
+            "scenarios": [
+                {"title": "구성도"},
+                {"title": "FLOW", "segments": [
+                    {"n": 1, "from": "fw-edge", "to": "lb-in", "label": "통과"}]}]}
+    out = tmp_path / "h.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert 'as fw_edge' in text and 'as lb_in' in text     # 선언 정규화
+    assert "fw_edge -- lb_in" in text                       # 정적 링크 정규화
+    assert "fw_edge --> lb_in : 1" in text                  # 번호 세그먼트 참조 정규화
+    assert "fw-edge" not in text and "lb-in" not in text    # 하이픈 별칭은 어디에도 없음
+
+
+def test_sequence_and_component_hyphenated_ids_sanitized(tmp_path):
+    """sequence participant/화살표·component 엣지도 동일하게 정규화(표시명은 원문 보존)."""
+    seq = {"system": "T",
+           "actors": [{"id": "web-api", "name": "Web"}, {"id": "pay-gw", "name": "Pay"}],
+           "scenarios": [{"title": "S", "steps": [
+               {"from": "web-api", "to": "pay-gw", "label": "요청", "kind": "req"}]}]}
+    out = tmp_path / "s.puml"
+    export_sequence(seq, out)
+    st = out.read_text(encoding="utf-8")
+    assert "as web_api" in st and "web_api -> pay_gw : 요청" in st and "web-api" not in st
+
+    comp = {"system": "T", "view": "component", "scenarios": [{"title": "S",
+            "nodes": [{"id": "svc-a", "name": "A", "col": 0, "row": 0},
+                      {"id": "svc-b", "name": "B", "col": 1, "row": 0}],
+            "edges": [{"from": "svc-a", "to": "svc-b", "label": "call"}]}]}
+    out = tmp_path / "c.puml"
+    export_component(comp, out)
+    ct = out.read_text(encoding="utf-8")
+    assert "as svc_a" in ct and "svc_a --> svc_b : call" in ct and "svc-a" not in ct
+
+
 # ── 스타일 토글 ───────────────────────────────────────────────
 def test_no_style_omits_skinparam(tmp_path):
     _, styled, _ = _emit(export_sequence, SEQ, tmp_path)
