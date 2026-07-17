@@ -66,6 +66,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-13 | runtime contract 안정화 — manifest schema 1.0 검증 게이트·소스/페어 메타데이터·선택 PDF·partial 상태 | `skills/*`·`agents/*`·plugin manifest | fan-out 전 입력 계약과 선택 출력 실패 의미를 고정 (#39) |
 | 2026-07-14 | B-out PlantUML export — 3뷰 JSON → `.puml`(stdlib·좌표 미사용·검증기 재사용, flowcast 팔레트 skinparam+smetana) + `plantuml` 옵션 배선 | `scripts/plantuml_export.py`·`agents/diagram-drawer`·`skills/flowcast` | PlantUML 계보 다이어그램과 정합·Obsidian 네이티브 렌더 지원 (#53) |
 | 2026-07-17 | **rectangle 뷰 레이아웃 기본값을 dot 으로 전환**(동작 변경) — `!pragma layout smetana` 강제 해제하고 `--smetana` opt-in 으로. pragma/skinparam 직교화(`RECT_PRAGMA` 분리) | `scripts/plantuml_export.py`·`agents/diagram-drawer` | smetana 가 캔버스를 클리핑 — 자체 예제 `three-tier` 마저 "5. 캐시 갱신"→"5. 캐시" 절단(243×541 vs dot 271×664). 강제 근거였던 "Obsidian=graphviz-free" 전제도 오류(플러그인 `dotPath` 절대경로면 dot 사용) (#55) |
+| 2026-07-17 | topology `.puml` 라벨 겹침 해소 — 엣지엔 번호만, 설명은 `legend` 표로(render.py 배지+범례 패턴 패리티). 세그먼트가 덮는 pair 의 정적 링크 생략 | `scripts/plantuml_export.py` | 한 pair 에 링크 1+세그먼트 N 이 걸리면 PlantUML 이 라벨을 같은 지점에 스택 → 노드명까지 가림(dot·smetana 공통). 실사용에서 `.puml` 수기 유지를 강요한 원인 (#57) |
 
 ## 라이선스
 

@@ -89,8 +89,8 @@ def test_topology_rectangles_zones_links_segments(tmp_path):
     assert 'rectangle "Load Balancer" as lb <<gear>>' in text
     assert 'rectangle "Client" as client <<ext>>' in text
     assert 'package "App Tier" {' in text
-    assert "client -- lb" in text                        # 정적 링크
-    assert "client --> lb : 1. HTTPS 요청" in text        # 번호 세그먼트
+    assert "client -- lb" in text                        # 정적 링크(순수 구성도 시나리오)
+    assert "client --> lb : 1" in text                   # 번호 세그먼트 — 설명은 legend 로
     assert "col" not in text and "row" not in text        # 좌표 미누출
 
 
@@ -98,6 +98,70 @@ def test_topology_pure_diagram_scenario_has_no_numbered_arrows(tmp_path):
     _, text, _ = _emit(export_topology, TOPO, tmp_path)
     first_block = text.split("@enduml")[0]   # "인프라 구성도" (segments 없음)
     assert "-->" not in first_block and "client -- lb" in first_block
+    assert "legend" not in first_block       # 번호 세그먼트가 없으면 범례도 없다
+
+
+# ── topology 범례 (#57 — 다중 엣지 라벨 겹침 회피) ─────────────
+def test_topology_segment_labels_move_to_legend(tmp_path):
+    """엣지엔 번호만, 설명은 legend 표로 — 한 pair 에 엣지가 몰려도 라벨이 스택되지 않는다."""
+    _, text, _ = _emit(export_topology, TOPO, tmp_path)
+    flow = text.split("@enduml")[1]
+    assert "client --> lb : 1" in flow
+    assert "HTTPS 요청" not in flow.split("legend")[0]    # 화살표 라벨엔 설명 없음
+    assert "| 1 | HTTPS 요청 |" in flow                   # 범례 행에 있음
+
+
+def test_topology_legend_drops_step_column_when_no_step(tmp_path):
+    """단계 열은 _split_step_label 이 실제로 뽑아낸 행이 있을 때만."""
+    _, text, _ = _emit(export_topology, TOPO, tmp_path)
+    assert "|= # |= 설명 |" in text and "단계" not in text
+
+
+def test_topology_legend_keeps_step_column_and_meta(tmp_path):
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "a", "name": "A", "col": 0, "row": 0},
+                      {"id": "b", "name": "B", "col": 1, "row": 0}],
+            "scenarios": [{"title": "S", "segments": [
+                {"n": 1, "from": "a", "to": "b", "label": "정산 — 수수료 차감", "meta": "D+3"}]}]}
+    out = tmp_path / "s.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert "|= # |= 단계 |= 설명 |" in text
+    assert "| 1 | 정산 | 수수료 차감\\n( D+3 ) |" in text
+    assert "a --> b : 1" in text
+
+
+def test_topology_static_link_dropped_only_when_segment_covers_pair(tmp_path):
+    """세그먼트가 잇는 pair 의 정적 링크만 생략 — 나머지는 남아 노드가 고아가 되지 않는다."""
+    _, text, _ = _emit(export_topology, TOPO, tmp_path)
+    flow = text.split("@enduml")[1]
+    assert "client -- lb" not in flow      # 세그먼트 1 이 덮음
+    assert "lb -- web2" in flow            # 덮는 세그먼트 없음 → 유지
+
+
+def test_topology_unnumbered_segment_keeps_inline_label(tmp_path):
+    """번호가 없으면 범례에서 참조할 키가 없어 라벨을 화살표에 남긴다."""
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "a", "name": "A", "col": 0, "row": 0},
+                      {"id": "b", "name": "B", "col": 1, "row": 0}],
+            "scenarios": [{"title": "S", "segments": [
+                {"from": "a", "to": "b", "label": "무번호 흐름"}]}]}
+    out = tmp_path / "u.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert "a --> b : 무번호 흐름" in text and "legend" not in text
+
+
+def test_topology_legend_escapes_pipe(tmp_path):
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "a", "name": "A", "col": 0, "row": 0},
+                      {"id": "b", "name": "B", "col": 1, "row": 0}],
+            "scenarios": [{"title": "S", "segments": [
+                {"n": 1, "from": "a", "to": "b", "label": "a|b 분기"}]}]}
+    out = tmp_path / "p.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert "| 1 | a&#124;b 분기 |" in text   # 셀 구분자로 오인되지 않게 이스케이프
 
 
 # ── COMPONENT ─────────────────────────────────────────────────
