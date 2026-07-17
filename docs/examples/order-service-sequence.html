@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Order Service IF 흐름도</title>
+<style>
+    :root {
+      --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+      --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --line:rgba(104,182,255,0.75); --line-soft:rgba(140,166,205,0.55);
+      --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
+      --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
+      --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
+      --comp-bg:rgba(78,205,190,0.14); --comp-bd:rgba(78,205,190,0.44);
+      --shadow:0 24px 72px rgba(0,0,0,0.34);
+      --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+    }
+    :root[data-theme="light"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .page{width:min(954px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;display:grid;gap:18px;}
+    .sheet{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);border-radius:20px;padding:20px 24px;}
+    .hero{margin-bottom:14px;}
+    .eyebrow{display:inline-flex;padding:6px 12px;border-radius:999px;border:1px solid var(--zone-bd);background:var(--zone-bg);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.07em;}
+    h1{margin:10px 0 4px;font-size:clamp(1.3rem,2.2vw,1.7rem);letter-spacing:-0.02em;}
+    p.sub{margin:0;color:var(--muted);font-size:12.5px;}
+    .diagram-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+    .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
+    /* ── SVG ── */
+    .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:12px;font-weight:700;}
+    .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:12.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:10px;}
+    .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
+    .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
+    .ar{fill:none;}
+    .ar-req{stroke:var(--line);stroke-width:1.8;}
+    .ar-res{stroke:var(--line-soft);stroke-width:1.5;stroke-dasharray:6,4;}
+    .ar-relay{stroke:var(--line-soft);stroke-width:1.4;}
+    .ar-self{stroke:var(--line);stroke-width:1.6;}
+    .mk-req,.mk-self{fill:var(--line);}
+    .mk-res,.mk-relay{fill:var(--line-soft);}
+    text{font-family:var(--font);}
+    .lb-req,.lb-self{fill:var(--accent);font-size:12px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:12px;}
+    .lb-relay{fill:var(--muted);font-size:11.5px;font-style:italic;}
+    .lb-sub{fill:var(--warn);font-size:11px;font-weight:600;}
+    .lb-proto{fill:var(--muted);font-size:10.5px;font-family:var(--mono);}
+    .note{fill:var(--note-bg);stroke:var(--note-bd);stroke-width:1.3;}
+    .note-tx{fill:var(--text);font-size:11.5px;}
+    /* ── 토폴로지(구성도) 뷰 ── */
+    .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
+    .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
+    .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-node.dim{opacity:0.5;}
+    .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
+    .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
+    .topo-tx.on{fill:var(--accent);}
+    .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
+    .topo-seg{fill:none;stroke:var(--line);stroke-width:2;}
+    .mk-topo{fill:var(--line);}
+    .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
+    .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    /* ── 컴포넌트 뷰 ── */
+    .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
+    .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
+    .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
+    .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
+    .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
+    .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
+    .comp-lb{fill:var(--text);font-size:11px;font-weight:600;}
+    .comp-proto{fill:var(--muted);font-size:10px;font-family:var(--mono);}
+    .mk-comp{fill:var(--line);}
+    @media print {
+      :root, :root[data-theme="dark"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+      .theme-toggle{display:none;}
+      body{background:#fff;}
+      .page{width:954px;padding:0;gap:0;}
+      .sheet{border:none;box-shadow:none;border-radius:0;page-break-after:always;page-break-inside:avoid;}
+      .diagram-wrap{overflow:visible;border:none;}
+      .hero{height:96px;overflow:hidden;}
+    }
+
+    @page { size: 954px 727px; margin: 0; }
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button">🌓 테마</button>
+<main class="page">
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">Order Service · IF 흐름도</span>
+      <h1>주문 결제 FLOW</h1>
+      <p class="sub">flowcast 합성 예제 (sequence)</p>
+    </header>
+    
+    <div class="diagram-wrap"><svg viewBox="0 0 906 553" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="주문 결제 FLOW"><defs><marker id="mk-req" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-req" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-res" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-res" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-relay" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-relay" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-self" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-self" d="M0,0 L0,8 L8,4z"/></marker></defs><rect class="zone" x="206" y="14" width="154" height="30" rx="8"/><text class="zone-tx" x="283.0" y="33.0" text-anchor="middle">Frontend</text><rect class="zone" x="376" y="14" width="324" height="30" rx="8"/><text class="zone-tx" x="538.0" y="33.0" text-anchor="middle">Backend</text><line class="lifeline" x1="113.0" y1="104" x2="113.0" y2="537"/><line class="lifeline" x1="283.0" y1="104" x2="283.0" y2="537"/><line class="lifeline" x1="453.0" y1="104" x2="453.0" y2="537"/><line class="lifeline" x1="623.0" y1="104" x2="623.0" y2="537"/><line class="lifeline" x1="793.0" y1="104" x2="793.0" y2="537"/><rect class="actor" x="38.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="113.0" y="82.0" text-anchor="middle">Buyer</text><rect class="actor" x="208.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="283.0" y="82.0" text-anchor="middle">Web Store</text><rect class="actor" x="378.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="453.0" y="75.0" text-anchor="middle">Order API</text><text class="actor-sub" x="453.0" y="93.0" text-anchor="middle">8080</text><rect class="actor" x="548.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="623.0" y="82.0" text-anchor="middle">Payment Gateway</text><rect class="actor" x="718.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="793.0" y="82.0" text-anchor="middle">Bank</text><rect class="act-bar" x="107.0" y="149" width="12" height="364" rx="2"/><rect class="act-bar" x="277.0" y="149" width="12" height="364" rx="2"/><rect class="act-bar" x="447.0" y="196" width="12" height="270" rx="2"/><rect class="act-bar" x="617.0" y="258" width="12" height="161" rx="2"/><rect class="act-bar" x="787.0" y="305" width="12" height="67" rx="2"/><line class="ar-req ar" x1="120.0" y1="159" x2="275.0" y2="159" marker-end="url(#mk-req)"/><text class="lb-req" x="198.0" y="153" text-anchor="middle">1. 상품 주문</text><line class="ar-req ar" x1="290.0" y1="206" x2="445.0" y2="206" marker-end="url(#mk-req)"/><text class="lb-req" x="368.0" y="200" text-anchor="middle">2. 결제 요청</text><text class="lb-proto" x="368.0" y="221" text-anchor="middle">( HTTPS )</text><line class="ar-req ar" x1="460.0" y1="268" x2="615.0" y2="268" marker-end="url(#mk-req)"/><text class="lb-req" x="538.0" y="262" text-anchor="middle">3. 승인 요청</text><line class="ar-req ar" x1="630.0" y1="315" x2="785.0" y2="315" marker-end="url(#mk-req)"/><text class="lb-req" x="708.0" y="309" text-anchor="middle">4. 카드 승인</text><line class="ar-res ar" x1="786.0" y1="362" x2="631.0" y2="362" marker-end="url(#mk-res)"/><text class="lb-res" x="708.0" y="356" text-anchor="middle">5. 승인 응답</text><line class="ar-res ar" x1="616.0" y1="409" x2="461.0" y2="409" marker-end="url(#mk-res)"/><text class="lb-res" x="538.0" y="403" text-anchor="middle">6. 승인 결과</text><line class="ar-res ar" x1="446.0" y1="456" x2="291.0" y2="456" marker-end="url(#mk-res)"/><text class="lb-res" x="368.0" y="450" text-anchor="middle">7. 결제 완료</text><line class="ar-res ar" x1="276.0" y1="503" x2="121.0" y2="503" marker-end="url(#mk-res)"/><text class="lb-res" x="198.0" y="497" text-anchor="middle">8. 주문 완료</text></svg></div>
+  </section>
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">Order Service · IF 흐름도</span>
+      <h1>주문 취소 FLOW</h1>
+      <p class="sub">flowcast 합성 예제 (sequence)</p>
+    </header>
+    
+    <div class="diagram-wrap"><svg viewBox="0 0 906 491" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="주문 취소 FLOW"><defs><marker id="mk-req" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-req" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-res" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-res" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-relay" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-relay" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-self" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-self" d="M0,0 L0,8 L8,4z"/></marker></defs><rect class="zone" x="206" y="14" width="154" height="30" rx="8"/><text class="zone-tx" x="283.0" y="33.0" text-anchor="middle">Frontend</text><rect class="zone" x="376" y="14" width="324" height="30" rx="8"/><text class="zone-tx" x="538.0" y="33.0" text-anchor="middle">Backend</text><line class="lifeline" x1="113.0" y1="104" x2="113.0" y2="475"/><line class="lifeline" x1="283.0" y1="104" x2="283.0" y2="475"/><line class="lifeline" x1="453.0" y1="104" x2="453.0" y2="475"/><line class="lifeline" x1="623.0" y1="104" x2="623.0" y2="475"/><line class="lifeline" x1="793.0" y1="104" x2="793.0" y2="475"/><rect class="actor" x="38.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="113.0" y="82.0" text-anchor="middle">Buyer</text><rect class="actor" x="208.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="283.0" y="82.0" text-anchor="middle">Web Store</text><rect class="actor" x="378.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="453.0" y="75.0" text-anchor="middle">Order API</text><text class="actor-sub" x="453.0" y="93.0" text-anchor="middle">8080</text><rect class="actor" x="548.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="623.0" y="82.0" text-anchor="middle">Payment Gateway</text><rect class="actor" x="718.0" y="52" width="150" height="52" rx="9"/><text class="actor-tx" x="793.0" y="82.0" text-anchor="middle">Bank</text><rect class="act-bar" x="107.0" y="149" width="12" height="20" rx="2"/><rect class="act-bar" x="277.0" y="149" width="12" height="302" rx="2"/><rect class="act-bar" x="447.0" y="196" width="12" height="255" rx="2"/><rect class="act-bar" x="617.0" y="243" width="12" height="161" rx="2"/><rect class="act-bar" x="787.0" y="290" width="12" height="67" rx="2"/><line class="ar-req ar" x1="120.0" y1="159" x2="275.0" y2="159" marker-end="url(#mk-req)"/><text class="lb-req" x="198.0" y="153" text-anchor="middle">1. 취소 요청</text><line class="ar-req ar" x1="290.0" y1="206" x2="445.0" y2="206" marker-end="url(#mk-req)"/><text class="lb-req" x="368.0" y="200" text-anchor="middle">2. 취소 요청</text><line class="ar-req ar" x1="460.0" y1="253" x2="615.0" y2="253" marker-end="url(#mk-req)"/><text class="lb-req" x="538.0" y="247" text-anchor="middle">3. 취소 승인</text><line class="ar-req ar" x1="630.0" y1="300" x2="785.0" y2="300" marker-end="url(#mk-req)"/><text class="lb-req" x="708.0" y="294" text-anchor="middle">4. 카드 취소</text><line class="ar-res ar" x1="786.0" y1="347" x2="631.0" y2="347" marker-end="url(#mk-res)"/><text class="lb-res" x="708.0" y="341" text-anchor="middle">5. 취소 응답</text><line class="ar-res ar" x1="616.0" y1="394" x2="461.0" y2="394" marker-end="url(#mk-res)"/><text class="lb-res" x="538.0" y="388" text-anchor="middle">6. 취소 결과</text><line class="ar-res ar" x1="446.0" y1="441" x2="291.0" y2="441" marker-end="url(#mk-res)"/><text class="lb-res" x="368.0" y="435" text-anchor="middle">7. 취소 완료</text></svg></div>
+  </section>
+</main>
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+  });
+})();
+</script>
+<script></script>
+</body>
+</html>

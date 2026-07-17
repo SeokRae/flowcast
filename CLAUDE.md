@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
+| `docs/` | GitHub Pages 사이트 — `index.html` 예제 갤러리 + `examples/*.html`(게시용 복사본). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
 | `tests/test_render.py` | 렌더러 검증·출력 테스트 |
 
 ## 명령어
@@ -67,6 +68,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-14 | B-out PlantUML export — 3뷰 JSON → `.puml`(stdlib·좌표 미사용·검증기 재사용, flowcast 팔레트 skinparam+smetana) + `plantuml` 옵션 배선 | `scripts/plantuml_export.py`·`agents/diagram-drawer`·`skills/flowcast` | PlantUML 계보 다이어그램과 정합·Obsidian 네이티브 렌더 지원 (#53) |
 | 2026-07-17 | **rectangle 뷰 레이아웃 기본값을 dot 으로 전환**(동작 변경) — `!pragma layout smetana` 강제 해제하고 `--smetana` opt-in 으로. pragma/skinparam 직교화(`RECT_PRAGMA` 분리) | `scripts/plantuml_export.py`·`agents/diagram-drawer` | smetana 가 캔버스를 클리핑 — 자체 예제 `three-tier` 마저 "5. 캐시 갱신"→"5. 캐시" 절단(243×541 vs dot 271×664). 강제 근거였던 "Obsidian=graphviz-free" 전제도 오류(플러그인 `dotPath` 절대경로면 dot 사용) (#55) |
 | 2026-07-17 | topology `.puml` 라벨 겹침 해소 — 엣지엔 번호만, 설명은 `legend` 표로(render.py 배지+범례 패턴 패리티). 세그먼트가 덮는 pair 의 정적 링크 생략 | `scripts/plantuml_export.py` | 한 pair 에 링크 1+세그먼트 N 이 걸리면 PlantUML 이 라벨을 같은 지점에 스택 → 노드명까지 가림(dot·smetana 공통). 실사용에서 `.puml` 수기 유지를 강요한 원인 (#57) |
+| 2026-07-18 | GitHub Pages 예제 갤러리 — `docs/index.html`(3뷰 합성 예제 카드·라이브 iframe 프리뷰·다크/라이트 테마 공유) + `docs/examples/*.html` 게시용 복사본 | `docs/`·README·CLAUDE.md | 자체완결 예제 HTML을 라이브로 보여줄 진입점 부재 — Pages `main /docs` 정적 게시 (#59) |
 
 ## 라이선스
 
