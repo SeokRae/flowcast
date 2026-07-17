@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>flowcast · 예제 갤러리</title>
+<meta name="description" content="flowcast 3뷰(sequence·topology·component) 합성 예제 라이브 데모"/>
+<style>
+  :root {
+    --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+    --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+    --teal:#4ecdbe;
+    --shadow:0 24px 72px rgba(0,0,0,0.34);
+    --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+  }
+  :root[data-theme="light"] {
+    --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+    --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+    --teal:#148278;
+    --shadow:0 10px 32px rgba(23,48,88,0.10);
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--text); font-family:var(--font);
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .topbar {
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px;
+    padding:14px clamp(18px,5vw,48px);
+    background:var(--surface); border-bottom:1px solid var(--border);
+    backdrop-filter:blur(10px);
+  }
+  .brand { font-weight:700; font-size:18px; letter-spacing:-0.01em; }
+  .brand span { color:var(--accent); }
+  .topbar .spacer { flex:1; }
+  .topbar a.nav { color:var(--muted); font-size:14px; }
+  .topbar a.nav:hover { color:var(--text); text-decoration:none; }
+  .toggle {
+    border:1px solid var(--border); background:transparent; color:var(--text);
+    border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; font-family:var(--font);
+  }
+  .toggle:hover { border-color:var(--accent); }
+
+  main { max-width:1120px; margin:0 auto; padding:clamp(28px,6vw,56px) clamp(18px,5vw,48px) 0; }
+
+  .intro h1 { font-size:clamp(28px,5vw,40px); line-height:1.2; margin:0 0 12px; letter-spacing:-0.02em; }
+  .intro .lede { color:var(--muted); font-size:clamp(15px,2vw,17px); max-width:62ch; margin:0 0 22px; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+  .chip {
+    display:inline-flex; align-items:center; gap:7px;
+    border:1px solid var(--border); border-radius:999px;
+    padding:5px 13px; font-size:13px; color:var(--muted);
+  }
+  .chip .dot { width:9px; height:9px; border-radius:50%; }
+  .dot-sequence { background:var(--accent); }
+  .dot-topology { background:var(--warn); }
+  .dot-component { background:var(--teal); }
+
+  .grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:22px; margin:34px 0 8px;
+  }
+  .card {
+    border:1px solid var(--border); border-radius:14px; overflow:hidden;
+    background:var(--surface); box-shadow:var(--shadow);
+    display:flex; flex-direction:column;
+    transition:border-color .18s ease, transform .18s ease;
+  }
+  .card:hover { border-color:var(--accent); transform:translateY(-3px); }
+
+  .card-preview { position:relative; height:250px; overflow:hidden; background:var(--bg); border-bottom:1px solid var(--border); }
+  .card-preview iframe {
+    position:absolute; top:0; left:0; width:200%; height:200%; border:0;
+    transform:scale(0.5); transform-origin:top left; pointer-events:none;
+  }
+  .preview-cover { position:absolute; inset:0; display:block; }
+
+  .card-body { padding:16px 18px 18px; display:flex; flex-direction:column; gap:9px; flex:1; }
+  .badge {
+    align-self:flex-start; font-family:var(--mono); font-size:11px; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase;
+    border-radius:6px; padding:3px 9px; border:1px solid;
+  }
+  .badge-sequence { color:var(--accent); border-color:var(--accent); }
+  .badge-topology { color:var(--warn); border-color:var(--warn); }
+  .badge-component { color:var(--teal); border-color:var(--teal); }
+  .card-body h3 { margin:0; font-size:17px; letter-spacing:-0.01em; }
+  .card-body p { margin:0; color:var(--muted); font-size:14px; flex:1; }
+  .card-links { display:flex; gap:16px; font-size:13.5px; margin-top:4px; }
+  .card-links a.muted { color:var(--muted); }
+
+  footer {
+    max-width:1120px; margin:56px auto 0; padding:28px clamp(18px,5vw,48px) 48px;
+    border-top:1px solid var(--border); color:var(--muted); font-size:14px;
+  }
+  footer h2 { color:var(--text); font-size:16px; margin:0 0 12px; }
+  footer pre {
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; font-family:var(--mono); font-size:13px;
+    color:var(--text); margin:0 0 18px;
+  }
+  footer .meta { display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">flow<span>cast</span></span>
+  <div class="spacer"></div>
+  <a class="nav" href="https://github.com/SeokRae/flowcast" target="_blank" rel="noopener">GitHub</a>
+  <button class="toggle" id="themeToggle" type="button">◐ 테마</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>flowcast 예제 갤러리</h1>
+    <p class="lede">
+      데이터·설명을 주면 라우터가 다이어그램 단위로 쪼개고 drawer 서브에이전트가 병렬로
+      흐름도를 렌더링하는 Claude Code 플러그인. 아래는 3뷰의 <strong>합성 예제</strong>(실 데이터 없음)를
+      자체완결 HTML로 렌더한 라이브 데모다. 카드를 누르면 전체화면으로 열린다.
+    </p>
+    <div class="legend">
+      <span class="chip"><span class="dot dot-sequence"></span>sequence — 시간순 요청/응답 스윔레인</span>
+      <span class="chip"><span class="dot dot-topology"></span>topology — 존 배치 + 번호 구간</span>
+      <span class="chip"><span class="dot dot-component"></span>component — 포트·프로토콜 방향 엣지</span>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="card" data-view="sequence">
+      <div class="card-preview">
+        <iframe src="examples/order-service-sequence.html" loading="lazy" title="주문 결제 FLOW 미리보기"></iframe>
+        <a class="preview-cover" href="examples/order-service-sequence.html" target="_blank" rel="noopener" aria-label="주문 결제 FLOW 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-sequence">sequence</span>
+        <h3>Order Service · 주문 결제 FLOW</h3>
+        <p>구매자 → 웹스토어 → 주문 API → 결제 게이트웨이 → 은행. 5개 행위자 8단계 시간순 요청/응답을 스윔레인으로 표현.</p>
+        <div class="card-links">
+          <a href="examples/order-service-sequence.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/order-service-sequence.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-view="topology">
+      <div class="card-preview">
+        <iframe src="examples/three-tier-topology.html" loading="lazy" title="3-Tier 인프라 구성도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/three-tier-topology.html" target="_blank" rel="noopener" aria-label="3-Tier 인프라 구성도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-topology">topology</span>
+        <h3>Web Platform · 3-Tier 구성도</h3>
+        <p>DMZ·App·Data 존 배치 위에 LB → Web → App → DB/Cache 요청 구간을 번호 배지로 오버레이.</p>
+        <div class="card-links">
+          <a href="examples/three-tier-topology.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/three-tier-topology.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-view="topology">
+      <div class="card-preview">
+        <iframe src="examples/firewall-boundary-topology.html" loading="lazy" title="방화벽 경계 구성도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/firewall-boundary-topology.html" target="_blank" rel="noopener" aria-label="방화벽 경계 구성도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-topology">topology</span>
+        <h3>Gateway Platform · 방화벽 경계</h3>
+        <p>엣지 방화벽과 인바운드/아웃바운드 LB 경계, 파트너 연동까지 경계 존을 공간 배치.</p>
+        <div class="card-links">
+          <a href="examples/firewall-boundary-topology.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/firewall-boundary-topology.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-view="component">
+      <div class="card-preview">
+        <iframe src="examples/microservice-component.html" loading="lazy" title="마이크로서비스 컴포넌트도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/microservice-component.html" target="_blank" rel="noopener" aria-label="마이크로서비스 컴포넌트도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-component">component</span>
+        <h3>Microservice · 결제 처리 Process</h3>
+        <p>포트 달린 컴포넌트 박스 사이를 프로토콜 방향 엣지로 연결한 결제 처리 프로세스도.</p>
+        <div class="card-links">
+          <a href="examples/microservice-component.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/microservice-component.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <h2>설치</h2>
+  <pre>/plugin marketplace add SeokRae/flowcast
+/plugin install flowcast@flowcast</pre>
+  <div class="meta">
+    <span>Python 3.9+ (표준 라이브러리만). 기본 출력 HTML+MD, 선택 PDF·PPTX·PlantUML.</span>
+    <a href="https://github.com/SeokRae/flowcast" target="_blank" rel="noopener">저장소</a>
+    <span>MIT © SeokRae</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+    // 이미 로드된 프리뷰 iframe도 새 테마로 다시 로드
+    document.querySelectorAll('.card-preview iframe').forEach(function (f) {
+      f.contentWindow.location.reload();
+    });
+  });
+})();
+</script>
+</body>
+</html>
