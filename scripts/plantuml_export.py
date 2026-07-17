@@ -53,9 +53,17 @@ skinparam sequence {
 skinparam noteBackgroundColor #FAF6EE
 skinparam noteBorderColor #E0C998"""
 
-# rectangle 뷰(topology/component)는 graphviz 없이 Obsidian 에서 렌더되도록 smetana 사용
-RECT_STYLE = """!pragma layout smetana
-skinparam backgroundColor #FFFFFF
+# rectangle 뷰(topology/component)는 dot(graphviz) 레이아웃을 탄다 — 기본값이 dot.
+#
+# `!pragma layout smetana`(PlantUML 내장 엔진)는 graphviz 가 없는 환경용 **opt-in**(`--smetana`).
+# v0.12 까지는 이게 강제였으나 v0.13 에서 뒤집었다 — smetana 가 캔버스를 클리핑하기 때문:
+#   · examples/three-tier-topology  : smetana 243x541 ("5. 캐시 갱신"→"5. 캐시" 절단) / dot 271x664 정상
+#   · 6노드·11엣지·package 1 (실사용): smetana 407x442 잘림                        / dot 984x523 정상
+# 강제의 근거였던 "Obsidian 은 graphviz-free" 전제도 틀렸다 — Obsidian PlantUML 플러그인은 dot 을 쓴다.
+# (렌더 실패의 진짜 원인은 GUI 앱이라 셸 PATH 를 상속받지 않는 것 → dotPath 를 '절대경로'로 주면 된다.)
+RECT_PRAGMA = "!pragma layout smetana"
+
+RECT_STYLE = """skinparam backgroundColor #FFFFFF
 skinparam rectangle {
   BackgroundColor #F1F5F9
   BackgroundColor<<ext>> #FDF3E7
@@ -72,6 +80,15 @@ skinparam package {
   BackgroundColor transparent
   FontColor #475569
 }"""
+
+
+def _rect_head(style, smetana):
+    """rectangle 뷰(topology/component) 의 @startuml 직후 블록.
+
+    레이아웃 엔진(pragma)과 팔레트(skinparam)는 **직교**한다 —
+    `--smetana` 는 pragma 만 켜고, `--no-style` 은 skinparam 만 뺀다.
+    """
+    return "\n".join(p for p in (RECT_PRAGMA if smetana else "", RECT_STYLE if style else "") if p)
 
 
 def _disp(*parts):
@@ -227,10 +244,10 @@ def _topo_block(data, sc, R, style):
     return "\n".join(out)
 
 
-def export_topology(data, out_path, style=True):
+def export_topology(data, out_path, style=True, smetana=False):
     R = _load_render()
-    blocks = [_topo_block(data, sc, R, RECT_STYLE if style else "!pragma layout smetana")
-              for sc in data.get("scenarios", [])]
+    head = _rect_head(style, smetana)
+    blocks = [_topo_block(data, sc, R, head) for sc in data.get("scenarios", [])]
     out_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
     return len(blocks)
 
@@ -248,19 +265,20 @@ def _comp_block(data, sc, R, style):
     return "\n".join(out)
 
 
-def export_component(data, out_path, style=True):
+def export_component(data, out_path, style=True, smetana=False):
     R = _load_render()
-    blocks = [_comp_block(data, sc, R, RECT_STYLE if style else "!pragma layout smetana")
-              for sc in data.get("scenarios", [])]
+    head = _rect_head(style, smetana)
+    blocks = [_comp_block(data, sc, R, head) for sc in data.get("scenarios", [])]
     out_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
     return len(blocks)
 
 
 # ── main ──────────────────────────────────────────────────────
+# (exporter, 검증기명, rectangle 뷰인가) — rectangle 뷰만 레이아웃 pragma 를 탄다(sequence 는 네이티브).
 _DISPATCH = {
-    "sequence": (export_sequence, "validate"),
-    "topology": (export_topology, "validate_topology"),
-    "component": (export_component, "validate_component"),
+    "sequence": (export_sequence, "validate", False),
+    "topology": (export_topology, "validate_topology", True),
+    "component": (export_component, "validate_component", True),
 }
 
 
@@ -271,6 +289,10 @@ def main():
     ap.add_argument("-o", "--out", help="출력 .puml (기본: 입력과 같은 위치 .puml)")
     ap.add_argument("--no-style", action="store_true",
                     help="flowcast 팔레트 skinparam 생략(vanilla PlantUML)")
+    ap.add_argument("--smetana", action="store_true",
+                    help="topology·component 에 '!pragma layout smetana' 추가 — graphviz(dot) 가 없는 "
+                         "환경용 opt-in. smetana 는 캔버스를 클리핑할 수 있어 기본은 dot 이다. "
+                         "sequence 는 네이티브 렌더라 무관")
     args = ap.parse_args()
 
     path = Path(args.data)
@@ -284,7 +306,7 @@ def main():
               file=sys.stderr)
         return 1
 
-    exporter, validator_name = _DISPATCH[view]
+    exporter, validator_name, is_rect = _DISPATCH[view]
     R = _load_render()
     errors, warnings = getattr(R, validator_name)(data)
     for w in warnings:
@@ -295,7 +317,13 @@ def main():
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".puml")
-    n = exporter(data, out, style=not args.no_style)
+    kwargs = {"style": not args.no_style}
+    if is_rect:
+        kwargs["smetana"] = args.smetana
+    elif args.smetana:
+        print("경고: sequence 뷰는 레이아웃 pragma 를 쓰지 않아 --smetana 가 무시됩니다.",
+              file=sys.stderr)
+    n = exporter(data, out, **kwargs)
     print(f"puml: {out} (다이어그램 {n})")
     return 0
 

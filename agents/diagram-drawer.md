@@ -81,7 +81,7 @@ render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.puml"
 ```
 
-`plantuml_export.py`는 render.py의 검증기(`validate`·`validate_topology`·`validate_component`)를 재사용해 검증 통과 시에만 방출하므로, render가 이미 통과시킨 JSON은 보통 성공한다. exit 0이면 `puml` 경로를 반환에 담는다. 예외적으로 실패하면 `puml: null`, `error`에 원문 오류, `status: partial`(HTML/MD는 유효). flowcast 팔레트 skinparam + (topology/component) `!pragma layout smetana`가 baked-in되어 Obsidian PlantUML 플러그인에서 바로 렌더된다.
+`plantuml_export.py`는 render.py의 검증기(`validate`·`validate_topology`·`validate_component`)를 재사용해 검증 통과 시에만 방출하므로, render가 이미 통과시킨 JSON은 보통 성공한다. exit 0이면 `puml` 경로를 반환에 담는다. 예외적으로 실패하면 `puml: null`, `error`에 원문 오류, `status: partial`(HTML/MD는 유효). flowcast 팔레트 skinparam이 baked-in된다. topology/component는 **dot(graphviz) 레이아웃**을 타므로 Obsidian PlantUML 플러그인 설정의 `dotPath`가 **절대경로**여야 렌더된다(GUI 앱이라 셸 PATH 미상속 — `"dot"` 이름만 주면 "Cannot find Graphviz"). graphviz가 없는 환경이면 `--smetana`로 내장 엔진을 쓸 수 있으나 캔버스가 클리핑될 수 있다. sequence는 네이티브라 무관.
 
 ## 출력 프로토콜 (오케스트레이터가 취합)
 

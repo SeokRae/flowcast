@@ -30,7 +30,7 @@ python3 scripts/render.py {json}               # 기본 → HTML
 python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
 python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
-python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style])
+python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style] [--smetana])
 ```
 
 ## 규칙 (필수)
@@ -65,6 +65,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-11 | 소스 게이트 세분화 — 지식 계층에 **시나리오 노트**(업무별: 트리거·전제·정상 흐름·분기·예외) 추가, sequence 소스 요건·분기/예외 복수 슬라이드 규칙 | `skills/flowcast`·`skills/sequence`·`agents/diagram-router` | 시나리오 노트 없이 분석 노트→시퀀스 직행 시 분기·예외 소실 (실사용, #27) |
 | 2026-07-13 | runtime contract 안정화 — manifest schema 1.0 검증 게이트·소스/페어 메타데이터·선택 PDF·partial 상태 | `skills/*`·`agents/*`·plugin manifest | fan-out 전 입력 계약과 선택 출력 실패 의미를 고정 (#39) |
 | 2026-07-14 | B-out PlantUML export — 3뷰 JSON → `.puml`(stdlib·좌표 미사용·검증기 재사용, flowcast 팔레트 skinparam+smetana) + `plantuml` 옵션 배선 | `scripts/plantuml_export.py`·`agents/diagram-drawer`·`skills/flowcast` | PlantUML 계보 다이어그램과 정합·Obsidian 네이티브 렌더 지원 (#53) |
+| 2026-07-17 | **rectangle 뷰 레이아웃 기본값을 dot 으로 전환**(동작 변경) — `!pragma layout smetana` 강제 해제하고 `--smetana` opt-in 으로. pragma/skinparam 직교화(`RECT_PRAGMA` 분리) | `scripts/plantuml_export.py`·`agents/diagram-drawer` | smetana 가 캔버스를 클리핑 — 자체 예제 `three-tier` 마저 "5. 캐시 갱신"→"5. 캐시" 절단(243×541 vs dot 271×664). 강제 근거였던 "Obsidian=graphviz-free" 전제도 오류(플러그인 `dotPath` 절대경로면 dot 사용) (#55) |
 
 ## 라이선스
 

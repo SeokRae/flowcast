@@ -75,7 +75,8 @@ python3 scripts/pptx_export.py examples/three-tier-topology.json -o topo.pptx
 
 ```bash
 python3 scripts/plantuml_export.py examples/order-service-sequence.json -o seq.puml
-python3 scripts/plantuml_export.py examples/three-tier-topology.json -o topo.puml   # smetana
+python3 scripts/plantuml_export.py examples/three-tier-topology.json -o topo.puml   # dot(기본)
+python3 scripts/plantuml_export.py examples/three-tier-topology.json --smetana      # graphviz 없는 환경
 python3 scripts/plantuml_export.py examples/microservice-component.json --no-style   # vanilla
 ```
 
