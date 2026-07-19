@@ -1,0 +1,63 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Microservice Platform — 결제 처리 Process
+' flowcast source: flowcast 합성 예제 (component)
+package "< Internal >" {
+  rectangle "API Gateway\n:8080" as gw
+  rectangle "Order Service\n:8081" as order
+  rectangle "Payment Service\n:8082" as pay
+  rectangle "Order DB" as db
+}
+rectangle "Payment Gateway" as psp <<ext>>
+
+gw --> order : 1. 주문 생성\n( http )
+order --> db : 2. 주문 저장\n( jdbc )
+gw --> pay : 3. 결제 요청\n( http )
+pay --> psp : 4. 카드 승인\n( https )
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Microservice Platform — 알림 발송 Process
+' flowcast source: flowcast 합성 예제 (component)
+rectangle "Payment Service\n:8082" as pay2
+rectangle "Message Queue" as mq
+rectangle "Notification Service\n:8083" as noti
+rectangle "Mail Server" as mail <<ext>>
+
+pay2 --> mq : 1. 이벤트 발행
+mq --> noti : 2. 구독
+noti --> mail : 3. 메일 발송\n( smtp )
+@enduml

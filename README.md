@@ -4,7 +4,7 @@
 
 flowcast는 흐름도를 "생성"만 하는 도구가 아니라, IF/서비스 흐름도 **작업 전반**(생성·변환·검증·편집·PPT 입출력)을 다루는 하네스다. JSON을 손으로 짜지 않게 한다 — 데이터와 패턴 의도를 주면, 라우터가 다이어그램 단위로 쪼개고 뷰를 판별한 뒤, 여러 drawer가 각자 하나씩 렌더·파일링한다. 한 요청에서 **여러 다이어그램을 동시에** 뽑을 수 있다.
 
-**▶ 라이브 예제**: [seokrae.github.io/flowcast](https://seokrae.github.io/flowcast/) — 3뷰(sequence·topology·component) 합성 예제 갤러리.
+**▶ 라이브 예제**: [seokrae.github.io/flowcast](https://seokrae.github.io/flowcast/) — 3뷰(sequence·topology·component) 합성 예제 갤러리 (HTML 출력 + [PlantUML 출력](https://seokrae.github.io/flowcast/plantuml.html)).
 
 ## 범위 / 로드맵
 

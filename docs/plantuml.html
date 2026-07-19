@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>flowcast · PlantUML 출력</title>
+<meta name="description" content="flowcast B-out PlantUML(.puml) export — 같은 합성 예제를 PlantUML로 렌더한 결과"/>
+<style>
+  :root {
+    --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+    --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+    --teal:#4ecdbe;
+    --shadow:0 24px 72px rgba(0,0,0,0.34);
+    --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+  }
+  :root[data-theme="light"] {
+    --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+    --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+    --teal:#148278;
+    --shadow:0 10px 32px rgba(23,48,88,0.10);
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--text); font-family:var(--font);
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .topbar {
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px;
+    padding:14px clamp(18px,5vw,48px);
+    background:var(--surface); border-bottom:1px solid var(--border);
+    backdrop-filter:blur(10px);
+  }
+  .brand { font-weight:700; font-size:18px; letter-spacing:-0.01em; }
+  .brand span { color:var(--accent); }
+  .topbar .spacer { flex:1; }
+  .topbar a.nav { color:var(--muted); font-size:14px; }
+  .topbar a.nav:hover { color:var(--text); text-decoration:none; }
+  .toggle {
+    border:1px solid var(--border); background:transparent; color:var(--text);
+    border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; font-family:var(--font);
+  }
+  .toggle:hover { border-color:var(--accent); }
+
+  main { max-width:1120px; margin:0 auto; padding:clamp(28px,6vw,56px) clamp(18px,5vw,48px) 0; }
+
+  .intro h1 { font-size:clamp(28px,5vw,40px); line-height:1.2; margin:0 0 12px; letter-spacing:-0.02em; }
+  .intro .lede { color:var(--muted); font-size:clamp(15px,2vw,17px); max-width:64ch; margin:0 0 10px; }
+  .intro code { font-family:var(--mono); font-size:0.9em; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:1px 6px; }
+
+  .block { margin:38px 0; }
+  .block-head { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .badge {
+    font-family:var(--mono); font-size:11px; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase;
+    border-radius:6px; padding:3px 9px; border:1px solid;
+  }
+  .badge-sequence { color:var(--accent); border-color:var(--accent); }
+  .badge-topology { color:var(--warn); border-color:var(--warn); }
+  .badge-component { color:var(--teal); border-color:var(--teal); }
+  .block-head h2 { margin:0; font-size:19px; letter-spacing:-0.01em; }
+  .block-head .src { margin-left:auto; font-size:13.5px; font-family:var(--mono); }
+
+  .svg-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px; }
+  .svg-card {
+    border:1px solid var(--border); border-radius:12px; overflow:hidden;
+    background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column;
+  }
+  .svg-card figcaption {
+    padding:10px 14px; font-size:13.5px; color:var(--muted);
+    border-bottom:1px solid var(--border); background:var(--surface);
+  }
+  .svg-card figcaption b { color:var(--text); font-weight:600; }
+  .svg-view {
+    background:#ffffff; padding:16px; overflow:auto; flex:1;
+    max-height:480px; text-align:center;
+  }
+  .svg-view img { max-width:100%; height:auto; display:inline-block; vertical-align:top; }
+  figure { margin:0; }
+
+  footer {
+    max-width:1120px; margin:48px auto 0; padding:28px clamp(18px,5vw,48px) 48px;
+    border-top:1px solid var(--border); color:var(--muted); font-size:14px;
+  }
+  footer h2 { color:var(--text); font-size:16px; margin:0 0 12px; }
+  footer pre {
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; font-family:var(--mono); font-size:13px;
+    color:var(--text); margin:0 0 18px;
+  }
+  footer .meta { display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">flow<span>cast</span></span>
+  <div class="spacer"></div>
+  <a class="nav" href="index.html">← HTML 갤러리</a>
+  <a class="nav" href="https://github.com/SeokRae/flowcast" target="_blank" rel="noopener">GitHub</a>
+  <button class="toggle" id="themeToggle" type="button">◐ 테마</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>PlantUML 출력 (B-out)</h1>
+    <p class="lede">
+      flowcast는 같은 흐름도 JSON을 <code>scripts/plantuml_export.py</code>로 <code>.puml</code> 텍스트로도 뽑는다
+      (stdlib만, 좌표 미사용). 아래는 <a href="index.html">HTML 갤러리</a>와 동일한 합성 예제를
+      PlantUML로 export → <code>plantuml -tsvg</code>로 렌더한 결과다. 시나리오마다 다이어그램 1개(<code>@startuml</code> 블록 1개).
+    </p>
+    <p class="lede">
+      노드 id는 화살표 문법과 충돌하지 않도록 별칭으로 정규화되고(예: <code>fw-edge</code> → <code>fw_edge</code>),
+      표시명은 원문 그대로 유지된다.
+    </p>
+  </section>
+
+  <div id="blocks"></div>
+</main>
+
+<footer>
+  <h2>직접 만들기</h2>
+  <pre>python3 scripts/plantuml_export.py {view.json} -o out.puml   # JSON → .puml (stdlib)
+plantuml -tsvg out.puml                                     # .puml → SVG (graphviz dot)</pre>
+  <div class="meta">
+    <a href="index.html">HTML 갤러리</a>
+    <a href="https://github.com/SeokRae/flowcast" target="_blank" rel="noopener">저장소</a>
+    <span>MIT © SeokRae</span>
+  </div>
+</footer>
+
+<script>
+  var EXAMPLES = [
+    { view:'sequence',  system:'Order Service · 주문 서비스',  file:'order-service-sequence',
+      scenarios:['주문 결제 FLOW', '주문 취소 FLOW'] },
+    { view:'topology',  system:'Web Platform · 3-Tier',       file:'three-tier-topology',
+      scenarios:['인프라 구성도', '요청 처리 FLOW'] },
+    { view:'topology',  system:'Gateway Platform · 방화벽 경계', file:'firewall-boundary-topology',
+      scenarios:['인프라 구성도', '방화벽·L4 통과 FLOW'] },
+    { view:'component', system:'Microservice · 결제 처리',      file:'microservice-component',
+      scenarios:['결제 처리 Process', '알림 발송 Process'] }
+  ];
+
+  function svgName(file, i) {
+    return i === 0 ? 'examples/puml/' + file + '.svg'
+                   : 'examples/puml/' + file + '_' + String(i).padStart(3, '0') + '.svg';
+  }
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var html = EXAMPLES.map(function (ex) {
+    var cards = ex.scenarios.map(function (title, i) {
+      return '<figure class="svg-card">' +
+               '<figcaption>시나리오 ' + (i + 1) + ' · <b>' + esc(title) + '</b></figcaption>' +
+               '<div class="svg-view"><img loading="lazy" src="' + svgName(ex.file, i) +
+                 '" alt="' + esc(ex.system + ' — ' + title) + ' PlantUML 렌더"></div>' +
+             '</figure>';
+    }).join('');
+    return '<section class="block">' +
+             '<div class="block-head">' +
+               '<span class="badge badge-' + ex.view + '">' + ex.view + '</span>' +
+               '<h2>' + esc(ex.system) + '</h2>' +
+               '<a class="src" href="examples/puml/' + ex.file + '.puml" target="_blank" rel="noopener">.puml 소스 ↗</a>' +
+             '</div>' +
+             '<div class="svg-grid">' + cards + '</div>' +
+           '</section>';
+  }).join('');
+  document.getElementById('blocks').innerHTML = html;
+
+  (function () {
+    var KEY = 'flowcast-theme';
+    var root = document.documentElement;
+    var saved = localStorage.getItem(KEY);
+    if (saved) root.setAttribute('data-theme', saved);
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem(KEY, next);
+    });
+  })();
+</script>
+</body>
+</html>

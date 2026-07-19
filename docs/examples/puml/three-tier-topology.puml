@@ -1,0 +1,95 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Web Platform — 인프라 구성도
+' flowcast source: flowcast 합성 예제 (topology)
+package "DMZ" {
+  rectangle "Load Balancer" as lb <<gear>>
+}
+package "App Tier" {
+  rectangle "Web 1" as web1
+  rectangle "Web 2" as web2
+  rectangle "App Server" as app1
+}
+package "Data Tier" {
+  rectangle "Database" as db
+  rectangle "Cache" as cache
+}
+rectangle "Client" as client <<ext>>
+
+client -- lb
+lb -- web1
+lb -- web2
+web1 -- app1
+web2 -- app1
+app1 -- db
+app1 -- cache
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Web Platform — 요청 처리 FLOW
+' flowcast source: flowcast 합성 예제 (topology)
+package "DMZ" {
+  rectangle "Load Balancer" as lb <<gear>>
+}
+package "App Tier" {
+  rectangle "Web 1" as web1
+  rectangle "Web 2" as web2
+  rectangle "App Server" as app1
+}
+package "Data Tier" {
+  rectangle "Database" as db
+  rectangle "Cache" as cache
+}
+rectangle "Client" as client <<ext>>
+
+lb -- web2
+web2 -- app1
+
+client --> lb : 1
+lb --> web1 : 2
+web1 --> app1 : 3
+app1 --> db : 4
+app1 --> cache : 5
+
+legend
+|= # |= 설명 |
+| 1 | HTTPS 요청 |
+| 2 | 부하 분산 |
+| 3 | API 호출 |
+| 4 | 데이터 조회 |
+| 5 | 캐시 갱신 |
+end legend
+@enduml
