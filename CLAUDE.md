@@ -71,6 +71,8 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-18 | GitHub Pages 예제 갤러리 — `docs/index.html`(3뷰 합성 예제 카드·라이브 iframe 프리뷰·다크/라이트 테마 공유) + `docs/examples/*.html` 게시용 복사본 | `docs/`·README·CLAUDE.md | 자체완결 예제 HTML을 라이브로 보여줄 진입점 부재 — Pages `main /docs` 정적 게시 (#59) |
 | 2026-07-18 | plantuml_export 별칭 정규화 — `_alias()`로 노드 id 의 하이픈·점·공백 등을 `_` 로 치환, 선언·화살표·note·링크·세그먼트·엣지 전 방출 지점에 일관 적용 | `scripts/plantuml_export.py` | 하이픈 든 id(`fw-edge`)가 PlantUML 화살표(`client --> fw-edge`) 파싱을 깨뜨려 `firewall-boundary` flow 다이어그램 렌더 실패 — 표시명은 원문 보존 (#61) |
 | 2026-07-18 | Pages 갤러리에 PlantUML showcase 추가 — `docs/plantuml.html`(예제별 렌더 SVG·`.puml` 소스 링크·index 상호 내비) + `docs/examples/puml/*.{puml,svg}` 스냅샷 | `docs/`·README·CLAUDE.md | HTML 출력만 있던 갤러리에 B-out PlantUML export 결과를 함께 노출 (#63) |
+| 2026-07-19 | `scan-sensitive` 블록리스트의 짧은 파트너 코드 토큰을 단어경계(`\b…\b`)로 고정 — PlantUML 자동 링크 id `lnk7`의 부분문자열 오탐 해소(링크 7개 이상 SVG면 재발하던 게이트 버그) | `scripts/scan-sensitive.sh` | #63 SVG가 게이트에 걸려 push 차단 (#64) |
+| 2026-07-19 | Pages `index.html`을 갤러리→'이해' 페이지로 보강 — 동작 파이프라인 4단계·세 관점(질문 프레이밍)·블로그(flowcast 1편) 링크. 기존 디자인 토큰·테마 재사용, AA 유지 | `docs/index.html` | 갤러리만 있고 flowcast 동작·관점 설명이 없어 'flowcast를 이해하는' 목적에 미달 (#67) |
 
 ## 라이선스
 

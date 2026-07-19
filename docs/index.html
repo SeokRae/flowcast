@@ -106,6 +106,24 @@
     color:var(--text); margin:0 0 18px;
   }
   footer .meta { display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; }
+
+  /* 이해 섹션 (동작 방식·세 관점) */
+  .section { margin:44px 0 0; }
+  .sec-title { font-size:clamp(20px,3vw,26px); margin:0 0 8px; letter-spacing:-0.01em; }
+  .sec-lede { color:var(--muted); font-size:14.5px; margin:0 0 18px; max-width:62ch; }
+  .intro-more { font-size:14.5px; margin:2px 0 20px; }
+  .intro-more a { font-weight:600; }
+
+  .pipeline { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:14px; }
+  .pipeline li { position:relative; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:16px 16px 16px 48px; }
+  .pipeline .step-n { position:absolute; left:15px; top:16px; width:23px; height:23px; border-radius:50%; background:var(--accent); color:var(--bg); font-family:var(--mono); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .pipeline b { display:block; font-size:14.5px; margin-bottom:5px; }
+  .pipeline .d { color:var(--muted); font-size:13px; line-height:1.5; }
+
+  .views { display:grid; grid-template-columns:repeat(auto-fit,minmax(238px,1fr)); gap:16px; }
+  .view-card { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:16px 18px; display:flex; flex-direction:column; gap:9px; }
+  .view-card b { font-size:14.5px; }
+  .view-card p { margin:0; color:var(--muted); font-size:13.5px; line-height:1.55; }
 </style>
 </head>
 <body>
@@ -125,11 +143,40 @@
       흐름도를 렌더링하는 Claude Code 플러그인. 아래는 3뷰의 <strong>합성 예제</strong>(실 데이터 없음)를
       자체완결 HTML로 렌더한 라이브 데모다. 카드를 누르면 전체화면으로 열린다.
     </p>
+    <p class="intro-more">
+      왜 이걸 만드는지, 어떤 문제에서 출발했는지는 블로그에 적었다 —
+      <a href="https://seokrae.github.io/blog/2026/07/15/flowcast-1-why-visual-docs.html" target="_blank" rel="noopener">서비스는 움직이는데, 문서는 멈춰 있었다 ↗</a>
+    </p>
     <div class="legend">
       <span class="chip"><span class="dot dot-sequence"></span>sequence — 시간순 요청/응답 스윔레인</span>
       <span class="chip"><span class="dot dot-topology"></span>topology — 존 배치 + 번호 구간</span>
       <span class="chip"><span class="dot dot-component"></span>component — 포트·프로토콜 방향 엣지</span>
     </div>
+  </section>
+
+  <section class="section">
+    <h2 class="sec-title">어떻게 동작하나</h2>
+    <ol class="pipeline">
+      <li><span class="step-n">1</span><b>입력</b><span class="d">확정된 흐름 문서·명세·설명·PPT를 준다. JSON을 손으로 짜지 않는다.</span></li>
+      <li><span class="step-n">2</span><b>라우터</b><span class="d">데이터를 다이어그램 단위로 쪼개고 각 단위의 뷰를 판별한다. 미결 단위를 해소해 manifest로 고정한 뒤에야 다음으로.</span></li>
+      <li><span class="step-n">3</span><b>drawer 병렬</b><span class="d">단위마다 서브에이전트가 뷰 스킬을 로드해 JSON→렌더·파일링. 한 요청에서 여러 그림을 동시에.</span></li>
+      <li><span class="step-n">4</span><b>취합·검토</b><span class="d">각 다이어그램에 근거가 된 원문 경로를 남겨, 검토하고 필요하면 다시 생성한다.</span></li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2 class="sec-title">세 관점</h2>
+    <p class="sec-lede">하나의 프로젝트도 무엇을 알고 싶은지에 따라 필요한 그림이 다르다. flowcast는 질문에 맞는 관점을 골라 그린다.</p>
+    <div class="views">
+      <div class="view-card"><span class="badge badge-sequence">sequence</span><b>동작 — 무엇이 언제</b><p>요청과 응답이 어떤 순서로 오가는가. 행위자 사이 시간순 상호작용을 스윔레인으로.</p></div>
+      <div class="view-card"><span class="badge badge-topology">topology</span><b>실행 환경 — 어디를 거쳐</b><p>서비스가 어느 존과 인프라를 거치는가. 공간 배치 위에 요청 구간을 번호로 오버레이.</p></div>
+      <div class="view-card"><span class="badge badge-component">component</span><b>구성 — 무엇과 무엇이</b><p>컴포넌트와 포트가 어떻게 연결되는가. 프로토콜 방향 엣지로 프로세스를.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="sec-title">라이브 예제</h2>
+    <p class="sec-lede">세 관점을 자체완결 HTML로 렌더한 합성 예제(실 데이터 없음). 카드를 누르면 전체화면으로 열린다.</p>
   </section>
 
   <section class="grid">
