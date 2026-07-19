@@ -1,0 +1,84 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Gateway Platform — 인프라 구성도
+' flowcast source: flowcast 합성 예제 (topology · fw 방화벽 + l4 로드밸런서)
+package "WEB Tier" {
+  rectangle "web" as web1
+}
+package "APP Tier" {
+  rectangle "app" as app1
+}
+rectangle "Client" as client <<ext>>
+rectangle "Edge Firewall" as fw_edge <<fw>>
+rectangle "Ingress L4/VIP" as lb_in <<l4>>
+rectangle "Egress L4/VIP" as lb_out <<l4>>
+rectangle "Partner API" as partner <<ext>>
+
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Gateway Platform — 방화벽·L4 통과 FLOW
+' flowcast source: flowcast 합성 예제 (topology · fw 방화벽 + l4 로드밸런서)
+package "WEB Tier" {
+  rectangle "web" as web1
+}
+package "APP Tier" {
+  rectangle "app" as app1
+}
+rectangle "Client" as client <<ext>>
+rectangle "Edge Firewall" as fw_edge <<fw>>
+rectangle "Ingress L4/VIP" as lb_in <<l4>>
+rectangle "Egress L4/VIP" as lb_out <<l4>>
+rectangle "Partner API" as partner <<ext>>
+
+
+client --> fw_edge : 1
+fw_edge --> lb_in : 2
+lb_in --> web1 : 3
+web1 --> app1 : 4
+app1 --> lb_out : 5
+lb_out --> partner : 6
+
+legend
+|= # |= 설명 |
+| 1 | 인바운드 요청\n( HTTPS 443 ) |
+| 2 | 방화벽 통과(보안 필터)\n( FW rule · 인바운드 허용 ) |
+| 3 | L4 분배(로드밸런싱)\n( TCP · VIP → 백엔드 풀 ) |
+| 4 | 내부 호출\n( AJP 9109 ) |
+| 5 | 아웃바운드 요청 |
+| 6 | L4 통과\n( egress 443 ) |
+end legend
+@enduml

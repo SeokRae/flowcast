@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
-| `docs/` | GitHub Pages 사이트 — `index.html` 예제 갤러리 + `examples/*.html`(게시용 복사본). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
+| `docs/` | GitHub Pages 사이트 — `index.html` HTML 예제 갤러리 + `plantuml.html` PlantUML 출력 showcase + `examples/*.html`(게시용 복사본) + `examples/puml/*.{puml,svg}`(B-out export·렌더 스냅샷). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
 | `tests/test_render.py` | 렌더러 검증·출력 테스트 |
 
 ## 명령어
@@ -70,6 +70,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-17 | topology `.puml` 라벨 겹침 해소 — 엣지엔 번호만, 설명은 `legend` 표로(render.py 배지+범례 패턴 패리티). 세그먼트가 덮는 pair 의 정적 링크 생략 | `scripts/plantuml_export.py` | 한 pair 에 링크 1+세그먼트 N 이 걸리면 PlantUML 이 라벨을 같은 지점에 스택 → 노드명까지 가림(dot·smetana 공통). 실사용에서 `.puml` 수기 유지를 강요한 원인 (#57) |
 | 2026-07-18 | GitHub Pages 예제 갤러리 — `docs/index.html`(3뷰 합성 예제 카드·라이브 iframe 프리뷰·다크/라이트 테마 공유) + `docs/examples/*.html` 게시용 복사본 | `docs/`·README·CLAUDE.md | 자체완결 예제 HTML을 라이브로 보여줄 진입점 부재 — Pages `main /docs` 정적 게시 (#59) |
 | 2026-07-18 | plantuml_export 별칭 정규화 — `_alias()`로 노드 id 의 하이픈·점·공백 등을 `_` 로 치환, 선언·화살표·note·링크·세그먼트·엣지 전 방출 지점에 일관 적용 | `scripts/plantuml_export.py` | 하이픈 든 id(`fw-edge`)가 PlantUML 화살표(`client --> fw-edge`) 파싱을 깨뜨려 `firewall-boundary` flow 다이어그램 렌더 실패 — 표시명은 원문 보존 (#61) |
+| 2026-07-18 | Pages 갤러리에 PlantUML showcase 추가 — `docs/plantuml.html`(예제별 렌더 SVG·`.puml` 소스 링크·index 상호 내비) + `docs/examples/puml/*.{puml,svg}` 스냅샷 | `docs/`·README·CLAUDE.md | HTML 출력만 있던 갤러리에 B-out PlantUML export 결과를 함께 노출 (#63) |
 
 ## 라이선스
 

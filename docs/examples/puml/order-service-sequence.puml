@@ -1,0 +1,76 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title Order Service — 주문 결제 FLOW
+' flowcast source: flowcast 합성 예제 (sequence)
+participant "Buyer" as buyer
+box "Frontend"
+  participant "Web Store" as web
+end box
+box "Backend"
+  participant "Order API\n:8080" as api
+  participant "Payment Gateway" as pay
+end box
+participant "Bank" as bank
+
+buyer -> web : 1. 상품 주문
+web -> api : 2. 결제 요청\n( HTTPS )
+api -> pay : 3. 승인 요청
+pay -> bank : 4. 카드 승인
+bank --> pay : 5. 승인 응답
+pay --> api : 6. 승인 결과
+api --> web : 7. 결제 완료
+web --> buyer : 8. 주문 완료
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title Order Service — 주문 취소 FLOW
+' flowcast source: flowcast 합성 예제 (sequence)
+participant "Buyer" as buyer
+box "Frontend"
+  participant "Web Store" as web
+end box
+box "Backend"
+  participant "Order API\n:8080" as api
+  participant "Payment Gateway" as pay
+end box
+participant "Bank" as bank
+
+buyer -> web : 1. 취소 요청
+web -> api : 2. 취소 요청
+api -> pay : 3. 취소 승인
+pay -> bank : 4. 카드 취소
+bank --> pay : 5. 취소 응답
+pay --> api : 6. 취소 결과
+api --> web : 7. 취소 완료
+@enduml
