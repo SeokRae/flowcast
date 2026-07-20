@@ -57,6 +57,8 @@ flowcast:topology   {한 다이어그램 데이터}
 flowcast:component  {한 다이어그램 데이터}
 ```
 
+직접 호출도 `pdf`·`export`·`plantuml` 기본값은 모두 `false`이며, 필요하면 `pdf=true`처럼 함께 준다. `out_dir`을 주지 않으면 `{cwd}/flowcast-out`의 절대경로가 기본이다. 각 뷰 스킬의 `SKILL.md`에 스키마 필수 필드(`system`)·소스 요건·선택 출력 절차가 있다.
+
 **PPT 입력 변환** — `.pptx` 슬라이드에서 도형·라벨·좌표·커넥터를 draft JSON으로 추출 (drawer가 정제):
 
 ```bash
