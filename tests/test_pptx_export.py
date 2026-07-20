@@ -7,6 +7,8 @@ python-pptx 는 export 전용 선택적 의존성 → 미설치 환경에선 이
 
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -552,3 +554,59 @@ def test_paginated_title_has_page_index(tmp_path):
     n = export_sequence(_long_seq(30), out)
     text = _all_text(Presentation(str(out)))
     assert f"(1/{n})" in text and "이어서" in text
+
+
+# ── CLI 검증 게이트 (#71) ──────────────────────────────────────
+# render.py 검증기를 재사용해 잘못된 JSON 을 exit 1 + 한 줄 메시지로 돌려준다.
+# 없으면 미정의 참조가 KeyError 트레이스백으로 새어 drawer 의 error 계약을 오염시킨다.
+
+SCRIPT = Path(__file__).parent.parent / "scripts" / "pptx_export.py"
+
+
+def _run(args):
+    return subprocess.run([sys.executable, str(SCRIPT), *args],
+                          capture_output=True, text=True)
+
+
+def test_cli_sequence_dangling_actor_rejected(tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"system": "T", "actors": [{"id": "a", "name": "A"}],
+        "scenarios": [{"title": "S", "steps": [
+            {"from": "a", "to": "ghost", "label": "x", "kind": "req"}]}]}), encoding="utf-8")
+    r = _run([str(bad)])
+    assert r.returncode == 1 and "검증 오류" in r.stderr
+    assert "Traceback" not in r.stderr
+    assert not (tmp_path / "bad.pptx").exists()
+
+
+def test_cli_component_dangling_node_rejected(tmp_path):
+    data = json.loads(SRC.read_text(encoding="utf-8"))
+    data["scenarios"][0]["edges"][0]["to"] = "ghost"
+    bad = tmp_path / "comp.json"
+    bad.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    r = _run([str(bad)])
+    assert r.returncode == 1 and "검증 오류" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
+def test_cli_unsupported_view(tmp_path):
+    bad = tmp_path / "v.json"
+    bad.write_text(json.dumps({"system": "T", "view": "gantt", "scenarios": []}), encoding="utf-8")
+    r = _run([str(bad)])
+    assert r.returncode == 1 and "지원" in r.stderr
+
+
+def test_cli_missing_file():
+    r = _run(["/nonexistent/x.json"])
+    assert r.returncode == 1 and "파일 없음" in r.stderr
+
+
+def test_missing_pptx_exit2_precedes_validation(tmp_path, monkeypatch):
+    """의존성 부재(exit 2 = partial 계약)가 데이터 검증(exit 1)보다 먼저다."""
+    bad = tmp_path / "bad.json"          # 검증도 실패하는 입력
+    bad.write_text(json.dumps({"system": "T", "actors": [{"id": "a", "name": "A"}],
+        "scenarios": [{"title": "S", "steps": [
+            {"from": "a", "to": "ghost", "label": "x", "kind": "req"}]}]}), encoding="utf-8")
+    monkeypatch.setattr(_mod, "_import_pptx", lambda: False)
+    monkeypatch.setattr(sys, "argv", ["pptx_export.py", str(bad)])
+    assert _mod.main() == 2

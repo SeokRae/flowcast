@@ -853,6 +853,14 @@ def export_sequence(data, out_path, slide_size="wide", paginate=True):
     return len(layouts)
 
 
+# (exporter, render.py 검증기명) — 검증기는 render.py 단일 진실을 재사용한다.
+_DISPATCH = {
+    "sequence": (export_sequence, "validate"),
+    "component": (export_component, "validate_component"),
+    "topology": (export_topology, "validate_topology"),
+}
+
+
 def main():
     ap = argparse.ArgumentParser(description="flowcast 흐름도 → 편집가능 .pptx export (sequence·component·topology)")
     ap.add_argument("data", help="흐름도 뷰 JSON 경로 (view: sequence|component|topology)")
@@ -873,20 +881,28 @@ def main():
         print(f"파일 없음: {path}", file=sys.stderr)
         return 1
     data = json.loads(path.read_text(encoding="utf-8"))
-    dispatch = {"sequence": export_sequence, "component": export_component,
-                "topology": export_topology}
     # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주
     view = data.get("view", "sequence")
-    if view not in dispatch:
+    if view not in _DISPATCH:
         print(f"이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
               file=sys.stderr)
+        return 1
+
+    # 렌더와 같은 검증을 먼저 통과시킨다 — 없으면 미정의 참조가 KeyError 트레이스백으로 샌다.
+    exporter, validator_name = _DISPATCH[view]
+    errors, warnings = getattr(_load_render(), validator_name)(data)
+    for w in warnings:
+        print(f"경고: {w}", file=sys.stderr)
+    if errors:
+        for e in errors:
+            print(f"검증 오류: {e}", file=sys.stderr)
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".pptx")
     kwargs = {"slide_size": args.slide_size}
     if view == "sequence":
         kwargs["paginate"] = not args.no_paginate
-    n = dispatch[view](data, out, **kwargs)
+    n = exporter(data, out, **kwargs)
     print(f"pptx: {out} (슬라이드 {n})")
     return 0
 
