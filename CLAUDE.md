@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
 | `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
+| `scripts/regen-examples.sh` | `examples/*.json` → 예제 html·docs 게시본·puml 일괄 재생성 (골든 회귀 테스트가 누락을 잡는다) |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
 | `docs/` | GitHub Pages 사이트 — `index.html` HTML 예제 갤러리 + `plantuml.html` PlantUML 출력 showcase + `examples/*.html`(게시용 복사본) + `examples/puml/*.{puml,svg}`(B-out export·렌더 스냅샷). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
 | `tests/test_render.py` | 렌더러 검증·출력 테스트 |
@@ -27,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 python3 -m pytest tests/          # 테스트
 bash scripts/scan-sensitive.sh    # 실 데이터 스캔 게이트
+bash scripts/regen-examples.sh    # 예제 산출물 재생성 (렌더러 수정 후 필수)
 python3 scripts/render.py {json}               # 기본 → HTML
 python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
 python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
@@ -41,7 +43,8 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. PlantUML export(`plantuml_export.py`)는 텍스트 출력이라 **stdlib만**(추가 의존성 없음). 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
 - **선택 출력 상태**: `pdf=false`, `export=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다.
-- **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트.
+- **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트, ⑤ 아래 **예제 산출물 재생성**.
+- **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행. `.svg` 스냅샷은 plantuml 바이너리가 필요해 스크립트 범위 밖이다.
 
 ## 릴리즈
 
@@ -73,6 +76,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-18 | Pages 갤러리에 PlantUML showcase 추가 — `docs/plantuml.html`(예제별 렌더 SVG·`.puml` 소스 링크·index 상호 내비) + `docs/examples/puml/*.{puml,svg}` 스냅샷 | `docs/`·README·CLAUDE.md | HTML 출력만 있던 갤러리에 B-out PlantUML export 결과를 함께 노출 (#63) |
 | 2026-07-19 | `scan-sensitive` 블록리스트의 짧은 파트너 코드 토큰을 단어경계(`\b…\b`)로 고정 — PlantUML 자동 링크 id `lnk7`의 부분문자열 오탐 해소(링크 7개 이상 SVG면 재발하던 게이트 버그) | `scripts/scan-sensitive.sh` | #63 SVG가 게이트에 걸려 push 차단 (#64) |
 | 2026-07-19 | Pages `index.html`을 갤러리→'이해' 페이지로 보강 — 동작 파이프라인 4단계·세 관점(질문 프레이밍)·블로그(flowcast 1편) 링크. 기존 디자인 토큰·테마 재사용, AA 유지 | `docs/index.html` | 갤러리만 있고 flowcast 동작·관점 설명이 없어 'flowcast를 이해하는' 목적에 미달 (#67) |
+| 2026-07-20 | 예제 산출물 재생성(`regen-examples.sh`) + 골든 회귀 게이트 — 렌더 결과·docs 게시본·`.puml` 3축을 바이트 비교 | `scripts/regen-examples.sh`·`tests/test_render.py`·`tests/test_plantuml_export.py` | 커밋된 예제 HTML이 초기 구축 이후 재생성되지 않아 #57 구간 범례 표가 빠진 렌더를 Pages가 게시 중이었고, 이를 잡는 게이트가 없었음 (#69) |
 
 ## 라이선스
 

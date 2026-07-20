@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 _spec = importlib.util.spec_from_file_location(
     "plantuml_export", Path(__file__).parent.parent / "scripts" / "plantuml_export.py")
 _mod = importlib.util.module_from_spec(_spec)
@@ -319,3 +321,23 @@ def test_cli_unsupported_view(tmp_path):
 def test_cli_missing_file():
     r = _run(["/nonexistent/x.json"])
     assert r.returncode == 1 and "파일 없음" in r.stderr
+
+
+# ── 게시본 .puml 골든 회귀 (#69) ───────────────────────────────
+# docs/examples/puml/*.puml 는 Pages showcase 가 그대로 보여주는 B-out 산출물이다.
+# exporter 를 고치면 `bash scripts/regen-examples.sh` 로 함께 갱신한다.
+
+DOCS_PUML = ROOT / "docs" / "examples" / "puml"
+
+
+@pytest.mark.parametrize("name", sorted(p.stem for p in EX.glob("*.json")))
+def test_published_puml_matches_current_export(name, tmp_path):
+    out = tmp_path / f"{name}.puml"
+    r = _run([str(EX / f"{name}.json"), "-o", str(out)])
+    assert r.returncode == 0, r.stderr
+    assert out.read_text(encoding="utf-8") == (
+        DOCS_PUML / f"{name}.puml"
+    ).read_text(encoding="utf-8"), (
+        f"docs/examples/puml/{name}.puml 이 현재 plantuml_export.py 출력과 다르다 "
+        f"— bash scripts/regen-examples.sh 후 재생성분을 함께 커밋"
+    )
