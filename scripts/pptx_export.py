@@ -46,9 +46,14 @@ ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 FILL = {"comp": (0xE6, 0xF4, 0xF1), "ext": (0xFD, 0xF3, 0xE7)}
 LINE = {"comp": (0x2C, 0x7A, 0x7B), "ext": (0xB7, 0x79, 0x1F)}
 
-# topology kind: srv(기본) · ext(외부, 앰버) · gear(장비, 점선)
-TOPO_FILL = {"srv": (0xF8, 0xFA, 0xFC), "ext": (0xFD, 0xF3, 0xE7), "gear": (0xF8, 0xFA, 0xFC)}
-TOPO_LINE = {"srv": (0x64, 0x74, 0x8B), "ext": (0xB7, 0x79, 0x1F), "gear": (0x94, 0xA3, 0xB8)}
+# topology kind: srv(기본) · ext(외부, 앰버) · gear(장비, 점선) · fw(방화벽, --warn 굵은 테두리)
+# · l4(VIP/LB, --accent 점선). 키 집합은 render.py TOPO_KINDS 와 일치해야 한다(기동 시 대조).
+TOPO_FILL = {"srv": (0xF8, 0xFA, 0xFC), "ext": (0xFD, 0xF3, 0xE7), "gear": (0xF8, 0xFA, 0xFC),
+             "fw": (0xF8, 0xFA, 0xFC), "l4": (0xF8, 0xFA, 0xFC)}
+TOPO_LINE = {"srv": (0x64, 0x74, 0x8B), "ext": (0xB7, 0x79, 0x1F), "gear": (0x94, 0xA3, 0xB8),
+             "fw": (0x8A, 0x62, 0x10), "l4": (0x1F, 0x6F, 0xD0)}
+TOPO_DASH = {"gear", "l4"}        # HTML 의 stroke-dasharray 대응
+TOPO_LINE_W = {"fw": 1.6}         # 그 외 기본(1.0) — HTML .topo-fw{stroke-width:1.6}
 
 # sequence kind: req/self(accent) · res/relay(muted) — render.py LIGHT 테마 흰배경 솔리드 근사
 SEQ_ARROW = {"req": (0x1F, 0x6F, 0xD0), "self": (0x1F, 0x6F, 0xD0),
@@ -379,11 +384,17 @@ def export_topology(data, out_path, slide_size="wide"):
     from pptx import Presentation
     from pptx.util import Emu, Pt
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+    from pptx.enum.dml import MSO_LINE_DASH_STYLE
     from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
     from pptx.dml.color import RGBColor
     from pptx.oxml.ns import qn
 
     R = _load_render()
+    # kind 팔레트는 render.py TOPO_KINDS 가 단일 진실 — 새 kind 가 추가되면 여기서 드러난다.
+    _missing = R.TOPO_KINDS - set(TOPO_FILL)
+    if _missing:
+        print(f"경고: pptx 팔레트에 없는 topology kind {sorted(_missing)} — srv 로 그려집니다.",
+              file=sys.stderr)
     nodes = data.get("nodes") or []
     zones = data.get("zones") or []
     links = data.get("links") or []
@@ -561,8 +572,12 @@ def export_topology(data, out_path, slide_size="wide"):
         for nid, (x, y, w, h) in rects.items():
             nd = node_by_id[nid]
             kind = nd.get("kind", "srv")
+            if kind not in TOPO_FILL:
+                print(f"경고: 알 수 없는 topology kind {kind!r} — srv 로 그립니다.", file=sys.stderr)
             fillc = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
             linec = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
+            dashed = kind in TOPO_DASH
+            linew = TOPO_LINE_W.get(kind)
             if nd.get("dual"):   # 이중화(2대) — 그룹 테두리 + 위/아래 분리 2박스 (IP 하나씩)
                 g = 7
                 bh = (h - g) / 2
@@ -586,6 +601,10 @@ def export_topology(data, out_path, slide_size="wide"):
             box.fill.solid()
             box.fill.fore_color.rgb = fillc
             box.line.color.rgb = linec
+            if dashed:
+                box.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+            if linew:
+                box.line.width = Pt(linew)
             box.shadow.inherit = False
             tf = box.text_frame
             tf.word_wrap = True

@@ -57,6 +57,8 @@ T_CELL_W = 196        # 그리드 열 간격
 T_CELL_H = 88         # 그리드 행 간격
 T_BOX_W, T_BOX_H = 154, 50
 T_L4_W = 120          # l4(VIP/로드밸런서) 좁은 박스 폭 — 경량 통과 장비 표현
+# topology node kind 의 단일 진실 — 검증기와 export(pptx 팔레트)가 함께 참조한다.
+TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
 T_ZONE_PAD = 14       # 존 박스 여백
 T_ZONE_LBL = 18       # 존 라벨 높이
 T_LEG_LH = 19         # 흐름 설명 줄 높이
@@ -256,7 +258,6 @@ def validate_topology(data):
             ids.append(node["id"])
     if len(ids) != len(set(ids)):
         errors.append(f"node id 중복: {sorted({i for i in ids if ids.count(i) > 1})}")
-    TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
     for ni, n in enumerate(valid_nodes):
         where = f"nodes[{ni}]"
         if not _valid_id(n.get("id")) or not _is_nonempty_text(n.get("name")):
