@@ -24,10 +24,13 @@
         "sequence-diagram",
         "topology",
         "component-diagram",
+        "plantuml",
         "fan-out",
         "orchestration",
         "claude-code",
-        "claude-code-plugin"
+        "claude-code-plugin",
+        "render",
+        "svg"
       ]
     }
   ]

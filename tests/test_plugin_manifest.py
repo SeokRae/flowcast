@@ -325,3 +325,38 @@ def test_cli_rejects_incomplete_nested_marketplace_structure(
 
     assert result.returncode == 1
     assert "{}: required".format(expected) in result.stderr
+
+
+# ── keywords 교차 검증 (#77) ──────────────────────────────────
+# plugin.json 만 갱신되고 marketplace.json 이 남는 편측 갱신을 잡는다
+# (#53 에서 실제로 발생 — plantuml 등 3개가 어긋난 채 CI 초록이었다).
+
+def test_cli_rejects_marketplace_keyword_not_in_plugin(tmp_path):
+    marketplace = _marketplace()
+    marketplace["plugins"][0]["keywords"] = ["flowcast", "diagram", "ghost"]
+    repository = _write_repository(tmp_path, marketplace=marketplace)
+
+    result = _run_cli(repository)
+
+    assert result.returncode == 1
+    assert "must be a subset of plugin keywords" in result.stderr
+    assert "ghost" in result.stderr
+
+
+def test_cli_allows_marketplace_keywords_to_be_a_strict_subset(tmp_path):
+    """노출용이라 일부만 싣는 건 허용 — 동등 검사가 아니다."""
+    marketplace = _marketplace()
+    marketplace["plugins"][0]["keywords"] = ["flowcast"]
+    repository = _write_repository(tmp_path, marketplace=marketplace)
+
+    result = _run_cli(repository)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_shipped_marketplace_keywords_are_subset_of_plugin():
+    """실제 매니페스트 두 파일이 어긋나지 않는지 — #53 편측 갱신의 직접 회귀."""
+    plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    entry = marketplace["plugins"][0]["keywords"]
+    assert set(entry) <= set(plugin["keywords"])
