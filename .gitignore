@@ -5,3 +5,8 @@ __pycache__/
 
 # 내부 planning 문서 — 공개하지 않음
 PLAN.md
+
+# flowcast 실행 산출물 — 실 데이터가 섞일 수 있어 public repo 에 커밋 금지
+flowcast-out/
+_workspace/
+_workspace_prev/
