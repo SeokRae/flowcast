@@ -23,7 +23,9 @@ PAT_NICE='\bNICE\b'
 # PLAN.md(내부 planning, .gitignore로 미공개) 와 스캔 스크립트 자신은 제외.
 # flowcast-out/·_workspace*/ 는 실행 산출물이라 실 데이터가 정상적으로 들어간다 —
 # .gitignore 로 커밋되지 않으므로 게이트 대상이 아니다(로컬 실행 시 전량 매치를 막는다).
-EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh --exclude=PLAN.md"
+# .pytest_cache 도 같은 이유 — pytest 가 테스트 id 를 nodeids 에 적어 두는데,
+# 게이트 자신의 회귀 테스트(tests/test_scan_sensitive.py)가 바로 그 자리를 채운다.
+EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.pytest_cache --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh --exclude=PLAN.md"
 
 hits=0
 
