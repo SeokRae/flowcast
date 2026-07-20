@@ -59,7 +59,11 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## JSON 작성
 
-표준 스키마로 `{out_dir}/{name}.json`. 이름은 `{시스템}-{주제}` 케밥 케이스. `view` 미지정 시 sequence(기본).
+스키마의 단일 진실은 `scripts/render.py` 상단 docstring이다. 최상위 필수는 **`system`**(시스템명 — 없으면 render가 exit 1)이고, `view`는 미지정 시 sequence(기본), `source`는 위 소스 요건대로 시나리오 노트 경로를 담는다.
+
+표준 스키마로 `{out_dir}/{name}.json`. 이름은 `{시스템}-{주제}` 케밥 케이스.
+
+`out_dir`은 drawer가 넘기면 그 값을, 직접 호출이면 `{cwd}/flowcast-out`의 **절대경로**를 기본으로 쓰고 한 줄로 알린다(상대경로·`$(pwd)` 셸 치환 금지 — JSON에 리터럴로 들어간다. `pwd`로 실제 값을 확인해 적는다). 현재 디렉토리에 `.claude-plugin/plugin.json`이 있으면 flowcast 플러그인 레포이므로 기본값을 쓰지 말고 되묻는다.
 
 ## 렌더
 
@@ -89,6 +93,20 @@ python3 "$ROOT/scripts/render.py" "{out_dir}/{name}.json" --pdf
 `pdf=false`이거나 옵션이 없으면 `--pdf`를 전달하지 않는다. PDF 요청 시 Chrome이 없으면 HTML/MD를 유지하고 drawer가 `partial`로 보고한다.
 
 검증 에러(exit 1)면 메시지대로 JSON 수정 후 재렌더. 번호 중복 등 warning은 원문 보존 시 허용.
+
+## 선택 출력 (기본 모두 `false`)
+
+`export`(편집가능 `.pptx`)·`plantuml`(`.puml` 소스)은 요청이 있을 때만 실행한다. 둘 다 **render 검증을 통과한 뒤** 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치).
+
+```bash
+python3 "$ROOT/scripts/pptx_export.py"     "{out_dir}/{name}.json" -o "{out_dir}/{name}.pptx"   # export=true
+python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.puml"   # plantuml=true
+```
+
+- `pptx_export.py` — python-pptx는 **export 전용 선택적 의존성**이라 미설치 환경에선 exit 2 + 안내를 낸다. 이때 export만 건너뛰고 HTML/MD는 그대로 유효하다.
+- `plantuml_export.py` — stdlib 텍스트 출력이라 의존성 미설치 실패가 없다. sequence는 PlantUML 네이티브라 `smetana` 옵션과 무관하다(레이아웃 엔진을 타지 않는다).
+
+직접 호출이라 drawer의 status 프로토콜이 없을 때는, 만들지 못한 산출물과 원문 오류 메시지를 보고에 그대로 명시한다.
 
 ## 파일링
 
