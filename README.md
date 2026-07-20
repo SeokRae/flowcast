@@ -145,10 +145,14 @@ drawer 상태는 `ok` / `partial` / `render_error` / `needs_input`이다. 반환
 ## 개발
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # Homebrew·Debian python은 PEP 668로 전역 설치를 막는다
+python3 -m pip install -r requirements-dev.txt  # 개발 의존성 (pytest·python-pptx)
 python3 -m pytest tests/          # 렌더러 검증·SVG/HTML 출력 테스트
 bash scripts/scan-sensitive.sh    # 실 데이터 유입 차단 게이트
 python3 scripts/validate_manifest.py {out_dir}/_workspace/units.json
 ```
+
+CI는 Python 3.9·3.12 두 버전에서 테스트한다. 3.9는 지원 하한이자 macOS 시스템 `python3`이며, 이 잡은 python-pptx 없이 돌려 코어가 stdlib만으로 동작하는지 함께 확인한다(export 테스트는 `importorskip`으로 skip된다).
 
 **정책 — 실 데이터 금지**: 이 repo는 public이다. 실제 파트너·내부 식별자(계정·거래/정산 ID 등)를 절대 커밋하지 않는다. 모든 예제는 합성이다. `scripts/scan-sensitive.sh`가 CI에서 매 push마다 검사하며, 한 건이라도 매치되면 빌드가 실패한다.
 
