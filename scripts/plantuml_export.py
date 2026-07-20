@@ -118,10 +118,45 @@ _ALIAS_RE = re.compile(r"[^0-9A-Za-z_]")
 
 
 def _alias(node_id):
-    """PlantUML 별칭 — 화살표 문법(`-->`)과 충돌하는 문자(하이픈·점·공백 등)를 `_` 로
-    정규화한다. 선언(`as`)·참조(화살표·note over·링크·세그먼트·엣지)에 동일 적용해
-    선언↔참조 매칭을 유지한다. 표시명(따옴표 문자열)은 건드리지 않고 별칭만 바꾼다."""
-    return _ALIAS_RE.sub("_", str(node_id))
+    """PlantUML 별칭 정규화 — 화살표 문법(`-->`)과 충돌하는 문자(하이픈·점·공백 등)를
+    `_` 로 바꾸고, 빈 결과·숫자 시작을 PlantUML 이 받는 형태로 만든다.
+    표시명(따옴표 문자열)은 건드리지 않고 별칭만 바꾼다."""
+    base = _ALIAS_RE.sub("_", str(node_id))
+    if not base:
+        return "n"
+    return "n_" + base if base[0].isdigit() else base
+
+
+def _alias_map(ids):
+    """블록(다이어그램) 단위 id → 별칭 표.
+
+    정규화만 하면 서로 다른 id(`web-1`·`web.1`)가 같은 별칭으로 뭉개져 노드가 합쳐지고
+    엣지가 자기 루프로 변질된다 — 그것도 exit 0 으로 조용히(#72). 충돌하면 `_2`/`_3` 을
+    붙여 결정적으로 피하고 stderr 에 경고 한 줄을 남긴다. 정규화로 정상 출력이
+    가능하므로 종료시키지 않는다(pptx export 와 대칭 유지).
+    """
+    taken, amap = {}, {}
+    for nid in ids:
+        key = str(nid)
+        if key in amap:
+            continue
+        base = _alias(key)
+        alias, k = base, 1
+        while alias in taken:
+            k += 1
+            alias = f"{base}_{k}"
+        if k > 1:
+            print(f"경고: 별칭 충돌 — id {key!r} 이 {taken[base]!r} 과 같은 별칭 "
+                  f"{base!r} 으로 정규화되어 {alias!r} 로 구분합니다.", file=sys.stderr)
+        taken[alias] = key
+        amap[key] = alias
+    return amap
+
+
+def _al(amap, node_id):
+    """별칭 조회 — 선언되지 않은 id 참조(검증기가 먼저 걸러낸다)는 정규화로 폴백."""
+    key = str(node_id)
+    return amap.get(key) or _alias(key)
 
 
 def _header(system, title, source, style):
@@ -154,6 +189,7 @@ _SEQ_OP = {"req": "->", "res": "-->", "relay": "->>", "self": "->"}
 
 def _seq_block(data, sc, style):
     out = _header(data.get("system", ""), sc.get("title", ""), data.get("source"), style)
+    amap = _alias_map(a["id"] for a in data.get("actors", []))
     zone_name = {z["id"]: z.get("name", z["id"]) for z in data.get("zones", []) if isinstance(z, dict)}
     # participant 선언 — actors 배열 순서 = 좌→우, zone 은 연속(검증기 보장)이므로 box 로 감쌈
     cur, box_open = object(), False
@@ -168,7 +204,7 @@ def _seq_block(data, sc, style):
                 box_open = True
             cur = az
         indent = "  " if box_open else ""
-        out.append(f'{indent}participant "{_disp(a.get("name", a["id"]), _mk_port(a))}" as {_alias(a["id"])}')
+        out.append(f'{indent}participant "{_disp(a.get("name", a["id"]), _mk_port(a))}" as {_al(amap, a["id"])}')
     if box_open:
         out.append("end box")
     out.append("")
@@ -176,7 +212,7 @@ def _seq_block(data, sc, style):
         kind = st.get("kind")
         frm, to = st.get("from"), st.get("to")
         if kind == "note":
-            targets = _alias(frm) if frm == to else f"{_alias(frm)}, {_alias(to)}"
+            targets = _al(amap, frm) if frm == to else f"{_al(amap, frm)}, {_al(amap, to)}"
             out.append(f"note over {targets}")
             n = st.get("n")
             body = (f"{n}. " if n is not None else "") + (st.get("label") or "")
@@ -186,7 +222,7 @@ def _seq_block(data, sc, style):
         else:
             op = _SEQ_OP.get(kind, "->")
             lbl = _arrow_label(st)
-            out.append(f"{_alias(frm)} {op} {_alias(to)}" + (f" : {lbl}" if lbl else ""))
+            out.append(f"{_al(amap, frm)} {op} {_al(amap, to)}" + (f" : {lbl}" if lbl else ""))
     out.append("@enduml")
     return "\n".join(out)
 
@@ -207,7 +243,7 @@ def export_sequence(data, out_path, style=True):
 
 
 # ── TOPOLOGY ──────────────────────────────────────────────────
-def _rect_decl(node, R, indent=""):
+def _rect_decl(node, R, amap, indent=""):
     kind = node.get("kind")
     stereo = f" <<{kind}>>" if kind else ""
     # dual 노드는 IP range 를 2줄로 펼쳐 한 박스에 표기(v1 단순화)
@@ -216,10 +252,10 @@ def _rect_decl(node, R, indent=""):
         disp = _disp(*l1)
     else:
         disp = _disp(node.get("name", node["id"]), _mk_port(node))
-    return f'{indent}rectangle "{disp}" as {_alias(node["id"])}{stereo}'
+    return f'{indent}rectangle "{disp}" as {_al(amap, node["id"])}{stereo}'
 
 
-def _nodes_with_zones(nodes, zones, R, out):
+def _nodes_with_zones(nodes, zones, R, amap, out):
     """존별 package 로 묶어 rectangle 선언 (zoneless 는 최상위)."""
     zone_name = {z["id"]: z.get("name", z["id"]) for z in zones if isinstance(z, dict)}
     by_zone, loose = {}, []
@@ -232,10 +268,10 @@ def _nodes_with_zones(nodes, zones, R, out):
     for zid, members in by_zone.items():
         out.append(f'package "{_disp(zone_name[zid])}" {{')
         for n in members:
-            out.append(_rect_decl(n, R, indent="  "))
+            out.append(_rect_decl(n, R, amap, indent="  "))
         out.append("}")
     for n in loose:
-        out.append(_rect_decl(n, R))
+        out.append(_rect_decl(n, R, amap))
 
 
 def _cell(s):
@@ -281,7 +317,8 @@ def _seg_pair(sg):
 
 def _topo_block(data, sc, R, style):
     out = _header(data.get("system", ""), sc.get("title", ""), data.get("source"), style)
-    _nodes_with_zones(data.get("nodes", []), data.get("zones", []), R, out)
+    amap = _alias_map(n["id"] for n in data.get("nodes", []))
+    _nodes_with_zones(data.get("nodes", []), data.get("zones", []), R, amap, out)
     out.append("")
     segments = sc.get("segments", [])
     # 세그먼트가 이미 잇는 pair 의 정적 링크는 생략 — PlantUML 에선 중복 엣지가 되어
@@ -289,7 +326,7 @@ def _topo_block(data, sc, R, style):
     seg_pairs = {frozenset(_seg_pair(sg)) for sg in segments}
     for lk in data.get("links", []):
         if frozenset((lk["from"], lk["to"])) not in seg_pairs:
-            out.append(f'{_alias(lk["from"])} -- {_alias(lk["to"])}')
+            out.append(f'{_al(amap, lk["from"])} -- {_al(amap, lk["to"])}')
     # 번호가 있으면 엣지엔 번호만 두고 설명은 legend 로 뺀다 — 한 pair 에 엣지가 몰려도
     # 라벨이 겹쳐 뭉개지지 않는다(#57). 번호 없는 세그먼트는 참조할 키가 없어 라벨 유지.
     numbered = [sg for sg in segments if sg.get("n") is not None]
@@ -298,7 +335,7 @@ def _topo_block(data, sc, R, style):
         for sg in segments:
             frm, to = _seg_pair(sg)
             lbl = str(sg["n"]) if (numbered and sg.get("n") is not None) else _arrow_label(sg)
-            out.append(f"{_alias(frm)} --> {_alias(to)}" + (f" : {lbl}" if lbl else ""))
+            out.append(f"{_al(amap, frm)} --> {_al(amap, to)}" + (f" : {lbl}" if lbl else ""))
     if numbered:
         out.append("")
         out.extend(_topo_legend(numbered, R))
@@ -317,12 +354,14 @@ def export_topology(data, out_path, style=True, smetana=False):
 # ── COMPONENT ─────────────────────────────────────────────────
 def _comp_block(data, sc, R, style):
     out = _header(data.get("system", ""), sc.get("title", ""), data.get("source"), style)
-    _nodes_with_zones(sc.get("nodes", []), sc.get("zones", []), R, out)
+    # component 는 노드가 시나리오 로컬이라 별칭 스코프도 시나리오 단위다.
+    amap = _alias_map(n["id"] for n in sc.get("nodes", []))
+    _nodes_with_zones(sc.get("nodes", []), sc.get("zones", []), R, amap, out)
     out.append("")
     for e in sc.get("edges", []):
         op = "<-->" if e.get("bidir") else "-->"
         lbl = _arrow_label(e)
-        out.append(f'{_alias(e["from"])} {op} {_alias(e["to"])}' + (f" : {lbl}" if lbl else ""))
+        out.append(f'{_al(amap, e["from"])} {op} {_al(amap, e["to"])}' + (f" : {lbl}" if lbl else ""))
     out.append("@enduml")
     return "\n".join(out)
 
