@@ -31,11 +31,17 @@ model: opus
 
 ## PPT 입력 (.pptx)
 
-`source`가 `.pptx` 경로면, 수동 판독 대신 번들 파서로 draft를 먼저 뽑는다. draft는 `{out_dir}/_workspace/`에 남긴다 — 고정 `/tmp` 경로는 동시 세션·다중 덱에서 충돌한다. (`${CLAUDE_PLUGIN_ROOT}` 미설정 환경이면 플러그인 설치 루트를 직접 찾아 쓴다.)
+`source`가 `.pptx` 경로면, 수동 판독 대신 번들 파서로 draft를 먼저 뽑는다. draft는 `{out_dir}/_workspace/`에 남긴다 — 고정 `/tmp` 경로는 동시 세션·다중 덱에서 충돌한다.
 
 ```bash
+# 플러그인 루트 해석 — 이후 명령은 "$ROOT/scripts/…" 를 쓴다.
+ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+[ -n "$ROOT" ] && [ -f "$ROOT/scripts/render.py" ] || {
+  ROOT="$(ls -dt "$HOME"/.claude/plugins/cache/*/flowcast/*/scripts/render.py 2>/dev/null | head -1)"
+  ROOT="${ROOT%/scripts/render.py}"; }
+[ -f "$ROOT/scripts/render.py" ] || { echo "flowcast 플러그인 루트를 찾지 못했습니다 — 설치 경로를 알려주세요."; exit 1; }
 mkdir -p "{out_dir}/_workspace"
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_import.py" "{deck.pptx}" -o "{out_dir}/_workspace/draft.json"
+python3 "$ROOT/scripts/pptx_import.py" "{deck.pptx}" -o "{out_dir}/_workspace/draft.json"
 ```
 
 draft는 슬라이드별 `shapes[]`(sid·text·x·y·w·h — 그룹 좌표 보정 완료) + `connectors[]`(양 끝 도형 연결이 glue로 확인된 것) + `connectors_loose[]`(glue 미확증 — 시작→끝점 좌표 x1·y1·x2·y2, 부분 glue st/en). glue의 시작/끝은 연결 기하이지 업무 화살표 방향의 확증이 아니므로, 방향은 라벨·화살촉·문맥으로 별도 확인한다. 이를 근거로:

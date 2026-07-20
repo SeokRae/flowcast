@@ -50,26 +50,39 @@ model: opus
 
 ## 렌더 + PDF (PDF는 선택 — `pdf: false` 기본)
 
+플러그인 스크립트를 쓰기 전에 **루트를 먼저 해석**한다 — 서브에이전트 프롬프트에는 파일 경로가 없어 "SKILL.md 기준 상위"를 계산할 수 없다.
+
+```bash
+# 플러그인 루트 해석 — 이후 명령은 "$ROOT/scripts/…" 를 쓴다.
+ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+[ -n "$ROOT" ] && [ -f "$ROOT/scripts/render.py" ] || {
+  ROOT="$(ls -dt "$HOME"/.claude/plugins/cache/*/flowcast/*/scripts/render.py 2>/dev/null | head -1)"
+  ROOT="${ROOT%/scripts/render.py}"; }
+[ -f "$ROOT/scripts/render.py" ] || { echo "flowcast 플러그인 루트를 찾지 못했습니다 — 설치 경로를 알려주세요."; exit 1; }
+```
+
+`ls -dt`(수정시각 역순)여야 한다 — 사전순은 `0.9.1`을 `0.14.0`보다 뒤에 놓아 조용히 낡은 렌더러를 쓰게 된다. `plugins/*/flowcast` 글롭도 쓰지 않는다(`cache/flowcast`엔 scripts가 없고 `marketplaces/flowcast`는 별개 체크아웃이다). 못 찾으면 추측하지 말고 사용자에게 묻는다.
+
 기본 렌더는 `--pdf` 없이 HTML만 생성한다.
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json"
+python3 "$ROOT/scripts/render.py" "{out_dir}/{name}.json"
 ```
 
 `pdf: true`일 때만 `--pdf`를 붙인다.
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json" --pdf
+python3 "$ROOT/scripts/render.py" "{out_dir}/{name}.json" --pdf
 ```
 
 PDF를 요청했지만 Chrome을 찾지 못하거나 변환에 실패하면 render exit 2를 부분 성공으로 해석한다. 이미 생성된 HTML/MD는 유지하고 `pdf: null`, `error`에 원문 오류 메시지, `status: partial`로 반환한다.
 
 ## PPT export (선택 — `export: true`)
 
-render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치). `${CLAUDE_PLUGIN_ROOT}` 미설정 환경이면 로드한 뷰 스킬의 SKILL.md 기준 두 단계 상위가 플러그인 루트다:
+render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치).
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.pptx"
+python3 "$ROOT/scripts/pptx_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.pptx"
 ```
 
 `pptx_export.py`는 render.py 좌표를 재사용해 3뷰 모두 편집가능 도형으로 찍는다. **python-pptx는 export 전용 선택적 의존성**이라 미설치 환경에선 exit 2 + 안내를 낸다. 이때는 export만 건너뛰고 HTML/MD를 유지하며 `pptx: null`, `error`에 원문 오류 메시지, `status: partial`로 반환한다. exit 0이면 `pptx` 경로를 반환에 담는다.
@@ -79,7 +92,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pptx_export.py" "{out_dir}/{name}.json" -
 render 검증 통과 후에만 실행한다. 렌더에 쓴 그 JSON을 그대로 넘긴다(뷰는 JSON `view`로 자동 디스패치). 좌표를 쓰지 않는 텍스트 출력이라 **의존성이 없다**(stdlib만) — pptx/pdf 같은 미설치-partial 케이스가 없다.
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.puml"
+python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}/{name}.puml"
 ```
 
 `smetana: true` 일 때만 `--smetana` 를 덧붙인다(기본 `false` — 붙이지 않는다). `pdf`/`export` 와 같은 규칙이다.
