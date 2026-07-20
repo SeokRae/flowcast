@@ -665,6 +665,42 @@ def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
     return tables, maxy, maxx
 
 
+def _t_seg_geom(sg, rects):
+    """세그먼트 1개의 경로 꼭짓점 — render(SVG path)·pptx(커넥터) 공용 단일 진실.
+
+    반환 `(kind, pts)`:
+      - `"self"` : 자기호출 루프. pts = 베지어 4점(시작·제어2·끝) — SVG 는 `C`,
+                   pptx 는 연속 꼭짓점을 잇는 폴리라인으로 근사한다.
+      - `"rail"` : 지정 y 로 올라갔다 내려오는 3구간 엘보. pts = 4점.
+      - `"line"` : 직선. pts = 2점.
+    pptx 는 pts 를 연속 쌍으로 이어 그리고 마지막 구간에만 화살촉을 단다.
+    """
+    a = rects[sg["from"]]
+    if sg.get("self"):
+        sx, sy = a[0] + a[2] / 2, a[1]
+        return "self", [(sx - 16, sy), (sx - 16, sy - 30), (sx + 16, sy - 30), (sx + 16, sy)]
+    b = rects[sg["to"]]
+    ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
+    bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
+    if sg.get("rail") is not None:
+        rail = float(sg["rail"])
+        p1 = _edge_pt(a, ac[0], rail)
+        p2 = _edge_pt(b, bc[0], rail)
+        return "rail", [p1, (p1[0], rail), (p2[0], rail), p2]
+    p1 = _edge_pt(a, bc[0], bc[1])
+    p2 = _edge_pt(b, ac[0], ac[1])
+    return "line", [p1, p2]
+
+
+def _t_seg_path(sg, rects):
+    """`_t_seg_geom` 을 SVG path `d` 문자열로 — self 만 베지어, 나머지는 폴리라인."""
+    kind, pts = _t_seg_geom(sg, rects)
+    if kind == "self":
+        return (f'M{pts[0][0]},{pts[0][1]} C{pts[1][0]},{pts[1][1]} '
+                f'{pts[2][0]},{pts[2][1]} {pts[3][0]},{pts[3][1]}')
+    return "M" + " L".join(f"{x},{y}" for x, y in pts)
+
+
 def _t_badge_geom(sg, rects):
     """세그먼트 1개의 배지 위치 + 엣지 단위방향 (bx, by, ux, uy) — render·pptx 공용.
 
@@ -835,23 +871,10 @@ def render_svg_topology(data, scenario):
     # 구간 오버레이 (화살표 + 번호 배지 — 배지는 _t_badge_geom/_t_spread_badges 로 겹침 회피)
     seg_paths, badges, badge_sgs = [], [], []
     for sg in segments:
-        a = rects[sg["from"]]
+        d = _t_seg_path(sg, rects)
         if sg.get("self"):
-            sx, sy = a[0] + a[2] / 2, a[1]
-            seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="M{sx - 16},{sy} C{sx - 16},{sy - 30} {sx + 16},{sy - 30} {sx + 16},{sy}" marker-end="url(#mk-topo)"/>')
+            seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="{d}" marker-end="url(#mk-topo)"/>')
         else:
-            b = rects[sg["to"]]
-            ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
-            bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
-            if sg.get("rail") is not None:
-                rail = float(sg["rail"])
-                p1 = _edge_pt(a, ac[0], rail)
-                p2 = _edge_pt(b, bc[0], rail)
-                d = f'M{p1[0]},{p1[1]} L{p1[0]},{rail} L{p2[0]},{rail} L{p2[0]},{p2[1]}'
-            else:
-                p1 = _edge_pt(a, bc[0], bc[1])
-                p2 = _edge_pt(b, ac[0], ac[1])
-                d = f'M{p1[0]},{p1[1]} L{p2[0]},{p2[1]}'
             seg_paths.append(f'<path class="topo-seg" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#mk-topo)"/>')
         if sg.get("n") is not None:
             badge_sgs.append(sg)

@@ -558,15 +558,20 @@ def export_topology(data, out_path, slide_size="wide"):
             if sg.get("n") is not None:
                 badge_sgs.append(sg)
             to = sg.get("to")
-            if sg.get("self") or not to or to not in rects:
-                continue   # self·대상없음 커넥터 라우팅은 범위 밖 (배지는 노드 위)
-            r2 = rects[to]
-            (ax, ay), (bx, by) = _anchor(r1, r2)
-            conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(ax + ox), emu(ay + oy),
-                                        emu(bx + ox), emu(by + oy))
-            conn.line.color.rgb = RGBColor(0x33, 0x41, 0x55)
-            ln = conn.line._get_or_add_ln()
-            ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
+            if not sg.get("self") and (not to or to not in rects):
+                continue   # 대상 없음 — 배지만 노드 위에 남는다
+            # 경로 꼭짓점은 render.py 단일 진실(_t_seg_geom) — self 루프·rail 엘보를
+            # 포함해 HTML 과 같은 좌표를 쓴다. 배지(_t_badge_geom)도 같은 기하를 보므로
+            # 선과 배지가 어긋나지 않는다.
+            _, pts = R._t_seg_geom(sg, rects)
+            for i in range(len(pts) - 1):
+                (ax, ay), (bx, by) = pts[i], pts[i + 1]
+                conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, emu(ax + ox), emu(ay + oy),
+                                            emu(bx + ox), emu(by + oy))
+                conn.line.color.rgb = RGBColor(0x33, 0x41, 0x55)
+                if i == len(pts) - 2:      # 화살촉은 마지막 구간에만
+                    ln = conn.line._get_or_add_ln()
+                    ln.append(ln.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
 
         # 노드 — 커넥터 위 (관통 선을 가림)
         for nid, (x, y, w, h) in rects.items():
