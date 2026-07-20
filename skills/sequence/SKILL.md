@@ -117,7 +117,30 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
 
 ## 원본 대조 검증 (원본 파일이 있을 때)
 
-생성물을 원본과 육안 대조한다. 기본은 생성된 HTML을 브라우저에서 캡처해 원본 슬라이드 PNG(`qlmanage -t -s 1600`)와 나란히 비교한다. `pdf=true`일 때만 생성 PDF를 `pdftoppm -png`로 변환해 비교한다. 노드·라벨·화살표 방향·번호가 다르면 JSON 수정 후 반복한다.
+생성 HTML을 캡처해 원본과 육안 대조한다. 브라우저 MCP가 아니라 **Bash로 캡처하고 Read(이미지)로 본다**. 검증 부산물은 산출물과 섞이지 않게 `_workspace/`에 둔다.
+
+```bash
+mkdir -p "{out_dir}/_workspace"
+# Chrome 후보는 render.py 의 CHROME_CANDIDATES 와 같다.
+CHROME="$(command -v google-chrome || command -v chromium \
+  || ls "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+        "/Applications/Chromium.app/Contents/MacOS/Chromium" 2>/dev/null | head -1)"
+if [ -z "$CHROME" ]; then echo "Chrome 없음 → 아래 텍스트 대조 폴백"; else
+  "$CHROME" --headless=new --disable-gpu --screenshot="{out_dir}/_workspace/{name}.png" \
+            --window-size=1920,1080 "file://{out_dir}/{name}.html"
+fi
+```
+
+`--window-size`는 뷰포트이자 **캡처 크기**다 — 시나리오가 여러 장이면 1080으로는 첫 장만 담긴다. 높이를 늘리거나(예: `1920,3000`) 시나리오별로 나눠 대조한다. URL은 `file://` + **절대경로**여야 한다.
+
+원본 쪽도 PNG로 바꿔 나란히 Read 한다.
+
+- `.pptx` — `qlmanage -t -s 1600 {deck.pptx} -o {out_dir}/_workspace` → `{out_dir}/_workspace/{덱파일명}.png`. **덱이 몇 장이든 1번 슬라이드 1장만** 나온다 — 단위가 2번 이후 슬라이드를 가리키면 원본을 얻지 못하니 폴백으로 가고, 1번 슬라이드 이미지를 다른 슬라이드의 근거로 쓰지 않는다. 출력 디렉토리가 없어도 `produced one thumbnail` + exit 0을 내므로 메시지를 믿지 말고 **파일 존재를 확인**한다. 깨진 덱에선 무기한 멈추니 타임아웃을 건다.
+- `.pdf` — `pdftoppm -png -r 150 -f {N} -l {N} {file.pdf} {prefix}`로 해당 페이지만 뽑는다. 덱을 PDF로 변환할 수 있으면(`soffice --headless --convert-to pdf`) 멀티슬라이드도 이 경로로 페이지를 지정할 수 있다.
+
+**체크리스트**: 노드 · 라벨 원문 · 방향 · 번호 · 프로토콜. sequence는 여기에 **액터 좌→우 순서** · 존 소속 · `kind`(요청 실선 / 응답 점선 / 중계)를 더한다. 불일치가 있으면 JSON을 수정하고 재렌더해 반복한다.
+
+**원본 이미지를 못 얻으면**(Chrome 부재 · 2번 이후 슬라이드 · qlmanage 실패) 텍스트 1:1 대조로 폴백한다 — PPT draft의 해당 `slides[]`의 `shapes[]`·`connectors[]`(없으면 원문 텍스트)와 JSON의 노드·라벨·방향·번호를 하나씩 맞춘다. `warnings`에 `visual-diff-skipped: {사유}`(예: `multi-slide-deck`)를 남기되 **`status`는 `ok`를 유지한다** — 요청한 산출물이 빠진 게 아니라 검증 수단만 폴백한 것이라 `partial`이 아니다.
 
 ## 예제
 
