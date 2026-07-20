@@ -928,3 +928,47 @@ def test_topology_meta_renders_muted_subline():
     svg, _, _ = render_svg_topology(data, data["scenarios"][1])
     assert "topo-legend-meta" in svg          # 흐린 부라인 클래스
     assert "HTTPS 443" in svg                  # meta 내용 렌더
+
+
+# ── 예제 산출물 골든 회귀 (#69) ────────────────────────────────
+# 커밋된 examples/*.html 이 렌더러 변경을 따라오지 못해 낡는 것을 막는다.
+# 실패하면 `bash scripts/regen-examples.sh` 후 결과를 함께 커밋한다.
+# render.py 는 datetime/uuid/random 을 쓰지 않아 바이트 비교가 결정적이다.
+
+DOCS_EX = Path(__file__).parent.parent / "docs" / "examples"
+EXAMPLE_NAMES = sorted(p.stem for p in EX.glob("*.json"))
+
+_RENDERERS = {
+    "sequence": render_svg,
+    "topology": render_svg_topology,
+    "component": render_svg_component,
+}
+
+
+def _render_example(name):
+    """render.py main() 과 동일한 디스패치로 예제 1건의 HTML 전문을 만든다."""
+    data = json.loads((EX / f"{name}.json").read_text(encoding="utf-8"))
+    render = _RENDERERS[data.get("view", "sequence")]
+    return build_html(data, [render(data, sc) for sc in data["scenarios"]])
+
+
+def test_examples_present():
+    assert EXAMPLE_NAMES, "examples/*.json 이 없다 — 골든 회귀가 무력화된다"
+
+
+@pytest.mark.parametrize("name", EXAMPLE_NAMES)
+def test_example_html_matches_current_render(name):
+    assert _render_example(name) == (EX / f"{name}.html").read_text(encoding="utf-8"), (
+        f"examples/{name}.html 이 현재 render.py 출력과 다르다 "
+        f"— bash scripts/regen-examples.sh 후 재생성분을 함께 커밋"
+    )
+
+
+@pytest.mark.parametrize("name", EXAMPLE_NAMES)
+def test_docs_example_matches_source(name):
+    assert (DOCS_EX / f"{name}.html").read_text(encoding="utf-8") == (
+        EX / f"{name}.html"
+    ).read_text(encoding="utf-8"), (
+        f"docs/examples/{name}.html (Pages 게시본) 이 examples/{name}.html 과 다르다 "
+        f"— bash scripts/regen-examples.sh 후 재생성분을 함께 커밋"
+    )
