@@ -44,7 +44,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
 - **선택 출력 상태**: `pdf=false`, `export=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다.
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트, ⑤ 아래 **예제 산출물 재생성**.
-- **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행. `.svg` 스냅샷은 plantuml 바이너리가 필요해 스크립트 범위 밖이다.
+- **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. `.svg` 스냅샷은 `plantuml`이 설치돼 있을 때만 갱신된다(없으면 건너뛴다) — **`-nometadata` 필수**: 없으면 PlantUML이 SVG에 심는 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행.
 
 ## 릴리즈
 

@@ -610,3 +610,112 @@ def test_missing_pptx_exit2_precedes_validation(tmp_path, monkeypatch):
     monkeypatch.setattr(_mod, "_import_pptx", lambda: False)
     monkeypatch.setattr(sys, "argv", ["pptx_export.py", str(bad)])
     assert _mod.main() == 2
+
+
+# ── topology kind·rail·self, component 평행 엣지 패리티 (#73) ──────
+# HTML 에는 있고 pptx 에만 없던 의미들. 좌표는 render.py 헬퍼가 단일 진실이다.
+
+TOPO_FW = EX / "firewall-boundary-topology.json"
+_RSPEC = importlib.util.spec_from_file_location(
+    "flowcast_render_t73", Path(__file__).parent.parent / "scripts" / "render.py")
+_R = importlib.util.module_from_spec(_RSPEC)
+_RSPEC.loader.exec_module(_R)
+
+
+def _line_colors_by_name(prs):
+    """도형 첫 줄 텍스트 → 테두리 RGB 문자열."""
+    out = {}
+    for sl in prs.slides:
+        for sh in sl.shapes:
+            if not sh.has_text_frame or not sh.text_frame.text:
+                continue
+            try:
+                out.setdefault(sh.text_frame.text.split("\n")[0], str(sh.line.color.rgb))
+            except (AttributeError, TypeError):
+                pass
+    return out
+
+
+def test_topology_fw_l4_kinds_are_distinguishable(tmp_path):
+    """fw(방화벽)·l4(VIP)가 일반 srv 와 다른 테두리를 갖는다 — 예전엔 조용히 srv 폴백."""
+    data = json.loads(TOPO_FW.read_text(encoding="utf-8"))
+    kind_of = {n["name"]: n.get("kind", "srv") for n in data["nodes"]}
+    assert set(kind_of.values()) >= {"fw", "l4", "srv"}     # 픽스처가 셋을 다 담는지
+    out = tmp_path / "fw.pptx"
+    export_topology(data, out)
+    colors = _line_colors_by_name(Presentation(str(out)))
+    by_kind = {}
+    for name, k in kind_of.items():
+        if name in colors:
+            by_kind.setdefault(k, colors[name])
+    assert by_kind["fw"] != by_kind["srv"]
+    assert by_kind["l4"] != by_kind["srv"]
+    assert by_kind["fw"] != by_kind["l4"]
+
+
+def test_topology_pptx_palette_covers_render_kinds():
+    """새 kind 가 render.py 에 추가되면 pptx 팔레트 누락이 드러나야 한다."""
+    assert _R.TOPO_KINDS <= set(_mod.TOPO_FILL)
+    assert _R.TOPO_KINDS <= set(_mod.TOPO_LINE)
+
+
+def _topo_rail_self():
+    return {"view": "topology", "system": "T", "nodes": [
+        {"id": "a", "name": "A", "col": 0, "row": 0},
+        {"id": "b", "name": "B", "col": 2, "row": 0}],
+        "scenarios": [{"title": "S", "segments": [
+            {"n": 1, "from": "a", "to": "b", "label": "직선"},
+            {"n": 2, "from": "a", "to": "b", "label": "레일", "rail": 40},
+            {"n": 3, "from": "a", "to": "a", "label": "자기", "self": True}]}]}
+
+
+def test_topology_rail_and_self_are_drawn(tmp_path):
+    """rail 엘보·self 루프가 pptx 에도 그려진다 — 예전엔 배지만 허공에 떴다."""
+    data = _topo_rail_self()
+    assert _R.validate_topology(data)[0] == []
+    out = tmp_path / "rs.pptx"
+    export_topology(data, out)
+    conns = [sh for sl in Presentation(str(out)).slides for sh in sl.shapes
+             if sh.shape_type == MSO_SHAPE_TYPE.LINE]
+    assert len(conns) == 7        # 직선 1 + rail 3구간 + self 3구간
+
+
+def test_topology_rail_badge_sits_on_the_line():
+    """배지 y 가 rail y 와 같다 — 선을 안 그리면 배지만 뜨던 불일치의 회귀."""
+    data = _topo_rail_self()
+    rects = {n["id"]: _R._t_rect(n) for n in data["nodes"]}
+    rail_sg = data["scenarios"][0]["segments"][1]
+    kind, pts = _R._t_seg_geom(rail_sg, rects)
+    bx, by, _, _ = _R._t_badge_geom(rail_sg, rects)
+    assert kind == "rail" and len(pts) == 4
+    assert by == pts[1][1] == pts[2][1] == 40      # 배지가 엘보 수평구간 위에
+
+
+def test_component_parallel_edges_are_offset():
+    """같은 노드쌍 왕복 2엣지가 겹치지 않는다 (C_PAR_GAP 만큼 분리)."""
+    nodes = [{"id": "a", "name": "A", "col": 0, "row": 0},
+             {"id": "b", "name": "B", "col": 2, "row": 0}]
+    edges = [{"from": "a", "to": "b", "label": "요청"},
+             {"from": "b", "to": "a", "label": "응답"}]
+    rects = {n["id"]: _R._c_rect(n) for n in nodes}
+    g1, g2 = _R._c_edge_geoms(edges, rects)
+    assert g1["mid"] != g2["mid"]
+    assert abs(g1["mid"][1] - g2["mid"][1]) == _R.C_PAR_GAP
+
+
+def test_component_via_becomes_polyline_in_pptx(tmp_path):
+    """via 우회점이 pptx 에서도 꺾인다 — 예전엔 직선이라 노드를 관통했다."""
+    data = {"view": "component", "system": "T", "scenarios": [{"title": "S",
+        "nodes": [{"id": "a", "name": "A", "col": 0, "row": 0},
+                  {"id": "b", "name": "B", "col": 2, "row": 0}],
+        "edges": [{"from": "a", "to": "b", "label": "우회", "via": [300, 240]}]}]}
+    assert _R.validate_component(data)[0] == []
+    rects = {n["id"]: _R._c_rect(n) for n in data["scenarios"][0]["nodes"]}
+    (g,) = _R._c_edge_geoms(data["scenarios"][0]["edges"], rects)
+    assert len(g["pts"]) == 3 and tuple(g["pts"][1]) == (300, 240)
+    assert tuple(g["mid"]) == (300, 240)           # 라벨도 우회점에
+    out = tmp_path / "via.pptx"
+    export_component(data, out)
+    conns = [sh for sl in Presentation(str(out)).slides for sh in sl.shapes
+             if sh.shape_type == MSO_SHAPE_TYPE.LINE]
+    assert len(conns) == 2                          # 2구간 폴리라인

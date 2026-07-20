@@ -308,19 +308,22 @@ def export_component(data, out_path, slide_size="wide"):
 
         # 엣지 커넥터 — 노드보다 먼저 (render.py z-순서 패리티: 노드가 선을 가림, #25)
         pending_labels = []
-        for e in scenario.get("edges") or []:
-            r1, r2 = rects.get(e["from"]), rects.get(e["to"])
-            if not r1 or not r2:
-                continue
-            c1 = (r1[0] + r1[2] / 2, r1[1] + r1[3] / 2)
-            c2 = (r2[0] + r2[2] / 2, r2[1] + r2[3] / 2)
-            ax, ay = R._edge_pt(r1, *c2)
-            bx, by = R._edge_pt(r2, *c1)
-            conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
-                                        emu(ax + ox), emu(ay + oy),
-                                        emu(bx + ox), emu(by + oy))
-            conn.line.color.rgb = RGBColor(0x4B, 0x55, 0x63)
-            _arrow(conn, tail=True, head=bool(e.get("bidir")))
+        drawable = [e for e in (scenario.get("edges") or [])
+                    if e["from"] in rects and e["to"] in rects]
+        # 평행 오프셋·via 폴리라인·lpos 는 render.py 단일 진실(_c_edge_geoms) — 없으면
+        # 같은 노드쌍 다중 엣지가 한 줄로 겹치고 via 우회선이 노드를 관통한다.
+        geoms = R._c_edge_geoms(drawable, rects)
+        for e, g in zip(drawable, geoms):
+            pts = g["pts"]
+            for i in range(len(pts) - 1):
+                (ax, ay), (bx, by) = pts[i], pts[i + 1]
+                conn = shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+                                            emu(ax + ox), emu(ay + oy),
+                                            emu(bx + ox), emu(by + oy))
+                conn.line.color.rgb = RGBColor(0x4B, 0x55, 0x63)
+                # 화살촉은 양 끝 구간에만 (bidir 이면 첫 구간 시작에도)
+                _arrow(conn, tail=(i == len(pts) - 2),
+                       head=bool(e.get("bidir")) and i == 0)
 
             parts = []
             if e.get("n") is not None:
@@ -329,8 +332,9 @@ def export_component(data, out_path, slide_size="wide"):
                 parts.append(e["label"])
             proto = f"( {e['protocol']} )" if e.get("protocol") else ""
             if parts or proto:
-                mx = (e["lx"] if e.get("lx") is not None else (ax + bx) / 2)
-                my = (e["ly"] if e.get("ly") is not None else (ay + by) / 2)
+                mx, my = g["mid"]
+                mx = e["lx"] if e.get("lx") is not None else mx
+                my = e["ly"] if e.get("ly") is not None else my
                 pending_labels.append((mx, my, " ".join(parts), proto))
 
         # 노드 (커넥터 위)
