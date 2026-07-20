@@ -42,16 +42,27 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## 렌더
 
+플러그인 스크립트를 쓰기 전에 **루트를 먼저 해석**한다. `${CLAUDE_PLUGIN_ROOT}`가 설정돼 있으면 그대로 쓰고, 없으면 설치 캐시에서 찾는다 — 스킬 본문은 프롬프트로 주입되므로 "이 파일 기준 상위"는 알 수 없다. 못 찾으면 경로를 추측하지 말고 사용자에게 묻는다.
+
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json"
+# 플러그인 루트 해석 — 이후 명령은 "$ROOT/scripts/…" 를 쓴다.
+ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+[ -n "$ROOT" ] && [ -f "$ROOT/scripts/render.py" ] || {
+  ROOT="$(ls -dt "$HOME"/.claude/plugins/cache/*/flowcast/*/scripts/render.py 2>/dev/null | head -1)"
+  ROOT="${ROOT%/scripts/render.py}"; }
+[ -f "$ROOT/scripts/render.py" ] || { echo "flowcast 플러그인 루트를 찾지 못했습니다 — 설치 경로를 알려주세요."; exit 1; }
 ```
 
-(`${CLAUDE_PLUGIN_ROOT}` 미설정 시 이 SKILL.md 기준 두 단계 상위가 플러그인 루트.)
+`ls -dt`(수정시각 역순)여야 한다 — 사전순 정렬은 `0.9.1`을 `0.14.0`보다 뒤에 놓아 조용히 낡은 렌더러를 쓰게 된다. `plugins/*/flowcast` 글롭도 쓰지 않는다 (`cache/flowcast`엔 scripts가 없고 `marketplaces/flowcast`는 별개 체크아웃이다).
+
+```bash
+python3 "$ROOT/scripts/render.py" "{out_dir}/{name}.json"
+```
 
 `pdf` 옵션의 기본값은 `false`다. `pdf=true`일 때만 `--pdf`를 붙인다:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render.py" "{out_dir}/{name}.json" --pdf
+python3 "$ROOT/scripts/render.py" "{out_dir}/{name}.json" --pdf
 ```
 
 `pdf=false`이거나 옵션이 없으면 `--pdf`를 전달하지 않는다. PDF 요청 시 Chrome이 없으면 HTML/MD를 유지하고 drawer가 `partial`로 보고한다.
