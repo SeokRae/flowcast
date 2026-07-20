@@ -137,12 +137,12 @@ def _validate_plugin(plugin, repository_root, errors):
     _required_string(plugin, "homepage", "plugin", errors)
     _required_string(plugin, "repository", "plugin", errors)
     _required_string(plugin, "license", "plugin", errors)
-    _required_string_list(plugin, "keywords", "plugin", errors)
+    keywords = _required_string_list(plugin, "keywords", "plugin", errors)
     skills = _required_string_list(plugin, "skills", "plugin", errors)
 
     if skills is not None:
         _validate_skill_paths(skills, repository_root, errors)
-    return {"name": name, "version": version}
+    return {"name": name, "version": version, "keywords": keywords}
 
 
 def _validate_skill_paths(skills, repository_root, errors):
@@ -207,6 +207,7 @@ def _validate_marketplace(marketplace, errors):
 
     entry_name = None
     entry_version = None
+    entry_keywords = None
     if plugin_entry is not None:
         _reject_unknown_fields(
             plugin_entry,
@@ -232,7 +233,7 @@ def _validate_marketplace(marketplace, errors):
             plugin_entry, "author", "marketplace.plugins[0]", errors
         )
         _validate_person(author, "marketplace.plugins[0].author", errors)
-        _required_string_list(
+        entry_keywords = _required_string_list(
             plugin_entry, "keywords", "marketplace.plugins[0]", errors
         )
 
@@ -241,6 +242,7 @@ def _validate_marketplace(marketplace, errors):
         "metadata_version": metadata_version,
         "entry_name": entry_name,
         "entry_version": entry_version,
+        "entry_keywords": entry_keywords,
     }
 
 
@@ -288,6 +290,20 @@ def _load_and_validate(repository_root):
     versions_are_present = all(version is not None for version in versions)
     if versions_are_present and not _all_present_and_equal(versions):
         errors.append("plugin versions must match across all three metadata fields")
+
+    # marketplace keywords ⊆ plugin keywords.
+    # 동등이 아니라 부분집합인 이유: marketplace 는 노출용이라 일부만 실을 수 있지만,
+    # plugin.json 에 없는 키워드로 검색되면 잘못된 기대를 준다. description 처럼
+    # 의도적으로 다른 필드까지 묶지 않도록 동등 검사는 쓰지 않는다.
+    plugin_keywords = plugin_details.get("keywords")
+    entry_keywords = marketplace_details.get("entry_keywords")
+    if plugin_keywords is not None and entry_keywords is not None:
+        extra = [k for k in entry_keywords if k not in set(plugin_keywords)]
+        if extra:
+            errors.append(
+                "marketplace.plugins[0].keywords must be a subset of plugin keywords; "
+                f"unknown: {sorted(extra)}"
+            )
 
     return errors, plugin_details
 

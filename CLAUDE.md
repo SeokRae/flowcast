@@ -48,7 +48,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 
 ## 릴리즈
 
-버전은 3곳을 함께 올린다: `.claude-plugin/plugin.json`의 `version` · `.claude-plugin/marketplace.json`의 `metadata.version` · 같은 파일의 `plugins[0].version`. 로컬 반영: `~/.claude/plugins/marketplaces/flowcast` git pull → `claude plugin update flowcast` → 세션 재시작.
+버전은 3곳을 함께 올린다: `.claude-plugin/plugin.json`의 `version` · `.claude-plugin/marketplace.json`의 `metadata.version` · 같은 파일의 `plugins[0].version`. **keywords도 두 파일을 함께 고친다** — `marketplace.plugins[0].keywords`는 `plugin.json`의 부분집합이어야 하며 `validate_plugin_manifest.py`가 검사한다. 로컬 반영: `~/.claude/plugins/marketplaces/flowcast` git pull → `claude plugin update flowcast` → 세션 재시작.
 
 ## 하네스 변경 이력
 
