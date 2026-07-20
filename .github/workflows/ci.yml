@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 아래 버전 비교가 base 커밋을 읽는다
 
       # 실 데이터 유입 차단 — 한 건이라도 매치되면 실패
       - name: Sensitive-data scan
@@ -26,3 +28,22 @@ jobs:
 
       - name: Tests
         run: python -m pytest tests/ -q
+
+      # 런타임(scripts·skills·agents·매니페스트)이 바뀌었는데 버전이 그대로면 경고만 낸다.
+      # 문서·테스트만 바뀐 PR 은 대상이 아니다. 파일 diff 여부가 아니라 version '값'을 비교한다.
+      - name: Version bump reminder
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          base='${{ github.event.pull_request.base.sha }}'
+          if git diff --quiet "$base"...HEAD -- scripts/ skills/ agents/ .claude-plugin/; then
+            echo "런타임 경로 변경 없음 — 버전 검사 생략"; exit 0
+          fi
+          ver() { python -c 'import json,sys;print(json.load(sys.stdin)["version"])'; }
+          old=$(git show "$base:.claude-plugin/plugin.json" | ver)
+          new=$(ver < .claude-plugin/plugin.json)
+          if [ "$old" = "$new" ]; then
+            echo "::warning::런타임 경로가 바뀌었는데 plugin version 이 $new 그대로입니다 — 릴리즈 전 3곳을 함께 올리세요."
+          else
+            echo "version $old → $new"
+          fi
