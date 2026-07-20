@@ -1,6 +1,6 @@
 ---
 name: topology
-description: 인프라 구성도(topology) 흐름도 1건을 생성한다. 존/노드 공간 배치 위에 번호 구간(segments)을 오버레이하는 뷰를 nodes + links + scenarios[].segments JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=topology 단위를 받아 호출하거나, 사용자가 직접 인프라 구성도/토폴로지/네트워크 배치도를 요청할 때 사용. 시간순 요청/응답은 flowcast:sequence, 포트 달린 컴포넌트 프로세스도는 flowcast:component 로 라우팅.
+description: 인프라 배치도(topology) 흐름도 1건을 생성한다. 존/노드 공간 배치 위에 번호 구간(segments)을 오버레이하는 뷰를 nodes + links + scenarios[].segments JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=topology 단위를 받아 호출하거나, 사용자가 직접 인프라 배치도(존·노드 배치 + 번호 구간)/토폴로지/네트워크 배치도를 요청할 때 사용. 시간순 요청/응답은 flowcast:sequence, 포트 달린 컴포넌트 프로세스도는 flowcast:component 로 라우팅. English triggers — topology, infrastructure diagram, network layout, zones and nodes, numbered segments.
 allowed-tools: Bash, Read, Write, Edit
 ---
 
@@ -103,7 +103,7 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
 
 ## 파일링
 
-페어드 MD `{out_dir}/{name}.md` — `type: diagram` + iframe(기본 상대경로, vault 모드 시 `file://` 절대경로) + 구간 테이블 + 흐름 서술.
+페어드 MD `{out_dir}/{name}.md` — frontmatter(`type: diagram`, `html: {name}.html`) + iframe(기본 상대경로, vault 모드 시 `file://` 절대경로) + 구간 테이블 + 흐름 서술.
 
 ## 원본 대조 검증 (원본 파일이 있을 때)
 

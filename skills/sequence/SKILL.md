@@ -1,6 +1,6 @@
 ---
 name: sequence
-description: 시퀀스(스윔레인) 흐름도 1건을 생성한다. 행위자 간 시간순 요청/응답 상호작용을 actors + scenarios[].steps JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=sequence 단위를 받아 호출하거나, 사용자가 직접 시퀀스/스윔레인 다이어그램을 요청할 때 사용. 인프라 공간배치는 flowcast:topology, 포트 달린 컴포넌트 프로세스도는 flowcast:component 로 라우팅.
+description: 시퀀스(스윔레인) 흐름도 1건을 생성한다. 행위자 간 시간순 요청/응답 상호작용을 actors + scenarios[].steps JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=sequence 단위를 받아 호출하거나, 사용자가 직접 시퀀스/스윔레인 다이어그램을 요청할 때 사용. 인프라 공간배치는 flowcast:topology, 포트 달린 컴포넌트 프로세스도는 flowcast:component 로 라우팅. English triggers — sequence diagram, swimlane, request/response flow, interaction diagram.
 allowed-tools: Bash, Read, Write, Edit
 ---
 

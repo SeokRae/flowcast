@@ -1,6 +1,7 @@
 {
   "system": "Order Service",
   "source": "flowcast 합성 예제 (sequence)",
+  "view": "sequence",
   "zones": [
     { "id": "front", "name": "Frontend" },
     { "id": "back", "name": "Backend" }
