@@ -77,6 +77,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 | 2026-07-19 | `scan-sensitive` 블록리스트의 짧은 파트너 코드 토큰을 단어경계(`\b…\b`)로 고정 — PlantUML 자동 링크 id `lnk7`의 부분문자열 오탐 해소(링크 7개 이상 SVG면 재발하던 게이트 버그) | `scripts/scan-sensitive.sh` | #63 SVG가 게이트에 걸려 push 차단 (#64) |
 | 2026-07-19 | Pages `index.html`을 갤러리→'이해' 페이지로 보강 — 동작 파이프라인 4단계·세 관점(질문 프레이밍)·블로그(flowcast 1편) 링크. 기존 디자인 토큰·테마 재사용, AA 유지 | `docs/index.html` | 갤러리만 있고 flowcast 동작·관점 설명이 없어 'flowcast를 이해하는' 목적에 미달 (#67) |
 | 2026-07-20 | 예제 산출물 재생성(`regen-examples.sh`) + 골든 회귀 게이트 — 렌더 결과·docs 게시본·`.puml` 3축을 바이트 비교 | `scripts/regen-examples.sh`·`tests/test_render.py`·`tests/test_plantuml_export.py` | 커밋된 예제 HTML이 초기 구축 이후 재생성되지 않아 #57 구간 범례 표가 빠진 렌더를 Pages가 게시 중이었고, 이를 잡는 게이트가 없었음 (#69) |
+| 2026-07-20 | 하네스 감사 Tier 1 일괄 — out_dir 절대경로·실행 산출물 gitignore(#70) · pptx_export 검증 게이트(#71) · plantuml 별칭 충돌 회피(#72) · pptx topology/component 패리티(fw·l4·rail·self·평행엣지, #73) · CLAUDE_PLUGIN_ROOT 폴백 실행가능화(#74) · scan-sensitive 회귀 테스트(#75) · keywords 교차 검증(#77) | `scripts/*`·`skills/*`·`agents/*`·`tests/*`·`.claude-plugin/*` | 다중 에이전트 하네스 감사(72건 발견)의 Tier 1 해소. 부수 발견 2건도 함께 수정 — HTML 역평행 엣지 겹침(#21 계열)과 `-nometadata` 없는 SVG 재생성이 게이트를 무작위로 막던 문제 |
 
 ## 라이선스
 

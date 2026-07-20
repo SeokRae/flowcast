@@ -100,7 +100,12 @@ def test_cli_accepts_repository_plugin_metadata():
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout == "plugin metadata valid: flowcast 0.14.0\n"
+    shipped = json.loads(
+        (ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    # 버전을 하드코딩하면 릴리즈마다 이 테스트가 red 가 되어
+    # "테스트를 고치는" 습관이 붙는다 — 매니페스트에서 읽어 비교한다.
+    assert result.stdout == (
+        f"plugin metadata valid: {shipped['name']} {shipped['version']}\n")
     assert result.stderr == ""
 
 
