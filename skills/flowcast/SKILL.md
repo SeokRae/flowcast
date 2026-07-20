@@ -1,6 +1,6 @@
 ---
 name: flowcast
-description: IF/서비스 흐름도 생성 하네스의 진입점. 데이터(텍스트·PPTX/PDF·설명)를 받아 다이어그램 단위로 쪼개고 뷰를 판별한 뒤 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 흐름도를 렌더·파일링하고, 요청 시 PDF·편집가능 .pptx(B-out)·PlantUML(.puml)로도 출력한다. "흐름도 만들어줘", "여러 다이어그램 한 번에", "시퀀스/구성도/컴포넌트 다이어그램", "IF 흐름도", "PPTX 흐름도 변환", "PDF로 뽑아줘", "PPT로 뽑아줘", "편집가능 PPT/pptx로", "pptx export", "PlantUML로 뽑아줘", "puml로 내보내줘", "flowcast" 요청 시 사용. 후속 — "다시 그려줘", "이 다이어그램만 수정", "뷰 바꿔서", "예제 추가", "PDF/PPT/PlantUML로도 내보내줘"도 이 스킬. 단일 뷰만 확실하면 flowcast:sequence/topology/component 로 바로 갈 수도 있다.
+description: IF/서비스 흐름도 생성 하네스의 진입점. 데이터(텍스트·PPTX/PDF·설명)를 받아 다이어그램 단위로 쪼개고 뷰를 판별한 뒤 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 흐름도를 렌더·파일링하고, 요청 시 PDF·편집가능 .pptx(B-out)·PlantUML(.puml)로도 출력한다. "흐름도 만들어줘", "여러 다이어그램 한 번에", "시퀀스/구성도/컴포넌트 다이어그램", "IF 흐름도", "PPTX 흐름도 변환", "흐름도를 PDF로 뽑아줘", "다이어그램을 PPT로 뽑아줘", "편집가능 PPT/pptx로", "pptx export", "PlantUML로 뽑아줘", "puml로 내보내줘", "flowcast" 요청 시 사용. 후속 — "다시 그려줘", "이 다이어그램만 수정", "뷰 바꿔서", "예제 추가", "PDF/PPT/PlantUML로도 내보내줘"도 이 스킬. 단일 뷰만 확실하면 flowcast:sequence/topology/component 로 바로 갈 수도 있다. English triggers — flow diagram, flowchart harness, render diagrams, convert pptx to diagrams, export to pptx/PlantUML.
 allowed-tools: Agent, Bash, Read, Write, Edit, Skill
 ---
 

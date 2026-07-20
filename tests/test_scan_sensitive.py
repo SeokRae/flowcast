@@ -105,10 +105,16 @@ def test_lowercase_generic_word_is_not_blocked(tmp_path):
 
 # ── 제외 경로(EXCL) 가 유지되는가 ─────────────────────────────
 
-def test_planning_doc_is_excluded(tmp_path):
-    """PLAN.md 는 .gitignore 로 미공개인 내부 문서라 스캔 대상이 아니다."""
+def test_planning_doc_is_no_longer_excluded(tmp_path):
+    """PLAN.md 는 더 이상 제외 대상이 아니다 (#98).
+
+    초기 구축용 planning 문서를 지우면서 `.gitignore` 와 EXCL 양쪽에서 함께 뺐다.
+    같은 이름의 파일이 다시 생기면 커밋은 가능하되 스캔 대상이므로, 실 데이터가
+    들어가면 게이트가 push 를 막는다 — public repo 에선 '무시'보다 '스캔'이 더
+    강한 보장이다.
+    """
     r = _run(tmp_path, {"PLAN.md": "제약: " + "나스" + "텍" + " 데이터 금지"})
-    assert r.returncode == 0
+    assert r.returncode == 1
 
 
 def test_scan_script_itself_is_excluded(tmp_path):

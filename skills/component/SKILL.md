@@ -1,6 +1,6 @@
 ---
 name: component
-description: 컴포넌트 프로세스 흐름도(component) 1건을 생성한다. 포트를 단 컴포넌트 박스를 공간 배치하고 라벨·프로토콜을 나르는 방향 엣지로 잇는 뷰를 scenarios[].{nodes, edges} JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=component 단위를 받아 호출하거나, 사용자가 직접 시스템 구성/컴포넌트 다이어그램(포트·프로토콜 달린 박스+엣지)을 요청할 때 사용. 시간순 요청/응답은 flowcast:sequence, 인프라 존 배치+번호 구간은 flowcast:topology 로 라우팅.
+description: 컴포넌트 프로세스 흐름도(component) 1건을 생성한다. 포트를 단 컴포넌트 박스를 공간 배치하고 라벨·프로토콜을 나르는 방향 엣지로 잇는 뷰를 scenarios[].{nodes, edges} JSON으로 옮겨 render.py로 렌더·파일링. diagram-drawer 에이전트가 view=component 단위를 받아 호출하거나, 사용자가 직접 컴포넌트 프로세스도(포트·프로토콜 달린 박스 + 방향 엣지)를 요청할 때 사용. 시간순 요청/응답은 flowcast:sequence, 인프라 존 배치+번호 구간은 flowcast:topology 로 라우팅. English triggers — component diagram, process flow, ports and protocols, service components.
 allowed-tools: Bash, Read, Write, Edit
 ---
 
@@ -97,7 +97,7 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
 
 ## 파일링
 
-페어드 MD `{out_dir}/{name}.md` — `type: diagram` + iframe(기본 상대경로, vault 모드 시 `file://`) + 엣지 테이블 + 흐름 서술.
+페어드 MD `{out_dir}/{name}.md` — frontmatter(`type: diagram`, `html: {name}.html`) + iframe(기본 상대경로, vault 모드 시 `file://` 절대경로) + 엣지 테이블 + 흐름 서술.
 
 ## 원본 대조 검증 (원본 파일이 있을 때)
 

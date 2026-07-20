@@ -20,12 +20,12 @@ PAT_KO='나스텍|롯데|입금정산'
 # 회사명 NICE (영어 일반어 nice 와 구분: 대문자 단어경계)
 PAT_NICE='\bNICE\b'
 
-# PLAN.md(내부 planning, .gitignore로 미공개) 와 스캔 스크립트 자신은 제외.
+# 스캔 스크립트 자신은 제외(블록리스트 토큰을 리터럴로 들고 있다).
 # flowcast-out/·_workspace*/ 는 실행 산출물이라 실 데이터가 정상적으로 들어간다 —
 # .gitignore 로 커밋되지 않으므로 게이트 대상이 아니다(로컬 실행 시 전량 매치를 막는다).
 # .pytest_cache 도 같은 이유 — pytest 가 테스트 id 를 nodeids 에 적어 두는데,
 # 게이트 자신의 회귀 테스트(tests/test_scan_sensitive.py)가 바로 그 자리를 채운다.
-EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.pytest_cache --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh --exclude=PLAN.md"
+EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.pytest_cache --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh"
 
 hits=0
 

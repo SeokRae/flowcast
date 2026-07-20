@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> IF/서비스 흐름도 작업 하네스 — Claude Code 플러그인. 데이터·.pptx를 다이어그램 단위로 라우팅하고 검증한 뒤 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF 또는 편집가능 `.pptx`(B-out)로도 출력. (생성·PPT입력(B-in)·PPT출력(B-out, 3뷰)·편집 경로 배선 완료 / 뷰확장 계획)
+> IF/서비스 흐름도 작업 하네스 — Claude Code 플러그인. 데이터·.pptx를 다이어그램 단위로 라우팅하고 검증한 뒤 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 `.pptx`·PlantUML `.puml`(B-out)로도 출력. (생성·PPT입력(B-in)·PPT/PlantUML출력(B-out, 3뷰)·편집 경로 배선 완료 / 뷰확장 계획)
 
 ## 구조
 
@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
 | `scripts/validate_manifest.py` | router manifest schema 1.0 검증 — drawer dispatch 전 필수 게이트 |
+| `scripts/validate_plugin_manifest.py` | 플러그인 매니페스트 검증 (`plugin.json`·`marketplace.json` 필드·버전 3곳 일치·keywords 부분집합·스킬 경로 실존) — CI 게이트 |
 | `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
 | `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
 | `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
@@ -21,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/regen-examples.sh` | `examples/*.json` → 예제 html·docs 게시본·puml 일괄 재생성 (골든 회귀 테스트가 누락을 잡는다) |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
 | `docs/` | GitHub Pages 사이트 — `index.html` HTML 예제 갤러리 + `plantuml.html` PlantUML 출력 showcase + `examples/*.html`(게시용 복사본) + `examples/puml/*.{puml,svg}`(B-out export·렌더 스냅샷). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
-| `tests/test_render.py` | 렌더러 검증·출력 테스트 |
+| `tests/*.py` | 7개 — `test_render`(렌더러·골든 회귀) · `test_manifest` · `test_plugin_manifest` · `test_pptx_import` · `test_pptx_export` · `test_plantuml_export` · `test_scan_sensitive` |
 | `requirements-dev.txt` | 개발 의존성 선언 (pytest·python-pptx) — 테스트 전용, 코어는 stdlib만 |
 
 ## 명령어
@@ -34,6 +35,7 @@ bash scripts/regen-examples.sh    # 예제 산출물 재생성 (렌더러 수정
 python3 scripts/render.py {json}               # 기본 → HTML
 python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
 python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
+python3 scripts/validate_plugin_manifest.py        # 플러그인 매니페스트 검증 (CI 게이트)
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
 python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style] [--smetana])
 ```
@@ -44,7 +46,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **원문 보존**: 실제 다이어그램을 옮길 때 라벨·포트·프로토콜을 원문 그대로 — 단, 그 산출물은 이 public repo가 아니라 사용자 로컬 `out_dir`에 파일링한다.
 - **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. PlantUML export(`plantuml_export.py`)는 텍스트 출력이라 **stdlib만**(추가 의존성 없음). 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
-- **선택 출력 상태**: `pdf=false`, `export=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다.
+- **선택 출력 상태**: `pdf=false`, `export=false`, `plantuml=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다. `plantuml`은 stdlib라 의존성-없음 partial 케이스가 없다. (옵션 전체는 `skills/flowcast/SKILL.md` 옵션표가 단일 진실)
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트, ⑤ 아래 **예제 산출물 재생성**.
 - **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. `.svg` 스냅샷은 `plantuml`이 설치돼 있을 때만 갱신된다(없으면 건너뛴다) — **`-nometadata` 필수**: 없으면 PlantUML이 SVG에 심는 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행.
 
@@ -52,35 +54,15 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 
 버전은 3곳을 함께 올린다: `.claude-plugin/plugin.json`의 `version` · `.claude-plugin/marketplace.json`의 `metadata.version` · 같은 파일의 `plugins[0].version`. **keywords도 두 파일을 함께 고친다** — `marketplace.plugins[0].keywords`는 `plugin.json`의 부분집합이어야 하며 `validate_plugin_manifest.py`가 검사한다. 로컬 반영: `~/.claude/plugins/marketplaces/flowcast` git pull → `claude plugin update flowcast` → 세션 재시작.
 
-## 하네스 변경 이력
+## 설계 결정 (지금도 코드를 구속하는 것)
 
-| 날짜 | 변경 내용 | 대상 | 사유 |
-|------|----------|------|------|
-| 2026-07-11 | 초기 구축 — router/drawer 팬아웃 + 3뷰 + render.py 이관 + 합성 예제 | 전체 | - |
-| 2026-07-11 | B-in PPT 입력 변환 + 하네스 범위 재정의 | `scripts/pptx_import.py`·router | .pptx 덱을 draft로 추출해 라우팅 (#1) |
-| 2026-07-11 | B-out PPT export 1·2차 (component·topology) | `scripts/pptx_export.py` | 편집가능 .pptx 출력 (#3·#5) |
-| 2026-07-11 | B-out PPT export 3뷰 완성 (sequence 추가) | `scripts/pptx_export.py`·`render.py` | component·topology·sequence export 대칭 완성 (#8) |
-| 2026-07-11 | B-out export를 하네스에 배선 | `agents/diagram-drawer`·`skills/flowcast` | export가 raw 스크립트로만 도달되던 drift 해소 — `/flowcast`에서 `export` 옵션으로 노출 (#9) |
-| 2026-07-11 | B-in 파서 그룹 좌표 보정 + `connectors_loose[]` | `scripts/pptx_import.py` | 그룹 덱 좌표 왜곡·glue 없는 커넥터 탈락 해소 (#11) |
-| 2026-07-11 | 편집 경로(⓪ 컨텍스트 확인)·`_workspace` 배선·문서 위생 | `skills/*`·`agents/*`·CLAUDE.md | 하네스 감사 후속 — 후속 요청 절차 부재·draft 경로 충돌 해소 (#12) |
-| 2026-07-11 | B-out 품질 개선 — 멀티라인 전 문단 스타일·topology 배지+범례·wide(1920×1080) 캔버스 기본값 | `scripts/pptx_export.py` | 실사용에서 둘째 줄 18pt 누수·라벨 겹침·비표준 슬라이드 비율 확인 (#17) |
-| 2026-07-11 | topology 번호 배지 겹침 자동 회피 — `_t_badge_geom`/`_t_spread_badges` 공용화(HTML·pptx 단일 진실) | `scripts/render.py`·`scripts/pptx_export.py` | 교차 엣지 배지 완전 중첩(구간 3×8) 실사용 확인 (#19) |
-| 2026-07-11 | 배지 spread 부호를 분리 벡터 내적 기반으로 — 역평행(왕복 A→B/B→A) 퇴행 수정 + 무개선 시 부호 반전 폴백 | `scripts/render.py` | 왕복 구간(12×13) 배지가 같은 방향으로 밀려 겹침 유지되던 실사용 퇴행 (#21) |
-| 2026-07-11 | 워크플로우 게이트 4종 — 소스 게이트(지식 계층: 개념 노트→흐름 문서→다이어그램→PPT)·2축 페어링(sequence+topology 번호 공유)·순서 검증(업무 트리거=n1)·속성 근거 규칙 | `skills/flowcast`·`agents/diagram-router`·`skills/{sequence,topology}` | 실사용 검토에서 업무 순서 어긋남·근거 없는 속성(async 등)·계보 부재 확인 (#23) |
-| 2026-07-11 | pptx z-순서 패리티 — topology·component 드로잉 순서를 존→커넥터→노드(→배지·라벨) 로 (HTML과 동일, 노드가 관통 선을 가림) | `scripts/pptx_export.py` | 같은 행 관통 릴레이(VIP→WEB)가 pptx에서만 노드 위로 노출 (#25) |
-| 2026-07-11 | 소스 게이트 세분화 — 지식 계층에 **시나리오 노트**(업무별: 트리거·전제·정상 흐름·분기·예외) 추가, sequence 소스 요건·분기/예외 복수 슬라이드 규칙 | `skills/flowcast`·`skills/sequence`·`agents/diagram-router` | 시나리오 노트 없이 분석 노트→시퀀스 직행 시 분기·예외 소실 (실사용, #27) |
-| 2026-07-13 | runtime contract 안정화 — manifest schema 1.0 검증 게이트·소스/페어 메타데이터·선택 PDF·partial 상태 | `skills/*`·`agents/*`·plugin manifest | fan-out 전 입력 계약과 선택 출력 실패 의미를 고정 (#39) |
-| 2026-07-14 | B-out PlantUML export — 3뷰 JSON → `.puml`(stdlib·좌표 미사용·검증기 재사용, flowcast 팔레트 skinparam+smetana) + `plantuml` 옵션 배선 | `scripts/plantuml_export.py`·`agents/diagram-drawer`·`skills/flowcast` | PlantUML 계보 다이어그램과 정합·Obsidian 네이티브 렌더 지원 (#53) |
-| 2026-07-17 | **rectangle 뷰 레이아웃 기본값을 dot 으로 전환**(동작 변경) — `!pragma layout smetana` 강제 해제하고 `--smetana` opt-in 으로. pragma/skinparam 직교화(`RECT_PRAGMA` 분리) | `scripts/plantuml_export.py`·`agents/diagram-drawer` | smetana 가 캔버스를 클리핑 — 자체 예제 `three-tier` 마저 "5. 캐시 갱신"→"5. 캐시" 절단(243×541 vs dot 271×664). 강제 근거였던 "Obsidian=graphviz-free" 전제도 오류(플러그인 `dotPath` 절대경로면 dot 사용) (#55) |
-| 2026-07-17 | topology `.puml` 라벨 겹침 해소 — 엣지엔 번호만, 설명은 `legend` 표로(render.py 배지+범례 패턴 패리티). 세그먼트가 덮는 pair 의 정적 링크 생략 | `scripts/plantuml_export.py` | 한 pair 에 링크 1+세그먼트 N 이 걸리면 PlantUML 이 라벨을 같은 지점에 스택 → 노드명까지 가림(dot·smetana 공통). 실사용에서 `.puml` 수기 유지를 강요한 원인 (#57) |
-| 2026-07-18 | GitHub Pages 예제 갤러리 — `docs/index.html`(3뷰 합성 예제 카드·라이브 iframe 프리뷰·다크/라이트 테마 공유) + `docs/examples/*.html` 게시용 복사본 | `docs/`·README·CLAUDE.md | 자체완결 예제 HTML을 라이브로 보여줄 진입점 부재 — Pages `main /docs` 정적 게시 (#59) |
-| 2026-07-18 | plantuml_export 별칭 정규화 — `_alias()`로 노드 id 의 하이픈·점·공백 등을 `_` 로 치환, 선언·화살표·note·링크·세그먼트·엣지 전 방출 지점에 일관 적용 | `scripts/plantuml_export.py` | 하이픈 든 id(`fw-edge`)가 PlantUML 화살표(`client --> fw-edge`) 파싱을 깨뜨려 `firewall-boundary` flow 다이어그램 렌더 실패 — 표시명은 원문 보존 (#61) |
-| 2026-07-18 | Pages 갤러리에 PlantUML showcase 추가 — `docs/plantuml.html`(예제별 렌더 SVG·`.puml` 소스 링크·index 상호 내비) + `docs/examples/puml/*.{puml,svg}` 스냅샷 | `docs/`·README·CLAUDE.md | HTML 출력만 있던 갤러리에 B-out PlantUML export 결과를 함께 노출 (#63) |
-| 2026-07-19 | `scan-sensitive` 블록리스트의 짧은 파트너 코드 토큰을 단어경계(`\b…\b`)로 고정 — PlantUML 자동 링크 id `lnk7`의 부분문자열 오탐 해소(링크 7개 이상 SVG면 재발하던 게이트 버그) | `scripts/scan-sensitive.sh` | #63 SVG가 게이트에 걸려 push 차단 (#64) |
-| 2026-07-19 | Pages `index.html`을 갤러리→'이해' 페이지로 보강 — 동작 파이프라인 4단계·세 관점(질문 프레이밍)·블로그(flowcast 1편) 링크. 기존 디자인 토큰·테마 재사용, AA 유지 | `docs/index.html` | 갤러리만 있고 flowcast 동작·관점 설명이 없어 'flowcast를 이해하는' 목적에 미달 (#67) |
-| 2026-07-20 | 예제 산출물 재생성(`regen-examples.sh`) + 골든 회귀 게이트 — 렌더 결과·docs 게시본·`.puml` 3축을 바이트 비교 | `scripts/regen-examples.sh`·`tests/test_render.py`·`tests/test_plantuml_export.py` | 커밋된 예제 HTML이 초기 구축 이후 재생성되지 않아 #57 구간 범례 표가 빠진 렌더를 Pages가 게시 중이었고, 이를 잡는 게이트가 없었음 (#69) |
-| 2026-07-20 | 하네스 감사 Tier 1 일괄 — out_dir 절대경로·실행 산출물 gitignore(#70) · pptx_export 검증 게이트(#71) · plantuml 별칭 충돌 회피(#72) · pptx topology/component 패리티(fw·l4·rail·self·평행엣지, #73) · CLAUDE_PLUGIN_ROOT 폴백 실행가능화(#74) · scan-sensitive 회귀 테스트(#75) · keywords 교차 검증(#77) | `scripts/*`·`skills/*`·`agents/*`·`tests/*`·`.claude-plugin/*` | 다중 에이전트 하네스 감사(72건 발견)의 Tier 1 해소. 부수 발견 2건도 함께 수정 — HTML 역평행 엣지 겹침(#21 계열)과 `-nometadata` 없는 SVG 재생성이 게이트를 무작위로 막던 문제 |
-| 2026-07-20 | `requirements-dev.txt` 선언 + CI 매트릭스 3.9·3.12 — 3.9 잡은 pytest 단독 설치(코어 stdlib 검증)에 `compileall`+import 스모크, 3.12 잡이 전체 게이트 | `requirements-dev.txt`·`.github/workflows/ci.yml`·README·CLAUDE.md | 개발 의존성 선언 파일이 전무해 클린 체크아웃에서 문서화된 `pytest`가 즉시 실패했고, "Python 3.9+ (stdlib만)" 주장이 CI 3.12 단일이라 미검증이었다 (#96) |
+전체 변경 이력은 [CHANGELOG.md](CHANGELOG.md)에 있다. 아래는 고치면 회귀가 나는 결정만 남긴 것이다.
+
+- **배지 좌표 단일 진실** — topology 번호 배지의 겹침 회피(`_t_badge_geom`/`_t_spread_badges`)는 `render.py`에 있고 `pptx_export.py`가 그대로 참조한다. 한쪽만 고치면 HTML과 PPT가 갈린다 (#19·#21).
+- **z-순서** — topology·component는 존 → 커넥터 → 노드 순으로 그린다. 노드가 관통 선을 가려야 해서다. HTML·pptx 양쪽 동일 (#25).
+- **rectangle 뷰 기본 레이아웃은 dot** — `!pragma layout smetana`는 캔버스를 클리핑한다(자체 예제에서 라벨 절단 확인). `--smetana`는 graphviz 없는 환경용 opt-in이며 요청 없이 켜지 않는다 (#55).
+- **topology `.puml`은 엣지에 번호만, 설명은 `legend`로** — 한 pair에 링크와 세그먼트가 겹치면 PlantUML이 라벨을 같은 지점에 스택해 노드명까지 가린다 (#57).
+- **PlantUML SVG 재생성은 `-nometadata` 필수** — 없으면 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다 (#73).
 
 ## 라이선스
 
