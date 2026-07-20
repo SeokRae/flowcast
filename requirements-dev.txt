@@ -1,0 +1,15 @@
+# flowcast 개발 의존성 — 테스트 실행 전용이다.
+#
+# 코어(render.py · pptx_import.py · plantuml_export.py · validate_*.py)는 stdlib 만 쓴다.
+# 여기에 코어 런타임 의존성을 추가하지 않는다 (CLAUDE.md "의존성 격리").
+#
+# python-pptx 는 pptx_export.py 전용 선택적 의존성이다. 없으면 스크립트가 exit 2 로
+# 안내하고 종료하며 tests/test_pptx_export.py 는 importorskip 으로 통째로 skip 된다
+# (pytest 요약줄의 skipped 1건이 그 모듈이다). 개발 환경에서는 그 skip 되는 케이스까지
+# 실제로 돌리기 위해 설치한다.
+#
+# 하한은 Python 3.9.6 에서 전체 테스트가 통과한 조합이다. 상한은 메이저 업그레이드가
+# 조용히 CI 를 깨뜨리는 것을 막는 가드다 — 올릴 때는 CI 의 3.9·3.12 두 잡이 모두
+# 녹색인지 확인하고 올린다.
+pytest>=8.4.2,<9
+python-pptx>=1.0.2,<2
