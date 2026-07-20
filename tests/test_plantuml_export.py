@@ -206,6 +206,69 @@ def test_topology_hyphenated_ids_sanitized(tmp_path):
     assert "fw-edge" not in text and "lb-in" not in text    # 하이픈 별칭은 어디에도 없음
 
 
+def test_topology_alias_collision_kept_distinct(tmp_path, capsys):
+    """정규화 결과가 같아지는 id 들(`web-1`·`web.1`·`web 1`)이 한 별칭으로 뭉개지면
+    노드가 합쳐지고 엣지가 자기 루프로 변질된다 — 그것도 exit 0 으로 조용히 (#72)."""
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "web-1", "name": "WEB", "col": 0, "row": 0},
+                      {"id": "web.1", "name": "OTHER", "col": 1, "row": 0},
+                      {"id": "web 1", "name": "THIRD", "col": 2, "row": 0}],
+            "links": [{"from": "web-1", "to": "web.1"}],
+            "scenarios": [{"title": "FLOW", "segments": [
+                {"n": 1, "from": "web-1", "to": "web.1", "label": "a"},
+                {"n": 2, "from": "web.1", "to": "web 1", "label": "b"}]}]}
+    out = tmp_path / "c.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert 'as web_1\n' in text and 'as web_1_2' in text and 'as web_1_3' in text
+    assert "web_1 --> web_1_2 : 1" in text      # 자기 루프(web_1 --> web_1) 아님
+    assert "web_1_2 --> web_1_3 : 2" in text
+    assert "web_1 --> web_1 " not in text
+    assert "경고: 별칭 충돌" in capsys.readouterr().err   # 조용히 넘어가지 않는다
+
+
+def test_alias_collision_is_deterministic(tmp_path):
+    """같은 입력이면 같은 별칭 — 재생성 diff 가 흔들리지 않아야 한다."""
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "a-1", "name": "A", "col": 0, "row": 0},
+                      {"id": "a.1", "name": "B", "col": 1, "row": 0}],
+            "scenarios": [{"title": "S", "segments": [
+                {"n": 1, "from": "a-1", "to": "a.1", "label": "x"}]}]}
+    first, second = tmp_path / "1.puml", tmp_path / "2.puml"
+    export_topology(data, first)
+    export_topology(data, second)
+    assert first.read_text(encoding="utf-8") == second.read_text(encoding="utf-8")
+
+
+def test_alias_numeric_and_empty_ids_are_valid(tmp_path):
+    """숫자로 시작하거나 기호뿐인 id 도 PlantUML 이 받는 별칭이 돼야 한다."""
+    data = {"system": "T", "view": "topology",
+            "nodes": [{"id": "7edge", "name": "NUM", "col": 0, "row": 0},
+                      {"id": "--", "name": "SYM", "col": 1, "row": 0}],
+            "scenarios": [{"title": "S", "segments": [
+                {"n": 1, "from": "7edge", "to": "--", "label": "x"}]}]}
+    out = tmp_path / "n.puml"
+    export_topology(data, out)
+    text = out.read_text(encoding="utf-8")
+    assert "as n_7edge" in text                 # 숫자 시작 → n_ prefix
+    assert "n_7edge --> " in text
+    assert " as 7edge" not in text
+
+
+def test_component_alias_scope_is_per_scenario(tmp_path):
+    """component 노드는 시나리오 로컬 — 시나리오마다 별칭을 새로 매긴다."""
+    data = {"system": "T", "view": "component", "scenarios": [
+        {"title": "S1", "nodes": [{"id": "a-1", "name": "A", "col": 0, "row": 0}],
+         "edges": []},
+        {"title": "S2", "nodes": [{"id": "a.1", "name": "B", "col": 0, "row": 0}],
+         "edges": []}]}
+    out = tmp_path / "cs.puml"
+    export_component(data, out)
+    blocks = out.read_text(encoding="utf-8").split("@enduml")
+    # 서로 다른 시나리오이므로 각자 충돌 없이 base 별칭을 쓴다
+    assert "as a_1" in blocks[0] and "as a_1" in blocks[1]
+
+
 def test_sequence_and_component_hyphenated_ids_sanitized(tmp_path):
     """sequence participant/화살표·component 엣지도 동일하게 정규화(표시명은 원문 보존)."""
     seq = {"system": "T",
