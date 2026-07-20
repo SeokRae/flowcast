@@ -9,6 +9,8 @@ skinparam rectangle {
   BorderColor #475569
   BorderColor<<ext>> #B7791F
   BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
   FontColor #1B2635
 }
 skinparam package {
@@ -43,6 +45,8 @@ skinparam rectangle {
   BorderColor #475569
   BorderColor<<ext>> #B7791F
   BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
   FontColor #1B2635
 }
 skinparam package {

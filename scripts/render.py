@@ -57,6 +57,8 @@ T_CELL_W = 196        # 그리드 열 간격
 T_CELL_H = 88         # 그리드 행 간격
 T_BOX_W, T_BOX_H = 154, 50
 T_L4_W = 120          # l4(VIP/로드밸런서) 좁은 박스 폭 — 경량 통과 장비 표현
+# topology node kind 의 단일 진실 — 검증기와 export(pptx 팔레트)가 함께 참조한다.
+TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
 T_ZONE_PAD = 14       # 존 박스 여백
 T_ZONE_LBL = 18       # 존 라벨 높이
 T_LEG_LH = 19         # 흐름 설명 줄 높이
@@ -256,7 +258,6 @@ def validate_topology(data):
             ids.append(node["id"])
     if len(ids) != len(set(ids)):
         errors.append(f"node id 중복: {sorted({i for i in ids if ids.count(i) > 1})}")
-    TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
     for ni, n in enumerate(valid_nodes):
         where = f"nodes[{ni}]"
         if not _valid_id(n.get("id")) or not _is_nonempty_text(n.get("name")):
@@ -664,6 +665,93 @@ def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
     return tables, maxy, maxx
 
 
+def _c_edge_geoms(edges, rects):
+    """component 엣지들의 경로 꼭짓점 + 라벨 기준점 — render(SVG)·pptx 공용 단일 진실.
+
+    같은 노드쌍에 걸린 평행 엣지는 연결선에 수직으로 `C_PAR_GAP` 씩 밀어 겹침을 없앤다.
+    `via` 가 있으면 그 점을 지나는 폴리라인이 되고 라벨도 그 점에 붙는다. 없으면 직선이며
+    `lpos`(0~1 비율) 지점이 라벨 기준점이다.
+
+    반환: `edges` 와 같은 순서의 `[{"pts": [(x, y), …], "mid": (mx, my)}, …]`
+    """
+    groups = defaultdict(list)
+    for i, e in enumerate(edges):
+        groups[frozenset((e["from"], e["to"]))].append(i)
+    order, perp = {}, {}
+    for key, idxs in groups.items():
+        for k, i in enumerate(idxs):
+            order[i] = (k, len(idxs))
+        # 오프셋 수직 벡터는 pair 의 **정규 방향**(노드 id 정렬)으로 고정한다.
+        # 엣지 자기 방향을 쓰면 왕복(A→B, B→A)에서 방향과 오프셋 부호가 함께
+        # 뒤집혀 상쇄되고 두 선이 완전히 겹친다 (#21 과 같은 역평행 퇴행).
+        e0 = edges[idxs[0]]
+        n1, n2 = sorted((e0["from"], e0["to"]))
+        r1, r2 = rects[n1], rects[n2]
+        cdx = (r2[0] + r2[2] / 2) - (r1[0] + r1[2] / 2)
+        cdy = (r2[1] + r2[3] / 2) - (r1[1] + r1[3] / 2)
+        cl = (cdx * cdx + cdy * cdy) ** 0.5 or 1
+        perp[key] = (-cdy / cl, cdx / cl)
+
+    out = []
+    for i, e in enumerate(edges):
+        a, b = rects[e["from"]], rects[e["to"]]
+        ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
+        bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
+        p1 = _edge_pt(a, bc[0], bc[1])
+        p2 = _edge_pt(b, ac[0], ac[1])
+        # 평행 오프셋 (선을 연결선에 수직으로 밀어 겹침 방지)
+        k, cnt = order[i]
+        px, py = perp[frozenset((e["from"], e["to"]))]
+        off = (k - (cnt - 1) / 2) * C_PAR_GAP if cnt > 1 else 0
+        p1 = (p1[0] + px * off, p1[1] + py * off)
+        p2 = (p2[0] + px * off, p2[1] + py * off)
+
+        via = e.get("via")
+        if via:
+            out.append({"pts": [p1, (via[0], via[1]), p2], "mid": (via[0], via[1])})
+        else:
+            t = e.get("lpos", 0.5)
+            out.append({"pts": [p1, p2],
+                        "mid": (p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t)})
+    return out
+
+
+def _t_seg_geom(sg, rects):
+    """세그먼트 1개의 경로 꼭짓점 — render(SVG path)·pptx(커넥터) 공용 단일 진실.
+
+    반환 `(kind, pts)`:
+      - `"self"` : 자기호출 루프. pts = 베지어 4점(시작·제어2·끝) — SVG 는 `C`,
+                   pptx 는 연속 꼭짓점을 잇는 폴리라인으로 근사한다.
+      - `"rail"` : 지정 y 로 올라갔다 내려오는 3구간 엘보. pts = 4점.
+      - `"line"` : 직선. pts = 2점.
+    pptx 는 pts 를 연속 쌍으로 이어 그리고 마지막 구간에만 화살촉을 단다.
+    """
+    a = rects[sg["from"]]
+    if sg.get("self"):
+        sx, sy = a[0] + a[2] / 2, a[1]
+        return "self", [(sx - 16, sy), (sx - 16, sy - 30), (sx + 16, sy - 30), (sx + 16, sy)]
+    b = rects[sg["to"]]
+    ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
+    bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
+    if sg.get("rail") is not None:
+        rail = float(sg["rail"])
+        p1 = _edge_pt(a, ac[0], rail)
+        p2 = _edge_pt(b, bc[0], rail)
+        return "rail", [p1, (p1[0], rail), (p2[0], rail), p2]
+    p1 = _edge_pt(a, bc[0], bc[1])
+    p2 = _edge_pt(b, ac[0], ac[1])
+    return "line", [p1, p2]
+
+
+def _t_seg_path(sg, rects):
+    """`_t_seg_geom` 을 SVG path `d` 문자열로 — self 만 베지어, 나머지는 폴리라인."""
+    kind, pts = _t_seg_geom(sg, rects)
+    if kind == "self":
+        return (f'M{pts[0][0]},{pts[0][1]} C{pts[1][0]},{pts[1][1]} '
+                f'{pts[2][0]},{pts[2][1]} {pts[3][0]},{pts[3][1]}')
+    return "M" + " L".join(f"{x},{y}" for x, y in pts)
+
+
 def _t_badge_geom(sg, rects):
     """세그먼트 1개의 배지 위치 + 엣지 단위방향 (bx, by, ux, uy) — render·pptx 공용.
 
@@ -834,23 +922,10 @@ def render_svg_topology(data, scenario):
     # 구간 오버레이 (화살표 + 번호 배지 — 배지는 _t_badge_geom/_t_spread_badges 로 겹침 회피)
     seg_paths, badges, badge_sgs = [], [], []
     for sg in segments:
-        a = rects[sg["from"]]
+        d = _t_seg_path(sg, rects)
         if sg.get("self"):
-            sx, sy = a[0] + a[2] / 2, a[1]
-            seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="M{sx - 16},{sy} C{sx - 16},{sy - 30} {sx + 16},{sy - 30} {sx + 16},{sy}" marker-end="url(#mk-topo)"/>')
+            seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="{d}" marker-end="url(#mk-topo)"/>')
         else:
-            b = rects[sg["to"]]
-            ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
-            bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
-            if sg.get("rail") is not None:
-                rail = float(sg["rail"])
-                p1 = _edge_pt(a, ac[0], rail)
-                p2 = _edge_pt(b, bc[0], rail)
-                d = f'M{p1[0]},{p1[1]} L{p1[0]},{rail} L{p2[0]},{rail} L{p2[0]},{p2[1]}'
-            else:
-                p1 = _edge_pt(a, bc[0], bc[1])
-                p2 = _edge_pt(b, ac[0], ac[1])
-                d = f'M{p1[0]},{p1[1]} L{p2[0]},{p2[1]}'
             seg_paths.append(f'<path class="topo-seg" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#mk-topo)"/>')
         if sg.get("n") is not None:
             badge_sgs.append(sg)
@@ -974,40 +1049,13 @@ def render_svg_component(data, scenario):
         zone_body.append(f'<text class="comp-zone-tx" x="{zx2 - 12}" y="{zy1 + 15}" text-anchor="end">{esc(z["name"])}</text>')
         zone_body.append('</g>')
 
-    # 평행 엣지(같은 노드쌍 다중 연결) 그룹핑 → 오프셋 인덱스
-    groups = defaultdict(list)
-    for i, e in enumerate(edges):
-        groups[frozenset((e["from"], e["to"]))].append(i)
-    order = {}
-    for idxs in groups.values():
-        for k, i in enumerate(idxs):
-            order[i] = (k, len(idxs))
+    # 평행 오프셋·via 폴리라인·lpos 는 pptx export 와 공유한다(_c_edge_geoms)
+    geoms = _c_edge_geoms(edges, rects)
 
     edge_body, label_body = [], []
     for i, e in enumerate(edges):
-        a, b = rects[e["from"]], rects[e["to"]]
-        ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
-        bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
-        p1 = _edge_pt(a, bc[0], bc[1])
-        p2 = _edge_pt(b, ac[0], ac[1])
-        # 평행 오프셋 (선을 연결선에 수직으로 밀어 겹침 방지)
-        k, cnt = order[i]
-        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
-        L = (dx * dx + dy * dy) ** 0.5 or 1
-        px, py = -dy / L, dx / L
-        off = (k - (cnt - 1) / 2) * C_PAR_GAP if cnt > 1 else 0
-        p1 = (p1[0] + px * off, p1[1] + py * off)
-        p2 = (p2[0] + px * off, p2[1] + py * off)
-
-        via = e.get("via")
-        if via:
-            d = f'M{p1[0]},{p1[1]} L{via[0]},{via[1]} L{p2[0]},{p2[1]}'
-            mx, my = via[0], via[1]
-        else:
-            d = f'M{p1[0]},{p1[1]} L{p2[0]},{p2[1]}'
-            t = e.get("lpos", 0.5)
-            mx = p1[0] + (p2[0] - p1[0]) * t
-            my = p1[1] + (p2[1] - p1[1]) * t
+        d = "M" + " L".join(f"{x},{y}" for x, y in geoms[i]["pts"])
+        mx, my = geoms[i]["mid"]
         start = ' marker-start="url(#mk-comp-s)"' if e.get("bidir") else ''
         edge_body.append(f'<path class="comp-edge" data-from="{esc(e["from"])}" data-to="{esc(e["to"])}" d="{d}" marker-end="url(#mk-comp)"{start}/>')
 
