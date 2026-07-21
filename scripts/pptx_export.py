@@ -22,9 +22,15 @@ python-pptx 는 **export 경로 전용 선택적 의존성**이다(코어 render
 
 import argparse
 import importlib.util
-import json
 import sys
 from pathlib import Path
+
+# scripts/ 를 경로에 넣어 _cli 를 로드한다 — 테스트가 spec_from_file_location 으로
+# 이 모듈을 로드할 때도 동작하도록 __file__ 기준으로 넣는다.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from _cli import load_json  # noqa: E402
 
 PX_TO_EMU = 9525   # 1px @96dpi
 PAD_PX = 20        # auto(content-fit) 슬라이드 여백(px)
@@ -397,7 +403,7 @@ def export_topology(data, out_path, slide_size="wide"):
     # kind 팔레트는 render.py TOPO_KINDS 가 단일 진실 — 새 kind 가 추가되면 여기서 드러난다.
     _missing = R.TOPO_KINDS - set(TOPO_FILL)
     if _missing:
-        print(f"경고: pptx 팔레트에 없는 topology kind {sorted(_missing)} — srv 로 그려집니다.",
+        print(f"warning: pptx 팔레트에 없는 topology kind {sorted(_missing)} — srv 로 그려집니다.",
               file=sys.stderr)
     nodes = data.get("nodes") or []
     zones = data.get("zones") or []
@@ -582,7 +588,7 @@ def export_topology(data, out_path, slide_size="wide"):
             nd = node_by_id[nid]
             kind = nd.get("kind", "srv")
             if kind not in TOPO_FILL:
-                print(f"경고: 알 수 없는 topology kind {kind!r} — srv 로 그립니다.", file=sys.stderr)
+                print(f"warning: 알 수 없는 topology kind {kind!r} — srv 로 그립니다.", file=sys.stderr)
             fillc = RGBColor(*TOPO_FILL.get(kind, TOPO_FILL["srv"]))
             linec = RGBColor(*TOPO_LINE.get(kind, TOPO_LINE["srv"]))
             dashed = kind in TOPO_DASH
@@ -900,19 +906,20 @@ def main():
     args = ap.parse_args()
 
     if not _import_pptx():
-        print("python-pptx 가 필요합니다 (flowcast PPT export 전용 선택적 의존성).\n"
+        print("error: python-pptx 가 필요합니다 (flowcast PPT export 전용 선택적 의존성).\n"
               "  pip install python-pptx", file=sys.stderr)
         return 2
 
+    # 의존성 검사(exit 2)는 위에서 이미 통과 — 그 뒤에 입력을 로드해야 python-pptx 없는
+    # 환경에서 잘못된 JSON 을 줘도 exit 2(partial)로 보고된다 (#71 순서 고정).
     path = Path(args.data)
-    if not path.exists():
-        print(f"파일 없음: {path}", file=sys.stderr)
-        return 1
-    data = json.loads(path.read_text(encoding="utf-8"))
-    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주
-    view = data.get("view", "sequence")
+    data = load_json(path)
+    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주.
+    # 최상위가 object 가 아니면(배열·스칼라) isinstance 가드로 data.get 트레이스백을 막고,
+    # 검증기가 "최상위 JSON은 object여야 함" 한 줄로 거른다.
+    view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
     if view not in _DISPATCH:
-        print(f"이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
+        print(f"error: 이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
               file=sys.stderr)
         return 1
 
@@ -920,10 +927,10 @@ def main():
     exporter, validator_name = _DISPATCH[view]
     errors, warnings = getattr(_load_render(), validator_name)(data)
     for w in warnings:
-        print(f"경고: {w}", file=sys.stderr)
+        print(f"warning: {w}", file=sys.stderr)
     if errors:
         for e in errors:
-            print(f"검증 오류: {e}", file=sys.stderr)
+            print(f"error: {e}", file=sys.stderr)
         return 1
 
     out = Path(args.out) if args.out else path.with_suffix(".pptx")

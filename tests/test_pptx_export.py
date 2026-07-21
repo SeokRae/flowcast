@@ -574,7 +574,7 @@ def test_cli_sequence_dangling_actor_rejected(tmp_path):
         "scenarios": [{"title": "S", "steps": [
             {"from": "a", "to": "ghost", "label": "x", "kind": "req"}]}]}), encoding="utf-8")
     r = _run([str(bad)])
-    assert r.returncode == 1 and "검증 오류" in r.stderr
+    assert r.returncode == 1 and "error:" in r.stderr
     assert "Traceback" not in r.stderr
     assert not (tmp_path / "bad.pptx").exists()
 
@@ -585,8 +585,17 @@ def test_cli_component_dangling_node_rejected(tmp_path):
     bad = tmp_path / "comp.json"
     bad.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     r = _run([str(bad)])
-    assert r.returncode == 1 and "검증 오류" in r.stderr
+    assert r.returncode == 1 and "error:" in r.stderr
     assert "Traceback" not in r.stderr
+
+
+def test_cli_broken_json_exits_one_without_traceback(tmp_path):
+    """깨진 JSON → load_json 이 exit 1 + 한 줄 error, 트레이스백 없음 (#89)."""
+    bad = tmp_path / "broken.json"
+    bad.write_text("{not valid json", encoding="utf-8")
+    r = _run([str(bad)])
+    assert r.returncode == 1
+    assert "error:" in r.stderr and "Traceback" not in r.stderr
 
 
 def test_cli_unsupported_view(tmp_path):

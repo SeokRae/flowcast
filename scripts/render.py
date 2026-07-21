@@ -31,13 +31,19 @@
 """
 import argparse
 import html
-import json
 import math
 import re
 import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+# scripts/ 를 경로에 넣어 _cli 를 로드한다 — 직접 실행뿐 아니라 exporter·테스트가
+# spec_from_file_location 으로 이 모듈을 로드할 때도 동작하도록 __file__ 기준으로 넣는다.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from _cli import load_json  # noqa: E402
 
 KINDS = {"req", "res", "relay", "self", "note"}
 
@@ -1446,7 +1452,7 @@ def to_pdf(html_path, pdf_path):
     chrome = next((c for c in CHROME_CANDIDATES
                    if Path(c).exists() or shutil.which(c)), None)
     if not chrome:
-        print("ERROR: Chrome을 찾을 수 없어 PDF 변환 불가 — HTML은 생성됨",
+        print("error: Chrome을 찾을 수 없어 PDF 변환 불가 — HTML은 생성됨",
               file=sys.stderr)
         raise SystemExit(2)
 
@@ -1458,7 +1464,7 @@ def to_pdf(html_path, pdf_path):
         except FileNotFoundError:
             pass
         except OSError as exc:
-            print(f"ERROR: PDF 임시 파일 정리 실패: {exc}", file=sys.stderr)
+            print(f"error: PDF 임시 파일 정리 실패: {exc}", file=sys.stderr)
             raise SystemExit(2)
 
     last_stderr = ""
@@ -1472,7 +1478,7 @@ def to_pdf(html_path, pdf_path):
                      f"--print-to-pdf={temp_path}", html_path.resolve().as_uri()],
                     capture_output=True, text=True)
             except OSError as exc:
-                print(f"ERROR: Chrome PDF 변환 실행 실패: {exc}", file=sys.stderr)
+                print(f"error: Chrome PDF 변환 실행 실패: {exc}", file=sys.stderr)
                 raise SystemExit(2)
 
             last_stderr = result.stderr or ""
@@ -1483,16 +1489,16 @@ def to_pdf(html_path, pdf_path):
                         temp_path.is_file() and temp_path.stat().st_size > 0
                     )
                 except OSError as exc:
-                    print(f"ERROR: PDF 결과 확인 실패: {exc}", file=sys.stderr)
+                    print(f"error: PDF 결과 확인 실패: {exc}", file=sys.stderr)
                     raise SystemExit(2)
             if temp_is_usable:
                 try:
                     temp_path.replace(pdf_path)
                 except OSError as exc:
-                    print(f"ERROR: PDF 결과 교체 실패: {exc}", file=sys.stderr)
+                    print(f"error: PDF 결과 교체 실패: {exc}", file=sys.stderr)
                     raise SystemExit(2)
                 return
-        print(f"ERROR: Chrome PDF 변환 실패\n{last_stderr[-500:]}", file=sys.stderr)
+        print(f"error: Chrome PDF 변환 실패\n{last_stderr[-500:]}", file=sys.stderr)
         raise SystemExit(2)
     finally:
         try:
@@ -1511,7 +1517,7 @@ def main():
     args = ap.parse_args()
 
     data_path = Path(args.data)
-    data = json.loads(data_path.read_text(encoding="utf-8"))
+    data = load_json(data_path)
 
     view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
     validators = {
@@ -1520,15 +1526,15 @@ def main():
         "component": validate_component,
     }
     if not isinstance(view, str) or view not in validators:
-        print(f"ERROR: 알 수 없는 view '{view}' (허용: {sorted(validators)})", file=sys.stderr)
+        print(f"error: 알 수 없는 view '{view}' (허용: {sorted(validators)})", file=sys.stderr)
         sys.exit(1)
     validator = validators[view]
     errors, warnings = validator(data)
     for w in warnings:
-        print(f"WARNING: {w}", file=sys.stderr)
+        print(f"warning: {w}", file=sys.stderr)
     if errors:
         for e in errors:
-            print(f"ERROR: {e}", file=sys.stderr)
+            print(f"error: {e}", file=sys.stderr)
         sys.exit(1)
 
     render = {
@@ -1538,6 +1544,7 @@ def main():
     }[view]
     rendered = [render(data, sc) for sc in data["scenarios"]]
     out = Path(args.out) if args.out else data_path.with_suffix(".html")
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(build_html(data, rendered), encoding="utf-8")
     print(f"HTML: {out}")
 

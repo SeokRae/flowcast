@@ -213,10 +213,20 @@ def main():
     args = ap.parse_args()
 
     if not Path(args.pptx).exists():
-        print(f"파일 없음: {args.pptx}", file=sys.stderr)
+        print(f"error: 파일 없음: {args.pptx}", file=sys.stderr)
         return 1
 
-    draft = import_pptx(args.pptx, canvas=args.canvas, scale=args.scale)
+    try:
+        draft = import_pptx(args.pptx, canvas=args.canvas, scale=args.scale)
+    except zipfile.BadZipFile:
+        # .pptx 는 OOXML(zip)이다 — zip 이 아니면 여기서 트레이스백 대신 한 줄로 막는다.
+        print(f"error: .pptx(OOXML)가 아닙니다: {args.pptx}", file=sys.stderr)
+        return 1
+    if not draft["slides"]:
+        # 유효한 zip 이지만 슬라이드가 없는 경우(예: .docx) — 예전엔 {slides: []} + exit 0 으로
+        # 조용히 성공했다. 빈 draft 는 소비처(drawer)에 무의미하므로 입력 오류로 막는다.
+        print(f"error: 슬라이드가 없습니다 (.pptx 가 아니거나 빈 덱): {args.pptx}", file=sys.stderr)
+        return 1
     text = json.dumps(draft, ensure_ascii=False, indent=2)
     if args.out:
         Path(args.out).write_text(text + "\n", encoding="utf-8")

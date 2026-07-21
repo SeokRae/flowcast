@@ -131,8 +131,17 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
 
 ## 에러 핸들링
 
+모든 스크립트(`render`·`pptx_export`·`plantuml_export`·`pptx_import`)는 공통 종료 코드·프리픽스 계약을 따른다(`scripts/_cli.py` 단일 진실). 진단 한 줄은 `error:` / `warning:` 프리픽스이고 트레이스백을 노출하지 않는다.
+
+| exit | 뜻 | drawer 해석 |
+|------|----|------------|
+| 0 | 성공 | 산출물 경로를 반환에 담는다 |
+| 1 | 입력·검증 오류 (파일 없음·깨진 JSON·스키마 위반·미지원 view) | render면 JSON 1회 수정·재렌더 → 그래도 실패 시 `status: render_error`. export(pptx/puml)면 **HTML/MD는 유효**하므로 그 산출물만 `null` + `status: partial` |
+| 2 | 선택 의존성·선택 출력 실패 (python-pptx 부재·Chrome PDF 실패) | 해당 산출물만 `null` + `status: partial`. JSON 재시도 대상 아님 |
+
 - render 검증 에러(exit 1)면 메시지대로 JSON을 1회 수정·재렌더. 그래도 실패면 `status: render_error`, `error`에 원문을 반환한다(추측 수정 반복 금지).
 - PDF 변환 오류(exit 2)는 JSON 재시도 대상이 아니다. HTML/MD를 유지하고 `status: partial`로 반환한다.
+- `pptx_export`의 비-0 종료는 **1(검증)·2(의존성) 모두 export만 실패**로 본다 — render가 이미 통과시킨 JSON이라 exit 1이 나와도 HTML/MD는 유효하므로 `pptx: null`, `status: partial`(render_error 아님).
 - 데이터가 부족해 필수 필드를 못 채우면 `status: needs_input`, `questions`에 필요한 확인 사항을 반환한다. 임의 값으로 채우지 않는다.
 - `pdf: true`인데 Chrome이 없거나 PDF 변환이 실패하면 `pdf: null`, `status: partial`이다. HTML/MD는 그대로 유효하다.
 - `export: true`인데 python-pptx가 없으면 `pptx: null`, `status: partial`이다. HTML/MD는 그대로 유효하다.
