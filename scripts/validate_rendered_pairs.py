@@ -29,10 +29,16 @@ exit 0(실패한 drawer 는 이미 오케스트레이터가 보고). 표준 라�
 """
 
 import importlib.util
-import json
 import os
 import sys
 from pathlib import Path
+
+# scripts/ 를 경로에 넣어 _cli 를 로드한다 — 직접 실행뿐 아니라 테스트가
+# spec_from_file_location 으로 이 모듈을 로드할 때도 동작하도록 __file__ 기준으로 넣는다.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from _cli import read_json  # noqa: E402
 
 
 def _load_validate_manifest():
@@ -202,30 +208,17 @@ def _file_loader(out_dir):
         if name in cache:
             return cache[name]
         rendered_path = os.path.join(out_dir, "{}.json".format(name))
-        try:
-            with open(rendered_path, "r", encoding="utf-8") as stream:
-                result = (json.load(stream), None)
-        except (OSError, TypeError, UnicodeError) as exc:
-            result = (None, "읽지 못함 {}: {}".format(rendered_path, exc))
-        except (json.JSONDecodeError, ValueError) as exc:
-            result = (None, "JSON 오류 {}: {}".format(rendered_path, exc))
-        cache[name] = result
-        return result
+        cache[name] = read_json(rendered_path)
+        return cache[name]
 
     return loader
 
 
 def validate_rendered_pairs_file(path):
     """*path* 의 manifest 를 읽어 out_dir 기준으로 렌더 산출물과 대조한다."""
-    try:
-        with open(path, "r", encoding="utf-8") as stream:
-            manifest = json.load(stream)
-    except (OSError, TypeError, UnicodeError) as exc:
-        return ["could not read manifest: {}".format(exc)], []
-    except json.JSONDecodeError as exc:
-        return ["invalid JSON: {}".format(exc)], []
-    except ValueError as exc:
-        return ["invalid JSON/numeric value: {}".format(exc)], []
+    manifest, error = read_json(path)
+    if error is not None:
+        return [error], []
 
     if not isinstance(manifest, dict):
         return ["manifest: expected a JSON object"], []

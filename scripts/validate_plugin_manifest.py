@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Validate Claude plugin metadata without third-party dependencies."""
 
-import json
 import re
 import sys
 from pathlib import Path
+
+# scripts/ 를 경로에 넣어 _cli 를 로드한다 — 직접 실행뿐 아니라 테스트가
+# spec_from_file_location 으로 이 모듈을 로드할 때도 동작하도록 __file__ 기준으로 넣는다.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from _cli import read_json  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
@@ -43,20 +49,11 @@ FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 
 
 def _load_json(path, label, errors):
-    try:
-        with path.open(encoding="utf-8") as stream:
-            return json.load(stream)
-    except FileNotFoundError:
-        errors.append("{}: file not found".format(label))
-    except json.JSONDecodeError as exc:
-        errors.append(
-            "{}: invalid JSON at line {}, column {}".format(
-                label, exc.lineno, exc.colno
-            )
-        )
-    except (OSError, UnicodeError) as exc:
-        errors.append("{}: could not read ({})".format(label, exc))
-    return LOAD_FAILED
+    data, error = read_json(path, label=label)
+    if error is not None:
+        errors.append(error)
+        return LOAD_FAILED
+    return data
 
 
 def _required_value(container, key, path, errors):
