@@ -43,6 +43,7 @@ def test_split_step_label_ignores_mid_dash():
 def _base(**over):
     data = {
         "system": "테스트",
+        "source": "docs/test-flow.md",
         "zones": [{"id": "z1", "name": "존1"}],
         "actors": [
             {"id": "a", "name": "액터A"},
@@ -209,6 +210,7 @@ def test_validate_actor_undefined_zone():
 def _topo(**over):
     data = {
         "system": "테스트망",
+        "source": "docs/test-topology.md",
         "view": "topology",
         "zones": [{"id": "z1", "name": "대외계 존"}],
         "nodes": [
@@ -420,6 +422,7 @@ def test_topology_build_html_end_to_end():
 def _comp(**over):
     data = {
         "system": "테스트PG",
+        "source": "docs/test-component.md",
         "view": "component",
         "scenarios": [{
             "title": "카드결제",
@@ -444,6 +447,21 @@ def test_component_validate_ok():
     errors, warnings = validate_component(_comp())
     assert errors == []
     assert warnings == []
+
+
+# ── source 계보 부재 warning (3뷰 공통, #94) ───────────────────
+
+@pytest.mark.parametrize(
+    ("validator", "builder"),
+    [(validate, _base), (validate_topology, _topo), (validate_component, _comp)],
+)
+def test_validators_warn_on_missing_source(validator, builder):
+    """source 부재는 error가 아니라 warning (라이트 경로 예외 — #94)."""
+    data = builder()
+    del data["source"]
+    errors, warnings = validator(data)
+    assert errors == []
+    assert any("source" in w for w in warnings)
 
 
 def test_component_rejects_malformed_nested_objects_without_throwing():
