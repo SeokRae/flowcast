@@ -657,6 +657,31 @@ def test_main_missing_view_defaults_to_sequence(tmp_path, monkeypatch):
     assert "액터A" in out_path.read_text(encoding="utf-8")
 
 
+def test_main_broken_json_exits_one_without_traceback(tmp_path, monkeypatch, capsys):
+    """깨진 JSON → load_json 이 exit 1 + 한 줄 error, 트레이스백 없음 (#89)."""
+    data_path = tmp_path / "broken.json"
+    data_path.write_text("{not valid json", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["render.py", str(data_path)])
+
+    with pytest.raises(SystemExit) as exc:
+        _mod.main()
+
+    assert exc.value.code == 1
+    assert "error:" in capsys.readouterr().err
+
+
+def test_main_creates_missing_output_dir(tmp_path, monkeypatch):
+    """출력 경로의 상위 디렉토리가 없어도 mkdir 로 만들어 쓴다 (#89)."""
+    data_path = tmp_path / "seq.json"
+    out_path = tmp_path / "nested" / "deep" / "seq.html"   # 상위 디렉토리 부재
+    data_path.write_text(json.dumps(_base()), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["render.py", str(data_path), "-o", str(out_path)])
+
+    _mod.main()
+
+    assert out_path.exists()
+
+
 def test_pdf_dependency_failure_uses_partial_success_exit_code(tmp_path, monkeypatch, capsys):
     html_path = tmp_path / "diagram.html"
     pdf_path = tmp_path / "diagram.pdf"

@@ -224,7 +224,7 @@ def test_topology_alias_collision_kept_distinct(tmp_path, capsys):
     assert "web_1 --> web_1_2 : 1" in text      # 자기 루프(web_1 --> web_1) 아님
     assert "web_1_2 --> web_1_3 : 2" in text
     assert "web_1 --> web_1 " not in text
-    assert "경고: 별칭 충돌" in capsys.readouterr().err   # 조용히 넘어가지 않는다
+    assert "warning: 별칭 충돌" in capsys.readouterr().err   # 조용히 넘어가지 않는다
 
 
 def test_alias_collision_is_deterministic(tmp_path):
@@ -370,7 +370,7 @@ def test_cli_dangling_actor_ref_rejected(tmp_path):
         "scenarios": [{"title": "S", "steps": [
             {"from": "a", "to": "ghost", "label": "x", "kind": "req"}]}]}), encoding="utf-8")
     r = _run([str(bad)])
-    assert r.returncode == 1 and "검증 오류" in r.stderr
+    assert r.returncode == 1 and "error:" in r.stderr
     assert not (tmp_path / "bad.puml").exists()
 
 
@@ -384,6 +384,15 @@ def test_cli_unsupported_view(tmp_path):
 def test_cli_missing_file():
     r = _run(["/nonexistent/x.json"])
     assert r.returncode == 1 and "파일 없음" in r.stderr
+
+
+def test_cli_broken_json_exits_one_without_traceback(tmp_path):
+    """깨진 JSON → load_json 이 exit 1 + 한 줄 error, 트레이스백 없음 (#89)."""
+    bad = tmp_path / "broken.json"
+    bad.write_text("{not valid json", encoding="utf-8")
+    r = _run([str(bad)])
+    assert r.returncode == 1
+    assert "error:" in r.stderr and "Traceback" not in r.stderr
 
 
 # ── 게시본 .puml 골든 회귀 (#69) ───────────────────────────────

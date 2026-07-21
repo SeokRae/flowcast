@@ -246,3 +246,22 @@ def test_cli_missing_file_exits_one():
     r = _run("/nonexistent/deck.pptx")
     assert r.returncode == 1 and "파일 없음" in r.stderr
     assert "Traceback" not in r.stderr
+
+
+def test_cli_non_pptx_exits_one_without_traceback(tmp_path):
+    """zip 이 아닌 파일(예: 텍스트) → BadZipFile 을 한 줄 error 로 막는다, 트레이스백 없음 (#89)."""
+    notpptx = tmp_path / "notes.pptx"
+    notpptx.write_text("이건 zip 이 아니라 그냥 텍스트다", encoding="utf-8")
+    r = _run(str(notpptx))
+    assert r.returncode == 1
+    assert "OOXML" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_cli_valid_zip_without_slides_exits_one(tmp_path):
+    """유효한 zip 이지만 슬라이드가 없으면(예: .docx) 조용한 exit 0 대신 exit 1 (#89)."""
+    docx_like = tmp_path / "doc.pptx"
+    with zipfile.ZipFile(docx_like, "w") as zf:
+        zf.writestr("word/document.xml", "<document/>")   # pptx 아님 → slides 0
+    r = _run(str(docx_like))
+    assert r.returncode == 1
+    assert "슬라이드가 없습니다" in r.stderr and "Traceback" not in r.stderr
