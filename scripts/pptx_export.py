@@ -914,8 +914,10 @@ def main():
     # 환경에서 잘못된 JSON 을 줘도 exit 2(partial)로 보고된다 (#71 순서 고정).
     path = Path(args.data)
     data = load_json(path)
-    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주
-    view = data.get("view", "sequence")
+    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주.
+    # 최상위가 object 가 아니면(배열·스칼라) isinstance 가드로 data.get 트레이스백을 막고,
+    # 검증기가 "최상위 JSON은 object여야 함" 한 줄로 거른다.
+    view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
     if view not in _DISPATCH:
         print(f"error: 이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
               file=sys.stderr)

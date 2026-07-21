@@ -406,7 +406,9 @@ def main():
 
     path = Path(args.data)
     data = load_json(path)
-    view = data.get("view", "sequence")
+    # 최상위가 object 가 아닌 유효 JSON(배열·스칼라)이면 render.py 처럼 sequence 로 두고
+    # 검증기가 "최상위 JSON은 object여야 함" 한 줄로 거른다(data.get 트레이스백 방지).
+    view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
     if view not in _DISPATCH:
         print(f"error: 이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
               file=sys.stderr)

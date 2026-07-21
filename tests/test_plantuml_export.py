@@ -395,6 +395,15 @@ def test_cli_broken_json_exits_one_without_traceback(tmp_path):
     assert "error:" in r.stderr and "Traceback" not in r.stderr
 
 
+def test_cli_toplevel_non_object_rejected_without_traceback(tmp_path):
+    """최상위가 배열인 유효 JSON → data.get 트레이스백 대신 검증기 한 줄 error (#89 리뷰)."""
+    arr = tmp_path / "arr.json"
+    arr.write_text("[1, 2, 3]", encoding="utf-8")
+    r = _run([str(arr)])
+    assert r.returncode == 1
+    assert "최상위 JSON은 object여야 함" in r.stderr and "Traceback" not in r.stderr
+
+
 # ── 게시본 .puml 골든 회귀 (#69) ───────────────────────────────
 # docs/examples/puml/*.puml 는 Pages showcase 가 그대로 보여주는 B-out 산출물이다.
 # exporter 를 고치면 `bash scripts/regen-examples.sh` 로 함께 갱신한다.
