@@ -123,12 +123,13 @@ def test_scan_script_itself_is_excluded(tmp_path):
     assert r.returncode == 0
 
 
-@pytest.mark.parametrize("d", ["__pycache__", ".pytest_cache"])
+@pytest.mark.parametrize("d", ["__pycache__", ".pytest_cache", ".venv"])
 def test_tooling_caches_are_excluded(tmp_path, d):
-    """gitignore 된 도구 캐시는 스캔 대상이 아니다.
+    """gitignore 된 도구 캐시·의존성 트리는 스캔 대상이 아니다.
 
     특히 `.pytest_cache/v/cache/nodeids` 는 pytest 가 테스트 id 를 그대로 적어 두는
     파일이라, 이 파일의 회귀 테스트가 바로 그 자리를 채운다(제외 전 실제로 걸렸다).
+    `.venv` 는 서드파티 패키지 소스·바이너리가 토큰 유사 문자열로 오탐한다(#122).
     """
     r = _run(tmp_path, {f"{d}/v/cache/nodeids": '["%s"]' % ("nas" + "tec")})
     assert r.returncode == 0

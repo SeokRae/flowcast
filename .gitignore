@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .pytest_cache/
+.venv/
 
 # flowcast 실행 산출물 — 실 데이터가 섞일 수 있어 public repo 에 커밋 금지
 flowcast-out/
