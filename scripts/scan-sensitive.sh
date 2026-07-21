@@ -25,7 +25,9 @@ PAT_NICE='\bNICE\b'
 # .gitignore 로 커밋되지 않으므로 게이트 대상이 아니다(로컬 실행 시 전량 매치를 막는다).
 # .pytest_cache 도 같은 이유 — pytest 가 테스트 id 를 nodeids 에 적어 두는데,
 # 게이트 자신의 회귀 테스트(tests/test_scan_sensitive.py)가 바로 그 자리를 채운다.
-EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.pytest_cache --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh"
+# .venv 는 서드파티 의존성 트리라 우리 데이터가 없고, 패키지 소스·바이너리가 토큰
+# 유사 문자열로 오탐만 낸다(#122). CI 는 pip install 전에 스캔하므로 로컬 게이트만 해당.
+EXCL="--exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.pytest_cache --exclude-dir=.venv --exclude-dir=flowcast-out --exclude-dir=_workspace --exclude-dir=_workspace_prev --exclude=scan-sensitive.sh"
 
 hits=0
 
