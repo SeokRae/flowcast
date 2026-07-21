@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Validate a flowcast router manifest before drawer fan-out."""
 
-import json
 import os
 import re
 import sys
+from pathlib import Path
+
+# scripts/ 를 경로에 넣어 _cli 를 로드한다 — 직접 실행뿐 아니라 테스트가
+# spec_from_file_location 으로 이 모듈을 로드할 때도 동작하도록 __file__ 기준으로 넣는다.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from _cli import read_json  # noqa: E402
 
 
 ALLOWED_VIEWS = frozenset(("sequence", "topology", "component"))
@@ -330,15 +337,9 @@ def validate_manifest(manifest):
 
 def validate_manifest_file(path):
     """Load *path* and return all readable JSON and manifest validation errors."""
-    try:
-        with open(path, "r", encoding="utf-8") as stream:
-            manifest = json.load(stream)
-    except (OSError, TypeError, UnicodeError) as exc:
-        return ["could not read manifest: {}".format(exc)]
-    except json.JSONDecodeError as exc:
-        return ["invalid JSON: {}".format(exc)]
-    except ValueError as exc:
-        return ["invalid JSON/numeric value: {}".format(exc)]
+    manifest, error = read_json(path)
+    if error is not None:
+        return [error]
     return validate_manifest(manifest)
 
 

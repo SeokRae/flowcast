@@ -103,7 +103,7 @@ def test_cli_reports_missing_file(tmp_path):
     )
 
     assert result.returncode == 1
-    assert "read" in result.stderr.lower()
+    assert "파일 없음" in result.stderr
 
 
 @pytest.mark.parametrize("payload", [None, [], "manifest", 42, True])
@@ -397,16 +397,21 @@ def test_file_validator_returns_numeric_value_errors(tmp_path, monkeypatch):
     path = tmp_path / "manifest.json"
     path.write_text("{}", encoding="utf-8")
 
-    def raise_integer_digit_limit(_stream):
+    # 파싱 책임은 이제 _cli.read_json 이 진다(#124). 정수 자릿수 한도 초과처럼
+    # JSONDecodeError 가 아닌 ValueError 도 read_json 이 흡수해 리스트로 돌려주는지 —
+    # 즉 validate_manifest_file 이 예외를 흘리지 않는지 실제 파싱 경로에 걸어 확인한다.
+    cli = sys.modules[_module.read_json.__module__]
+
+    def raise_integer_digit_limit(_text):
         raise ValueError("integer string conversion exceeds digit limit")
 
-    monkeypatch.setattr(_module.json, "load", raise_integer_digit_limit)
+    monkeypatch.setattr(cli.json, "loads", raise_integer_digit_limit)
     try:
         errors = _module.validate_manifest_file(path)
     except ValueError as exc:
         pytest.fail("validate_manifest_file leaked ValueError: {}".format(exc))
 
-    assert "invalid JSON/numeric value" in "\n".join(errors)
+    assert "JSON 파싱 실패" in "\n".join(errors)
 
 
 # ── 문서 manifest 예시 ↔ 검증기 동기화 (#97) ──────────────────

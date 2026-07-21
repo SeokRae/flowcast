@@ -72,6 +72,8 @@ def _write_repository(
     metadata_directory.mkdir(parents=True)
     scripts_directory.mkdir()
     shutil.copyfile(SCRIPT, scripts_directory / SCRIPT.name)
+    # 검증기는 형제 _cli.read_json 을 로드한다(#124) — 실배포처럼 scripts/ 에 나란히 둔다.
+    shutil.copyfile(SCRIPT.parent / "_cli.py", scripts_directory / "_cli.py")
 
     plugin = _plugin() if plugin is None else plugin
     marketplace = _marketplace() if marketplace is None else marketplace
@@ -159,7 +161,7 @@ def test_cli_reports_invalid_json_without_a_traceback(
     result = _run_cli(repository)
 
     assert result.returncode == 1
-    assert "{}: invalid JSON".format(manifest_name) in result.stderr
+    assert "JSON 파싱 실패: {}".format(manifest_name) in result.stderr
     assert "Traceback" not in result.stderr
 
 

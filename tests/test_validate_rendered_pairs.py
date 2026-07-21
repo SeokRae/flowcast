@@ -370,7 +370,7 @@ def test_cli_reports_missing_manifest(tmp_path):
     result = _run_cli(tmp_path / "missing.json")
 
     assert result.returncode == 1
-    assert "read" in result.stderr.lower()
+    assert "파일 없음" in result.stderr
 
 
 def test_cli_usage_error_without_argument():
