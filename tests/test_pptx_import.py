@@ -5,16 +5,24 @@
 """
 
 import importlib.util
+import json
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
-_spec = importlib.util.spec_from_file_location(
-    "pptx_import",
-    Path(__file__).parent.parent / "scripts" / "pptx_import.py",
-)
+SCRIPT = Path(__file__).parent.parent / "scripts" / "pptx_import.py"
+
+_spec = importlib.util.spec_from_file_location("pptx_import", SCRIPT)
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 import_pptx = _mod.import_pptx
+
+
+def _run(*args):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args], capture_output=True, text=True
+    )
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -212,3 +220,29 @@ def test_connector_inside_group_transformed(tmp_path):
     d = import_pptx(path, scale=1.0)
     [c] = d["slides"][0]["connectors_loose"]
     assert (c["x1"], c["y1"], c["x2"], c["y2"]) == (1200.0, 100.0, 1600.0, 100.0)
+
+
+# ── CLI 계약 (#97) — pptx_export 는 #71 로 CLI 테스트가 생겼으나 import 는 미검증이었다 ──
+
+def test_cli_writes_draft_json_to_out_file(tmp_path):
+    deck = _fixture(tmp_path)
+    out = tmp_path / "draft.json"
+    r = _run(str(deck), "-o", str(out))
+    assert r.returncode == 0, r.stderr
+    assert "슬라이드 2" in r.stdout
+    draft = json.loads(out.read_text(encoding="utf-8"))
+    assert len(draft["slides"]) == 2
+    assert draft["source"] == "deck.pptx"
+
+
+def test_cli_writes_draft_json_to_stdout(tmp_path):
+    deck = _fixture(tmp_path)
+    r = _run(str(deck))
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout)["slide_size"] == {"cx": 9144000, "cy": 6858000}
+
+
+def test_cli_missing_file_exits_one():
+    r = _run("/nonexistent/deck.pptx")
+    assert r.returncode == 1 and "파일 없음" in r.stderr
+    assert "Traceback" not in r.stderr

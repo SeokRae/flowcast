@@ -9,6 +9,10 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 METADATA_DIRECTORY = ".claude-plugin"
+AGENTS_DIRECTORY = "agents"
+# skills/flowcast/SKILL.md 가 이 이름들로 리터럴 dispatch 한다 — 유일 출처인
+# agents/*.md 의 frontmatter name 이 파일명과 어긋나면 dispatch 가 조용히 깨진다.
+REQUIRED_AGENT_NAMES = frozenset(("diagram-router", "diagram-drawer"))
 PLUGIN_FILENAME = "plugin.json"
 MARKETPLACE_FILENAME = "marketplace.json"
 MARKETPLACE_FIELDS = frozenset(("name", "owner", "metadata", "plugins"))
@@ -35,6 +39,7 @@ LOAD_FAILED = object()
 NUMERIC_SEMANTIC_VERSION = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
+FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 
 
 def _load_json(path, label, errors):
@@ -252,6 +257,61 @@ def _all_present_and_equal(values):
     )
 
 
+def _frontmatter_name(text):
+    """Return ``(name, has_frontmatter)`` from a Markdown frontmatter block.
+
+    Stdlib line scan — no PyYAML (dependency isolation). Only the ``name`` field
+    is contract-bearing here; full frontmatter YAML validity is a separate gate.
+    ``name`` is ``None`` when the frontmatter has no ``name:`` line. Tolerates CRLF
+    line endings and a single wrapping quote pair around the value (both valid YAML).
+    """
+    match = FRONTMATTER.match(text)
+    if match is None:
+        return None, False
+    for line in match.group(1).splitlines():
+        key, separator, value = line.partition(":")
+        if separator and key.strip() == "name":
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            return value, True
+    return None, True
+
+
+def _validate_agent_files(repository_root, errors):
+    """Every agents/*.md frontmatter ``name`` must equal its file stem, and the
+    names skills dispatch by must all be present."""
+    agents_directory = repository_root / AGENTS_DIRECTORY
+    found = set()
+    for path in sorted(agents_directory.glob("*.md")):
+        field = "{}/{}".format(AGENTS_DIRECTORY, path.name)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            errors.append("{}: cannot read".format(field))
+            continue
+        name, has_frontmatter = _frontmatter_name(text)
+        if not has_frontmatter:
+            errors.append("{}: missing frontmatter block".format(field))
+            continue
+        if name is None or not name:
+            errors.append("{}: missing frontmatter name".format(field))
+            continue
+        if name != path.stem:
+            errors.append(
+                "{}: frontmatter name {!r} does not match file stem {!r}".format(
+                    field, name, path.stem
+                )
+            )
+            continue
+        found.add(name)
+    missing = REQUIRED_AGENT_NAMES - found
+    if missing:
+        errors.append(
+            "required agent(s) missing or misnamed: {}".format(sorted(missing))
+        )
+
+
 def _load_and_validate(repository_root):
     repository_root = Path(repository_root)
     errors = []
@@ -273,6 +333,8 @@ def _load_and_validate(repository_root):
         if marketplace is not LOAD_FAILED
         else {}
     )
+
+    _validate_agent_files(repository_root, errors)
 
     names = (
         plugin_details.get("name"),
