@@ -259,6 +259,37 @@ def _validate_pairs(units, errors):
                 )
 
 
+_OPTION_FLAGS = ("pdf", "export", "plantuml", "smetana")
+
+
+def _validate_options(value, path, errors):
+    """Validate the optional top-level execution options object.
+
+    The orchestrator merges these into each drawer input at step ③, so a stale
+    or malformed value silently degrades re-dispatch (absolute vault_iframe
+    reverting to a relative path, an output flag flipping off). Unknown keys are
+    ignored so a future flag round-trips through an older validator.
+    """
+    if not isinstance(value, dict):
+        errors.append("{}: expected an object of execution options".format(path))
+        return
+
+    if "vault_iframe" in value:
+        vault_iframe = value["vault_iframe"]
+        if vault_iframe is not None and (
+            not isinstance(vault_iframe, str)
+            or not vault_iframe.strip()
+            or not os.path.isabs(vault_iframe)
+        ):
+            errors.append(
+                "{}.vault_iframe: expected null or an absolute path".format(path)
+            )
+
+    for flag in _OPTION_FLAGS:
+        if flag in value and not isinstance(value[flag], bool):
+            errors.append("{}.{}: expected a boolean".format(path, flag))
+
+
 def validate_manifest(manifest):
     """Return manifest contract violations without raising for malformed input."""
     if not isinstance(manifest, dict):
@@ -278,6 +309,12 @@ def validate_manifest(manifest):
 
     if "notes" in manifest:
         _validate_string_list(manifest["notes"], "manifest.notes", errors)
+
+    if "options" in manifest:
+        _validate_options(manifest["options"], "manifest.options", errors)
+
+    if "hint" in manifest and not isinstance(manifest["hint"], str):
+        errors.append("manifest.hint: expected a string")
 
     units = manifest.get("units")
     if not isinstance(units, list) or not units:

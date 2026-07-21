@@ -137,6 +137,67 @@ def test_top_level_notes_are_optional_but_must_be_strings():
     assert "manifest.notes" in _errors(_manifest(notes=["ok", 3]))
 
 
+# ── 실행 옵션 영속 (#90) ────────────────────────────────────
+# options·hint 는 오케스트레이터가 ③에서 병합해 units.json 에 남기는 선택 top-level
+# 필드다. schema 1.0 을 유지하면서(구버전 manifest 는 옵션 없이도 통과) 존재 시에만
+# 검증한다 — notes 패턴과 동일.
+
+
+def test_options_absent_passes():
+    manifest = _manifest()
+
+    assert "options" not in manifest
+    assert validate_manifest(manifest) == []
+
+
+def test_valid_options_and_hint_pass():
+    manifest = _manifest(
+        options={
+            "vault_iframe": "/vault/attachments",
+            "pdf": True,
+            "export": False,
+            "plantuml": True,
+            "smetana": False,
+        },
+        hint="슬라이드마다 1장",
+    )
+
+    assert validate_manifest(manifest) == []
+
+
+def test_options_must_be_an_object():
+    assert "manifest.options" in _errors(_manifest(options=["pdf"]))
+    assert "manifest.options" in _errors(_manifest(options="pdf"))
+
+
+@pytest.mark.parametrize("flag", ["pdf", "export", "plantuml", "smetana"])
+def test_options_output_flags_must_be_boolean_not_string(flag):
+    assert "options.{}".format(flag) in _errors(_manifest(options={flag: "true"}))
+
+
+def test_options_vault_iframe_is_null_or_absolute():
+    assert validate_manifest(_manifest(options={"vault_iframe": None})) == []
+    assert validate_manifest(_manifest(options={"vault_iframe": "/vault/x"})) == []
+    assert "vault_iframe" in _errors(_manifest(options={"vault_iframe": "relative/vault"}))
+    assert "vault_iframe" in _errors(_manifest(options={"vault_iframe": "   "}))
+    assert "vault_iframe" in _errors(_manifest(options={"vault_iframe": 7}))
+
+
+def test_options_unknown_keys_are_ignored_forward_compatible():
+    manifest = _manifest(options={"pdf": True, "future_flag": "whatever"})
+
+    assert validate_manifest(manifest) == []
+
+
+@pytest.mark.parametrize("hint", [42, [], {}, None, True])
+def test_hint_must_be_a_string(hint):
+    assert "manifest.hint" in _errors(_manifest(hint=hint))
+
+
+def test_hint_string_passes():
+    assert validate_manifest(_manifest(hint="전부 sequence")) == []
+
+
 @pytest.mark.parametrize(
     "field",
     [
