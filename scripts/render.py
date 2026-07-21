@@ -6,7 +6,7 @@
 
 데이터 스키마(JSON):
     system    : 시스템명 (필수)
-    source    : 원본 출처 표기 (선택)
+    source    : 원본 출처 표기 (권장 — 없으면 계보 warning, 라이트 경로 예외)
     zones[]   : { id, name } — 액터 그룹 밴드 (선택)
     actors[]  : { id, name, zone?, port?, line? } — 배열 순서 = 좌→우 레인 순서
     scenarios[]: { title, steps[] }
@@ -125,6 +125,8 @@ def _validation_root(data):
         errors.append("system은 비어 있지 않은 문자열이어야 함")
     scenarios = _list_field(
         data, "scenarios", errors, "최상위", required=True, nonempty=True)
+    if "source" not in data:
+        warnings.append("source(원본 출처)가 없음 — 계보 추적 권장 (라이트 경로 예외)")
     return data, scenarios, errors, warnings
 
 

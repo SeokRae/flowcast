@@ -46,7 +46,7 @@ model: opus
 }
 ```
 
-`system`은 렌더 JSON의 `system`, `source_ref`는 렌더 JSON의 `source`에 그대로 기록해 산출물의 계보를 유지한다. `pair_id`와 `segment_numbers`는 sequence/topology 페어 간 정합 확인에 사용하며 drawer가 임의로 바꾸지 않는다. `vault_iframe` 값이 있으면 페어드 MD iframe을 `file://` 절대경로로 만든다.
+`system`은 렌더 JSON의 `system`, `source_ref`는 렌더 JSON의 `source`에 그대로 기록해 산출물의 계보를 유지한다(`source` 없이 렌더하면 계보 warning이 `warnings[]`로 취합된다). `title`은 단위 하나가 시나리오 1건이면 렌더 JSON `scenarios[0].title`에 원문 그대로 넣고, 복수 시나리오면 다이어그램 전체 제목이므로 페어드 MD의 frontmatter/H1에 원문 그대로 쓴다(축약·의역 금지). 렌더 스키마에는 top-level `title`이 없다 — HTML 제목은 `system`에서 파생된다. `pair_id`와 `segment_numbers`는 sequence/topology 페어 간 정합 확인에 사용하며 drawer가 임의로 바꾸지 않는다. `vault_iframe` 값이 있으면 페어드 MD iframe을 `file://` 절대경로로 만든다.
 
 ## 렌더 + PDF (PDF는 선택 — `pdf: false` 기본)
 
