@@ -60,7 +60,7 @@ jobs:
       # 두 잡을 모두 통과해 3.9 실사용자에게서만 터진다. import 시점까지는 여기서 막는다.
       - name: Import smoke (3.9 — compileall 이 못 잡는 런타임 API)
         if: matrix.python-version == '3.9'
-        run: python -c "import sys; sys.path.insert(0, 'scripts'); import render, pptx_import, pptx_export, plantuml_export, validate_manifest, validate_plugin_manifest"
+        run: python -c "import sys; sys.path.insert(0, 'scripts'); import render, pptx_import, pptx_export, plantuml_export, validate_manifest, validate_rendered_pairs, validate_plugin_manifest"
 
       - name: Tests
         run: python -m pytest tests/ -q

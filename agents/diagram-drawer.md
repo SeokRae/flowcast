@@ -46,7 +46,7 @@ model: opus
 }
 ```
 
-`system`은 렌더 JSON의 `system`, `source_ref`는 렌더 JSON의 `source`에 그대로 기록해 산출물의 계보를 유지한다(`source` 없이 렌더하면 계보 warning이 `warnings[]`로 취합된다). `title`은 단위 하나가 시나리오 1건이면 렌더 JSON `scenarios[0].title`에 원문 그대로 넣고, 복수 시나리오면 다이어그램 전체 제목이므로 페어드 MD의 frontmatter/H1에 원문 그대로 쓴다(축약·의역 금지). 렌더 스키마에는 top-level `title`이 없다 — HTML 제목은 `system`에서 파생된다. `pair_id`와 `segment_numbers`는 sequence/topology 페어 간 정합 확인에 사용하며 drawer가 임의로 바꾸지 않는다. `vault_iframe` 값이 있으면 페어드 MD iframe을 `file://` 절대경로로 만든다.
+`system`은 렌더 JSON의 `system`, `source_ref`는 렌더 JSON의 `source`에 그대로 기록해 산출물의 계보를 유지한다(`source` 없이 렌더하면 계보 warning이 `warnings[]`로 취합된다. 원문 그대로 전사한다 — 축약·정규화 금지, 사후 훅이 대조한다). `title`은 단위 하나가 시나리오 1건이면 렌더 JSON `scenarios[0].title`에 원문 그대로 넣고, 복수 시나리오면 다이어그램 전체 제목이므로 페어드 MD의 frontmatter/H1에 원문 그대로 쓴다(축약·의역 금지). 렌더 스키마에는 top-level `title`이 없다 — HTML 제목은 `system`에서 파생된다. `pair_id`와 `segment_numbers`는 sequence/topology 페어 간 정합 확인에 사용하며 drawer가 임의로 바꾸지 않는다 — 입력 `segment_numbers`가 비어 있지 않으면 그 값을 **순서대로 `n`에 그대로 쓰고 재부여하지 않는다**(원문상 더 쪼개야 하면 임의 분할 대신 `needs_input`). 뷰 스킬의 매핑 규칙을 따른다. `vault_iframe` 값이 있으면 페어드 MD iframe을 `file://` 절대경로로 만든다.
 
 ## 렌더 + PDF (PDF는 선택 — `pdf: false` 기본)
 
@@ -116,6 +116,7 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
   "puml": null,
   "pair_id": null,
   "segment_numbers": [1, 2],
+  "rendered_numbers": [1, 2],
   "render_exit": 0,
   "warnings": ["번호 중복 19 등(원문 보존)"],
   "error": null,
@@ -123,6 +124,8 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
   "status": "ok"
 }
 ```
+
+`segment_numbers`는 입력 에코(임의로 바꾸지 않는다)이고, `rendered_numbers`는 **렌더 JSON에 실제로 찍힌 `n`의 실측값**이다(sequence=`steps[].n`, topology=`segments[].n`, null 제외 문서 순서). 둘을 분리해 두는 이유는, 에코를 실측으로 덮어쓰면 "임의로 바꾸지 않는다"와 충돌하기 때문이다. 오케스트레이터 ⑤의 사후 훅이 같은 `pair_id`의 두 멤버 각각의 실측 번호를 선언 `segment_numbers`와 대조해(자동 재번호 금지) — 둘 다 공유 선언값과 맞아야 하므로 페어 정합도 함께 보장된다 — 페어가 형식적으로만 정합하던 구멍을 닫는다. 세그먼트를 하나도 번호 매기지 않은 순수 구성도면 `rendered_numbers`는 `[]`다.
 
 `status`는 `ok` / `partial` / `render_error` / `needs_input` 중 하나다. 요청한 모든 산출물이 있으면 `ok`, HTML/MD는 유효하지만 요청한 PDF/PPT 일부를 만들지 못했으면 `partial`이다.
 

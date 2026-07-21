@@ -101,8 +101,19 @@ manifest 전체가 검증을 통과한 뒤 `units[]`의 각 원소마다 `diagra
 
 drawer는 배정된 뷰 스킬(`flowcast:sequence/topology/component`)만 로드해 JSON→render→파일링(→`export`면 `.pptx`도, →`plantuml`이면 `.puml`도)하고 결과 객체를 반환한다. **N=1이어도 같은 경로**(팬아웃 1건).
 
-### ⑤ 결과 취합
+### ⑤ 결과 취합 · 사후 대조
 모든 drawer 반환을 모은다. `status`별로 분류: `ok` / `partial` / `render_error` / `needs_input`.
+
+그다음 **dispatch 후 실측 대조**를 돌린다 — preflight `validate_manifest`는 선언값만 보므로, 번호가 실제로 그려졌는지·`source_ref`가 렌더 JSON `source`로 전사됐는지는 여기서 확인한다(③에서 해석한 `$ROOT` 재사용):
+
+```bash
+python3 "$ROOT/scripts/validate_rendered_pairs.py" "{out_dir}/_workspace/units.json"
+```
+
+- **페어 번호**: 같은 `pair_id`의 `rendered_numbers`(sequence `steps[].n` / topology `segments[].n` 실측)를 선언 `segment_numbers`와 대조한다. 불일치면(예: topology가 `[1..4]`를 `[1..6]`으로 쪼갬) 그 **페어를 `partial`로 낮추고 양쪽 번호를 나란히 보고**한다 — **자동 재번호 금지**, 원문·번호는 사람이 확인한다.
+- **source 전사**: `source_ref`가 비어 있지 않은 단위는 렌더 JSON `source`와 **원문 그대로**(정규화 금지) 대조한다. 불일치면 그 단위를 `partial` + 양쪽 값 보고(자동 수정 금지). 렌더 JSON에 애초에 `source`가 없으면 라이트 경로라 건너뛴다.
+
+스크립트는 위반이 있으면 exit 1(`error:`), 대조 불가(렌더 JSON 누락 등)는 `warning:` + exit 0이다. drawer가 자기 `rendered_numbers`를 반환하지 못했으면 이 스크립트가 렌더 JSON에서 직접 실측하므로 대조는 그대로 성립한다.
 
 ### ⑥ 요약 보고
 생성된 파일(json/html/md, 요청 시 pdf/pptx/puml) 목록, 각 단위의 `warnings`, `error`, `questions`를 표로 보고한다. `partial`은 HTML/MD는 유효하지만 요청한 선택 출력 일부가 없는 상태다. 실패가 있어도 성공 산출물은 그대로 남긴다.

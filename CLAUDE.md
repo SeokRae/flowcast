@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
 | `scripts/validate_manifest.py` | router manifest schema 1.0 검증 — drawer dispatch 전 필수 게이트 |
+| `scripts/validate_rendered_pairs.py` | dispatch **후** 실측 대조 — 페어 `rendered_numbers` vs 선언 `segment_numbers` · `source_ref`→렌더 `source` 전사 (자동 수정 없음, 오케스트레이터 ⑤ 훅, stdlib) |
 | `scripts/validate_plugin_manifest.py` | 플러그인 매니페스트 검증 (`plugin.json`·`marketplace.json` 필드·버전 3곳 일치·keywords 부분집합·스킬 경로 실존) — CI 게이트 |
 | `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
 | `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
@@ -22,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/regen-examples.sh` | `examples/*.json` → 예제 html·docs 게시본·puml 일괄 재생성 (골든 회귀 테스트가 누락을 잡는다) |
 | `examples/*.json` | 합성 예제 (실 데이터 없음) |
 | `docs/` | GitHub Pages 사이트 — `index.html` HTML 예제 갤러리 + `plantuml.html` PlantUML 출력 showcase + `examples/*.html`(게시용 복사본) + `examples/puml/*.{puml,svg}`(B-out export·렌더 스냅샷). Pages source = `main` `/docs`. 배포 URL `https://seokrae.github.io/flowcast/` |
-| `tests/*.py` | 7개 — `test_render`(렌더러·골든 회귀) · `test_manifest` · `test_plugin_manifest` · `test_pptx_import` · `test_pptx_export` · `test_plantuml_export` · `test_scan_sensitive` |
+| `tests/*.py` | 9개 — `test_render`(렌더러·골든 회귀) · `test_manifest` · `test_validate_rendered_pairs`(사후 실측 대조) · `test_plugin_manifest` · `test_pptx_import` · `test_pptx_cli` · `test_pptx_export` · `test_plantuml_export` · `test_scan_sensitive` |
 | `requirements-dev.txt` | 개발 의존성 선언 (pytest·python-pptx) — 테스트 전용, 코어는 stdlib만 |
 
 ## 명령어
@@ -35,6 +36,7 @@ bash scripts/regen-examples.sh    # 예제 산출물 재생성 (렌더러 수정
 python3 scripts/render.py {json}               # 기본 → HTML
 python3 scripts/render.py {json} --pdf         # 선택 → HTML+PDF (Chrome 필요)
 python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifest 검증
+python3 scripts/validate_rendered_pairs.py {units.json}  # dispatch 후 실측 대조 (페어 번호·source 전사)
 python3 scripts/validate_plugin_manifest.py        # 플러그인 매니페스트 검증 (CI 게이트)
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
 python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style] [--smetana])
