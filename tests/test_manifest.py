@@ -346,3 +346,67 @@ def test_file_validator_returns_numeric_value_errors(tmp_path, monkeypatch):
         pytest.fail("validate_manifest_file leaked ValueError: {}".format(exc))
 
     assert "invalid JSON/numeric value" in "\n".join(errors)
+
+
+# ── 문서 manifest 예시 ↔ 검증기 동기화 (#97) ──────────────────
+# manifest·dispatch-unit 예시가 3개 문서에 흩어져 있는데 파싱 테스트가 0건이었다.
+# 문서 예시가 검증기 계약과 어긋나면(현재 드리프트 0 — 예방적) 여기서 red 가 된다.
+
+import re  # noqa: E402
+
+_DOCS = (
+    ROOT / "agents" / "diagram-router.md",
+    ROOT / "skills" / "flowcast" / "SKILL.md",
+    ROOT / "agents" / "diagram-drawer.md",
+)
+_JSON_BLOCK = re.compile(r"```json\n(.*?)\n```", re.DOTALL)
+REQUIRED_UNIT_FIELDS = frozenset(_module.REQUIRED_UNIT_FIELDS)
+# dispatch-unit(오케스트레이터→drawer 입력)이 unit 계약 위에 얹는 실행 파라미터.
+# out_dir 은 문서에 placeholder(비-절대경로)로 적혀 있어 unit 계약 대상이 아니다 →
+# 투영에서 제외(치환 아님). 이 집합 단언이 drawer.md·SKILL.md 필드 패리티를 강제한다.
+_EXEC_PARAMS = frozenset(
+    ("out_dir", "vault_iframe", "pdf", "export", "plantuml", "smetana")
+)
+
+
+def _doc_json_blocks():
+    blocks = []
+    for doc in _DOCS:
+        for raw in _JSON_BLOCK.findall(doc.read_text(encoding="utf-8")):
+            obj = json.loads(raw)  # 파싱 실패 자체가 문서 결함 → 그대로 raise
+            if isinstance(obj, dict):
+                blocks.append((doc.name, obj))
+    return blocks
+
+
+def _classify(obj):
+    if "schema_version" in obj and "units" in obj:
+        return "manifest"
+    if "status" in obj:            # drawer 반환 — manifest 계약 대상 아님
+        return "drawer-return"
+    if {"unit_id", "data", "ambiguous"} <= obj.keys():
+        return "dispatch-unit"
+    return "other"
+
+
+def test_doc_manifest_examples_pass_validator():
+    seen = {"manifest": 0, "dispatch-unit": 0}
+    for name, obj in _doc_json_blocks():
+        kind = _classify(obj)
+        if kind == "manifest":
+            seen["manifest"] += 1
+            assert validate_manifest(obj) == [], name
+        elif kind == "dispatch-unit":
+            seen["dispatch-unit"] += 1
+            extra = set(obj) - REQUIRED_UNIT_FIELDS
+            # 필드 패리티: 두 문서의 dispatch-unit 이 같은 실행 파라미터 집합을 써야 한다.
+            assert extra == set(_EXEC_PARAMS), (name, sorted(extra))
+            projected = {k: obj[k] for k in REQUIRED_UNIT_FIELDS if k in obj}
+            manifest = {
+                "schema_version": "1.0",
+                "out_dir": "/tmp/flowcast-out",  # 문서 placeholder 는 제외하고 절대경로로
+                "units": [projected],
+            }
+            assert validate_manifest(manifest) == [], name
+    # 추출 자체가 깨지면(문서 구조 변경 등) 조용히 통과하지 않도록 개수를 고정한다.
+    assert seen == {"manifest": 1, "dispatch-unit": 2}

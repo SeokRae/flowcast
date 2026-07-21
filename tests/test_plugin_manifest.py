@@ -1,6 +1,7 @@
 """Plugin release metadata gate tests."""
 
 import copy
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -12,12 +13,17 @@ import pytest
 
 ROOT = Path(__file__).parent.parent
 SCRIPT = ROOT / "scripts" / "validate_plugin_manifest.py"
+
+_spec = importlib.util.spec_from_file_location("validate_plugin_manifest", SCRIPT)
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
 SKILL_PATHS = (
     "./skills/flowcast",
     "./skills/sequence",
     "./skills/topology",
     "./skills/component",
 )
+AGENT_NAMES = ("diagram-router", "diagram-drawer")
 
 
 def _plugin():
@@ -52,7 +58,14 @@ def _marketplace():
     }
 
 
-def _write_repository(tmp_path, plugin=None, marketplace=None, missing_skill=None):
+def _write_repository(
+    tmp_path,
+    plugin=None,
+    marketplace=None,
+    missing_skill=None,
+    agent_names=None,
+    missing_agent=None,
+):
     repository = tmp_path / "repository"
     metadata_directory = repository / ".claude-plugin"
     scripts_directory = repository / "scripts"
@@ -77,6 +90,20 @@ def _write_repository(tmp_path, plugin=None, marketplace=None, missing_skill=Non
         skill_directory = repository / skill_path
         skill_directory.mkdir(parents=True)
         (skill_directory / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+
+    # agent_names maps file stem -> frontmatter name (differ to force a mismatch).
+    agents_directory = repository / "agents"
+    agents_directory.mkdir()
+    names = {stem: stem for stem in AGENT_NAMES}
+    if agent_names is not None:
+        names.update(agent_names)
+    for stem, name in names.items():
+        if stem == missing_agent:
+            continue
+        (agents_directory / (stem + ".md")).write_text(
+            "---\nname: {}\ndescription: fixture\n---\n# agent\n".format(name),
+            encoding="utf-8",
+        )
     return repository
 
 
@@ -305,6 +332,55 @@ def test_cli_requires_each_declared_skill_to_have_skill_markdown(tmp_path):
 
     assert result.returncode == 1
     assert "plugin.skills[2]: missing SKILL.md" in result.stderr
+
+
+# ── agents/*.md 프론트매터 name 검증 (#97) ────────────────────
+# skills/flowcast/SKILL.md 가 diagram-router/diagram-drawer 를 리터럴 dispatch 하는데
+# 그 이름의 유일 출처인 agents/*.md 의 name 을 다른 게이트가 검사하지 않았다.
+
+def test_cli_accepts_matching_agent_frontmatter(tmp_path):
+    repository = _write_repository(tmp_path)
+
+    result = _run_cli(repository)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_cli_rejects_agent_name_not_matching_stem(tmp_path):
+    repository = _write_repository(
+        tmp_path, agent_names={"diagram-router": "diagram-rooter"}
+    )
+
+    result = _run_cli(repository)
+
+    assert result.returncode == 1
+    assert "agents/diagram-router.md" in result.stderr
+    assert "does not match file stem" in result.stderr
+
+
+def test_cli_rejects_missing_required_agent(tmp_path):
+    repository = _write_repository(tmp_path, missing_agent="diagram-drawer")
+
+    result = _run_cli(repository)
+
+    assert result.returncode == 1
+    assert "required agent(s) missing or misnamed: ['diagram-drawer']" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("frontmatter", "expected"),
+    (
+        ("---\nname: diagram-router\n---\n", ("diagram-router", True)),
+        ('---\nname: "diagram-router"\n---\n', ("diagram-router", True)),
+        ("---\nname: 'diagram-router'\n---\n", ("diagram-router", True)),
+        ("---\r\nname: diagram-router\r\n---\r\n", ("diagram-router", True)),
+        ("no frontmatter here", (None, False)),
+        ("---\ndescription: x\n---\n", (None, True)),
+    ),
+)
+def test_frontmatter_name_tolerates_quotes_and_crlf(frontmatter, expected):
+    # CRLF·따옴표는 유효 YAML — 언쿼팅/정규화 없이 비교하면 유효한 파일을 오거부한다.
+    assert _module._frontmatter_name(frontmatter) == expected
 
 
 @pytest.mark.parametrize(
