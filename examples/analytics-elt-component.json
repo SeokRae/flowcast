@@ -1,0 +1,34 @@
+{
+  "system": "Analytics Platform",
+  "source": "flowcast 합성 예제 (dataflow / ELT + Medallion)",
+  "view": "component",
+  "scenarios": [
+    {
+      "title": "ELT 데이터 파이프라인 (Medallion)",
+      "zones": [{ "id": "platform", "name": "< Data Platform >" }],
+      "nodes": [
+        { "id": "src",     "name": "Source Systems\nOLTP · SaaS · Log",    "kind": "ext", "x": 30,  "y": 40 },
+        { "id": "ingest",  "name": "Ingestion\nBatch · CDC · Stream",      "zone": "platform", "x": 294, "y": 40 },
+        { "id": "dwh",     "name": "Data Warehouse\nBronze→Silver→Gold",   "zone": "platform", "x": 558, "y": 40 },
+        { "id": "consume", "name": "Consumption\nBI · Ad-hoc · ML",        "kind": "ext", "x": 822, "y": 40 }
+      ],
+      "edges": [
+        { "from": "src",    "to": "ingest",  "n": 1, "label": "원천 추출", "protocol": "JDBC / CDC" },
+        { "from": "ingest", "to": "dwh",     "n": 2, "label": "원본 적재", "protocol": "batch write" },
+        { "from": "dwh",    "to": "consume", "n": 3, "label": "집계 제공", "protocol": "SQL / REST" }
+      ]
+    },
+    {
+      "title": "Medallion 계층 상세",
+      "nodes": [
+        { "id": "bronze", "name": "Bronze\n원본 그대로",  "col": 0, "row": 0 },
+        { "id": "silver", "name": "Silver\n정제·표준화", "col": 1, "row": 0 },
+        { "id": "gold",   "name": "Gold\n집계·마트",     "col": 2, "row": 0 }
+      ],
+      "edges": [
+        { "from": "bronze", "to": "silver", "n": 1, "label": "정제 변환" },
+        { "from": "silver", "to": "gold",   "n": 2, "label": "집계 변환" }
+      ]
+    }
+  ]
+}
