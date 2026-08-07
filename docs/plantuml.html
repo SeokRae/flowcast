@@ -142,7 +142,9 @@ plantuml -tsvg out.puml                                     # .puml → SVG (gra
     { view:'topology',  system:'Gateway Platform · 방화벽 경계', file:'firewall-boundary-topology',
       scenarios:['인프라 구성도', '방화벽·L4 통과 FLOW'] },
     { view:'component', system:'Microservice · 결제 처리',      file:'microservice-component',
-      scenarios:['결제 처리 Process', '알림 발송 Process'] }
+      scenarios:['결제 처리 Process', '알림 발송 Process'] },
+    { view:'component', system:'Analytics Platform · ELT 파이프라인', file:'analytics-elt-component',
+      scenarios:['ELT 데이터 파이프라인 (Medallion)', 'Medallion 계층 상세'] }
   ];
 
   function svgName(file, i) {
