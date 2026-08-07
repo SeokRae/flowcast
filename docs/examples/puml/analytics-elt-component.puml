@@ -1,0 +1,63 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Analytics Platform — ELT 데이터 파이프라인 (Medallion)
+' flowcast source: flowcast 합성 예제 (dataflow / ELT + Medallion)
+package "< Data Platform >" {
+  rectangle "Ingestion\nBatch · CDC · Stream" as ingest
+  rectangle "Data Warehouse\nBronze→Silver→Gold" as dwh
+}
+rectangle "Source Systems\nOLTP · SaaS · Log" as src <<ext>>
+rectangle "Consumption\nBI · Ad-hoc · ML" as consume <<ext>>
+
+src --> ingest : 1. 원천 추출\n( JDBC / CDC )
+ingest --> dwh : 2. 원본 적재\n( batch write )
+dwh --> consume : 3. 집계 제공\n( SQL / REST )
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Analytics Platform — Medallion 계층 상세
+' flowcast source: flowcast 합성 예제 (dataflow / ELT + Medallion)
+rectangle "Bronze\n원본 그대로" as bronze
+rectangle "Silver\n정제·표준화" as silver
+rectangle "Gold\n집계·마트" as gold
+
+bronze --> silver : 1. 정제 변환
+silver --> gold : 2. 집계 변환
+@enduml
