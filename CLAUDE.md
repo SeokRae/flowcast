@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|------|
 | `skills/flowcast/` | `/flowcast` 오케스트레이터 — router 호출 → drawer 병렬 팬아웃 → 취합 |
 | `skills/{sequence,topology,component}/` | 뷰별 드로잉 스킬 (`flowcast:{view}`) — 스키마·질의 대본·렌더·파일링 |
+| `skills/dataflow/` | 데이터 파이프라인(ELT+Medallion) 도메인 프리셋 — 질의 대본으로 흐름 문서를 먼저 만들고 `flowcast:component`에 위임(신규 뷰 아님, 사용자 직접 호출 전용) |
 | `agents/diagram-router.md` | 데이터 → 다이어그램 단위 분할 + 뷰 판별 (그리지 않음) |
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
@@ -50,6 +51,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
 - **선택 출력 상태**: `pdf=false`, `export=false`, `plantuml=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다. `plantuml`은 stdlib라 의존성-없음 partial 케이스가 없다. (옵션 전체는 `skills/flowcast/SKILL.md` 옵션표가 단일 진실)
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트, ⑤ 아래 **예제 산출물 재생성**.
+- **도메인 프리셋 스킬**: 기존 뷰(sequence/topology/component) 위에 특정 도메인 질의 대본·관례를 얹는 스킬(예: `skills/dataflow/`)은 새 뷰가 아니다 — `render.py`·router·drawer를 건드리지 않고 렌더는 해당 뷰 스킬에 `Skill` 도구로 위임한다. `agents/diagram-drawer.md`의 디스패치 목록(`sequence`/`topology`/`component` 셋으로 고정)에는 넣지 않는다 — 팬아웃 대상이 아니라 사용자 직접 호출 전용이다.
 - **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. `.svg` 스냅샷은 `plantuml`이 설치돼 있을 때만 갱신된다(없으면 건너뛴다) — **`-nometadata` 필수**: 없으면 PlantUML이 SVG에 심는 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행.
 
 ## 릴리즈
