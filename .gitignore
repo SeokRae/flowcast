@@ -8,3 +8,6 @@ __pycache__/
 flowcast-out/
 _workspace/
 _workspace_prev/
+
+# sr-harness 세션 로컬 상태 — PR 산출물 아님
+.claude/
