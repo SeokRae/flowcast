@@ -228,6 +228,22 @@
       </div>
     </article>
 
+    <article class="card" data-view="topology">
+      <div class="card-preview">
+        <iframe src="examples/gateway-nat-topology.html" loading="lazy" title="게이트웨이 NAT 구성도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/gateway-nat-topology.html" target="_blank" rel="noopener" aria-label="게이트웨이 NAT 구성도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-topology">topology</span>
+        <h3>Gateway Platform · IP/VIP/NAT 구성도</h3>
+        <p>Edge FW(공인 IP) → Ingress VIP(DNAT) → WEB/APP(내부 IP, 이중화, 허용 포트) → Egress VIP(SNAT) → Partner. network-nat 도메인 프리셋.</p>
+        <div class="card-links">
+          <a href="examples/gateway-nat-topology.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/gateway-nat-topology.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+
     <article class="card" data-view="component">
       <div class="card-preview">
         <iframe src="examples/microservice-component.html" loading="lazy" title="마이크로서비스 컴포넌트도 미리보기"></iframe>

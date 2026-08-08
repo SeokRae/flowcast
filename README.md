@@ -61,10 +61,11 @@ flowcast:component  {한 다이어그램 데이터}
 
 직접 호출도 `pdf`·`export`·`plantuml` 기본값은 모두 `false`이며, 필요하면 `pdf=true`처럼 함께 준다. `out_dir`을 주지 않으면 `{cwd}/flowcast-out`의 절대경로가 기본이다. 각 뷰 스킬의 `SKILL.md`에 스키마 필수 필드(`system`)·소스 요건·선택 출력 절차가 있다.
 
-**도메인 프리셋** — 근거 문서 없이 데이터 파이프라인 아키텍처부터 상의하고 싶을 때(4번째 뷰가 아니라 `component` 위의 질의 대본 프리셋):
+**도메인 프리셋** — 근거 문서 없이 특정 도메인 아키텍처부터 상의하고 싶을 때(4번째 뷰가 아니라 기존 뷰 위의 질의 대본 프리셋):
 
 ```
-flowcast:dataflow   {파이프라인을 아는 만큼만 — 문서 없어도 됨}
+flowcast:dataflow      {파이프라인을 아는 만큼만 — 문서 없어도 됨, component 위임}
+flowcast:network-nat   {IP/VIP/NAT/방화벽 구성을 아는 만큼만 — 문서 없어도 됨, topology 위임}
 ```
 
 아래 `python3 scripts/…` 명령은 **레포를 체크아웃한 기준**이다. 플러그인으로 설치해 쓰는 경우 스크립트는 설치 캐시 안에 있다 — 경로는 `~/.claude/plugins/installed_plugins.json`의 `installPath`로 확인한다(설치 경로는 마켓플레이스마다 다르므로 고정 경로를 가정하지 않는다). 스킬·에이전트는 이 해석을 자동으로 한다.

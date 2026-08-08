@@ -1,0 +1,32 @@
+{
+  "system": "Gateway Platform",
+  "source": "flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기)",
+  "view": "topology",
+  "zones": [
+    { "id": "dmz", "name": "DMZ" },
+    { "id": "internal", "name": "내부망" }
+  ],
+  "nodes": [
+    { "id": "client",  "name": "Client",                          "kind": "ext", "col": 0, "row": 0 },
+    { "id": "fw-edge", "name": "Edge Firewall\n공인 203.0.113.10", "kind": "fw",  "col": 1, "row": 0 },
+    { "id": "vip-in",  "name": "Ingress VIP\n10.0.0.10",           "kind": "l4",  "col": 2, "row": 0 },
+    { "id": "web1",    "name": "web1\n10.0.1.11", "zone": "dmz",      "col": 3, "row": 0 },
+    { "id": "app1",    "name": "app1\n10.0.2.21~22", "dual": true, "zone": "internal", "col": 4, "row": 0 },
+    { "id": "vip-out", "name": "Egress VIP\n10.0.0.20",            "kind": "l4",  "col": 5, "row": 0 },
+    { "id": "partner", "name": "Partner API",                      "kind": "ext", "col": 6, "row": 0 }
+  ],
+  "scenarios": [
+    { "title": "네트워크 인프라 구성도" },
+    {
+      "title": "인바운드/아웃바운드 FLOW",
+      "segments": [
+        { "n": 1, "from": "client",  "to": "fw-edge", "label": "인바운드 요청",  "meta": "HTTPS 443, 허용 443" },
+        { "n": 2, "from": "fw-edge", "to": "vip-in",  "label": "방화벽 통과",    "meta": "DNAT 203.0.113.10:443 → 10.0.0.10:443" },
+        { "n": 3, "from": "vip-in",  "to": "web1",    "label": "VIP 분배",      "meta": "TCP, 10.0.0.10 → 백엔드 풀" },
+        { "n": 4, "from": "web1",    "to": "app1",    "label": "내부 호출",     "meta": "AJP 9109, 허용 9109" },
+        { "n": 5, "from": "app1",    "to": "vip-out", "label": "아웃바운드 요청" },
+        { "n": 6, "from": "vip-out", "to": "partner", "label": "SNAT 통과",     "meta": "SNAT 10.0.0.0/16 → 203.0.113.30" }
+      ]
+    }
+  ]
+}
