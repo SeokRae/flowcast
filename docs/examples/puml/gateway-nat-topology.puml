@@ -19,19 +19,33 @@ skinparam package {
   FontColor #475569
 }
 title Gateway Platform — 네트워크 인프라 구성도
-' flowcast source: flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기)
+' flowcast source: flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기, 다계층)
 package "DMZ" {
   rectangle "web1\n10.0.1.11" as web1
+  rectangle "web2\n10.0.1.12" as web2
 }
-package "내부망" {
+package "App Tier" {
   rectangle "app1\n10.0.2.21" as app1
+}
+package "DB Tier" {
+  rectangle "db-primary\n10.0.3.31" as db_primary
+  rectangle "db-replica\n10.0.3.32" as db_replica
+}
+package "관리망" {
+  rectangle "Bastion\n10.0.9.5" as bastion
 }
 rectangle "Client" as client <<ext>>
 rectangle "Edge Firewall\n공인 203.0.113.10" as fw_edge <<fw>>
 rectangle "Ingress VIP\n10.0.0.10" as vip_in <<l4>>
+rectangle "Internal Firewall" as fw_db <<fw>>
 rectangle "Egress VIP\n10.0.0.20" as vip_out <<l4>>
 rectangle "Partner API" as partner <<ext>>
 
+db_primary -- db_replica
+bastion -- web1
+bastion -- web2
+bastion -- app1
+bastion -- db_primary
 @enduml
 
 @startuml
@@ -55,26 +69,42 @@ skinparam package {
   FontColor #475569
 }
 title Gateway Platform — 인바운드/아웃바운드 FLOW
-' flowcast source: flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기)
+' flowcast source: flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기, 다계층)
 package "DMZ" {
   rectangle "web1\n10.0.1.11" as web1
+  rectangle "web2\n10.0.1.12" as web2
 }
-package "내부망" {
+package "App Tier" {
   rectangle "app1\n10.0.2.21" as app1
+}
+package "DB Tier" {
+  rectangle "db-primary\n10.0.3.31" as db_primary
+  rectangle "db-replica\n10.0.3.32" as db_replica
+}
+package "관리망" {
+  rectangle "Bastion\n10.0.9.5" as bastion
 }
 rectangle "Client" as client <<ext>>
 rectangle "Edge Firewall\n공인 203.0.113.10" as fw_edge <<fw>>
 rectangle "Ingress VIP\n10.0.0.10" as vip_in <<l4>>
+rectangle "Internal Firewall" as fw_db <<fw>>
 rectangle "Egress VIP\n10.0.0.20" as vip_out <<l4>>
 rectangle "Partner API" as partner <<ext>>
 
+db_primary -- db_replica
+bastion -- web1
+bastion -- web2
+bastion -- app1
+bastion -- db_primary
 
 client --> fw_edge : 1
 fw_edge --> vip_in : 2
 vip_in --> web1 : 3
 web1 --> app1 : 4
-app1 --> vip_out : 5
-vip_out --> partner : 6
+app1 --> fw_db : 5
+fw_db --> db_primary : 6
+app1 --> vip_out : 7
+vip_out --> partner : 8
 
 legend
 |= # |= 설명 |
@@ -82,7 +112,67 @@ legend
 | 2 | 방화벽 통과\n( DNAT 203.0.113.10:443 → 10.0.0.10:443 ) |
 | 3 | VIP 분배\n( TCP, 10.0.0.10 → 백엔드 풀 ) |
 | 4 | 내부 호출\n( AJP 9109, 허용 9109 ) |
-| 5 | 아웃바운드 요청 |
-| 6 | SNAT 통과\n( SNAT 10.0.0.0/16 → 203.0.113.30 ) |
+| 5 | DB 방화벽 통과 요청\n( 허용 5432(App 대역만) ) |
+| 6 | DB 커넥션\n( PostgreSQL 5432, 허용 5432 ) |
+| 7 | 아웃바운드 요청 |
+| 8 | SNAT 통과\n( SNAT 10.0.0.0/16 → 203.0.113.30 ) |
+end legend
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Gateway Platform — 운영자 접속(SSH) FLOW
+' flowcast source: flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기, 다계층)
+package "DMZ" {
+  rectangle "web1\n10.0.1.11" as web1
+  rectangle "web2\n10.0.1.12" as web2
+}
+package "App Tier" {
+  rectangle "app1\n10.0.2.21" as app1
+}
+package "DB Tier" {
+  rectangle "db-primary\n10.0.3.31" as db_primary
+  rectangle "db-replica\n10.0.3.32" as db_replica
+}
+package "관리망" {
+  rectangle "Bastion\n10.0.9.5" as bastion
+}
+rectangle "Client" as client <<ext>>
+rectangle "Edge Firewall\n공인 203.0.113.10" as fw_edge <<fw>>
+rectangle "Ingress VIP\n10.0.0.10" as vip_in <<l4>>
+rectangle "Internal Firewall" as fw_db <<fw>>
+rectangle "Egress VIP\n10.0.0.20" as vip_out <<l4>>
+rectangle "Partner API" as partner <<ext>>
+
+db_primary -- db_replica
+bastion -- web2
+
+bastion --> web1 : 1
+bastion --> app1 : 2
+bastion --> db_primary : 3
+
+legend
+|= # |= 설명 |
+| 1 | 운영자 접속\n( SSH 22, 허용 22(bastion 대역만) ) |
+| 2 | 운영자 접속\n( SSH 22, 허용 22(bastion 대역만) ) |
+| 3 | 운영자 접속\n( SSH 22, 허용 22(bastion 대역만) ) |
 end legend
 @enduml

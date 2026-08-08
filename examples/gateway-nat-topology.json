@@ -1,31 +1,55 @@
 {
   "system": "Gateway Platform",
-  "source": "flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기)",
+  "source": "flowcast 합성 예제 (topology, network-nat 프리셋: IP/VIP/NAT/포트 방화벽 표기, 다계층)",
   "view": "topology",
   "zones": [
     { "id": "dmz", "name": "DMZ" },
-    { "id": "internal", "name": "내부망" }
+    { "id": "app", "name": "App Tier" },
+    { "id": "db", "name": "DB Tier" },
+    { "id": "mgmt", "name": "관리망" }
   ],
   "nodes": [
-    { "id": "client",  "name": "Client",                          "kind": "ext", "col": 0, "row": 0 },
-    { "id": "fw-edge", "name": "Edge Firewall\n공인 203.0.113.10", "kind": "fw",  "col": 1, "row": 0 },
-    { "id": "vip-in",  "name": "Ingress VIP\n10.0.0.10",           "kind": "l4",  "col": 2, "row": 0 },
-    { "id": "web1",    "name": "web1\n10.0.1.11", "zone": "dmz",      "col": 3, "row": 0 },
-    { "id": "app1",    "name": "app1\n10.0.2.21~22", "dual": true, "zone": "internal", "col": 4, "row": 0 },
-    { "id": "vip-out", "name": "Egress VIP\n10.0.0.20",            "kind": "l4",  "col": 5, "row": 0 },
-    { "id": "partner", "name": "Partner API",                      "kind": "ext", "col": 6, "row": 0 }
+    { "id": "client",     "name": "Client",                          "kind": "ext", "col": 0, "row": 0 },
+    { "id": "fw-edge",    "name": "Edge Firewall\n공인 203.0.113.10", "kind": "fw",  "col": 1, "row": 0 },
+    { "id": "vip-in",     "name": "Ingress VIP\n10.0.0.10",           "kind": "l4",  "col": 2, "row": 0 },
+    { "id": "web1",       "name": "web1\n10.0.1.11", "zone": "dmz", "col": 3, "row": 0 },
+    { "id": "web2",       "name": "web2\n10.0.1.12", "zone": "dmz", "col": 3, "row": 1 },
+    { "id": "app1",       "name": "app1\n10.0.2.21~22", "dual": true, "zone": "app", "col": 4, "row": 0 },
+    { "id": "fw-db",      "name": "Internal Firewall",                "kind": "fw",  "col": 5, "row": 0 },
+    { "id": "db-primary", "name": "db-primary\n10.0.3.31", "zone": "db", "col": 6, "row": 0 },
+    { "id": "db-replica", "name": "db-replica\n10.0.3.32", "zone": "db", "col": 6, "row": 1 },
+    { "id": "vip-out",    "name": "Egress VIP\n10.0.0.20",            "kind": "l4",  "col": 7, "row": 0 },
+    { "id": "partner",    "name": "Partner API",                      "kind": "ext", "col": 8, "row": 0 },
+    { "id": "bastion",    "name": "Bastion\n10.0.9.5", "zone": "mgmt", "col": 4, "row": 2 }
+  ],
+  "links": [
+    { "from": "db-primary", "to": "db-replica" },
+    { "from": "bastion", "to": "web1" },
+    { "from": "bastion", "to": "web2" },
+    { "from": "bastion", "to": "app1" },
+    { "from": "bastion", "to": "db-primary" }
   ],
   "scenarios": [
     { "title": "네트워크 인프라 구성도" },
     {
       "title": "인바운드/아웃바운드 FLOW",
       "segments": [
-        { "n": 1, "from": "client",  "to": "fw-edge", "label": "인바운드 요청",  "meta": "HTTPS 443, 허용 443" },
-        { "n": 2, "from": "fw-edge", "to": "vip-in",  "label": "방화벽 통과",    "meta": "DNAT 203.0.113.10:443 → 10.0.0.10:443" },
-        { "n": 3, "from": "vip-in",  "to": "web1",    "label": "VIP 분배",      "meta": "TCP, 10.0.0.10 → 백엔드 풀" },
-        { "n": 4, "from": "web1",    "to": "app1",    "label": "내부 호출",     "meta": "AJP 9109, 허용 9109" },
-        { "n": 5, "from": "app1",    "to": "vip-out", "label": "아웃바운드 요청" },
-        { "n": 6, "from": "vip-out", "to": "partner", "label": "SNAT 통과",     "meta": "SNAT 10.0.0.0/16 → 203.0.113.30" }
+        { "n": 1, "from": "client",     "to": "fw-edge",    "label": "인바운드 요청",     "meta": "HTTPS 443, 허용 443" },
+        { "n": 2, "from": "fw-edge",    "to": "vip-in",     "label": "방화벽 통과",       "meta": "DNAT 203.0.113.10:443 → 10.0.0.10:443" },
+        { "n": 3, "from": "vip-in",     "to": "web1",       "label": "VIP 분배",         "meta": "TCP, 10.0.0.10 → 백엔드 풀" },
+        { "n": 4, "from": "web1",       "to": "app1",       "label": "내부 호출",         "meta": "AJP 9109, 허용 9109" },
+        { "n": 5, "from": "app1",       "to": "fw-db",      "label": "DB 방화벽 통과 요청", "meta": "허용 5432(App 대역만)" },
+        { "n": 6, "from": "fw-db",      "to": "db-primary", "label": "DB 커넥션",        "meta": "PostgreSQL 5432, 허용 5432" },
+        { "n": 7, "from": "app1",       "to": "vip-out",    "label": "아웃바운드 요청", "rail": -20 },
+        { "n": 8, "from": "vip-out",    "to": "partner",    "label": "SNAT 통과",        "meta": "SNAT 10.0.0.0/16 → 203.0.113.30" }
+      ]
+    },
+    {
+      "title": "운영자 접속(SSH) FLOW",
+      "segments": [
+        { "n": 1, "from": "bastion", "to": "web1",       "label": "운영자 접속", "meta": "SSH 22, 허용 22(bastion 대역만)" },
+        { "n": 2, "from": "bastion", "to": "app1",       "label": "운영자 접속", "meta": "SSH 22, 허용 22(bastion 대역만)" },
+        { "n": 3, "from": "bastion", "to": "db-primary", "label": "운영자 접속", "meta": "SSH 22, 허용 22(bastion 대역만)" }
       ]
     }
   ]

@@ -236,7 +236,7 @@
       <div class="card-body">
         <span class="badge badge-topology">topology</span>
         <h3>Gateway Platform · IP/VIP/NAT 구성도</h3>
-        <p>Edge FW(공인 IP) → Ingress VIP(DNAT) → WEB/APP(내부 IP, 이중화, 허용 포트) → Egress VIP(SNAT) → Partner. network-nat 도메인 프리셋.</p>
+        <p>Edge FW(공인 IP) → Ingress VIP(DNAT) → WEB/APP(이중화)/DB(내부 방화벽 2중 경계) → Egress VIP(SNAT) → Partner, Bastion 관리망 SSH 접속까지. network-nat 도메인 프리셋.</p>
         <div class="card-links">
           <a href="examples/gateway-nat-topology.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
           <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/gateway-nat-topology.json" target="_blank" rel="noopener">JSON 소스</a>

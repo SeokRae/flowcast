@@ -154,4 +154,4 @@ name: {system-kebab}-network
 
 ## 예제
 
-`examples/gateway-nat-topology.json` (합성) — Client → Edge FW(공인 IP) → Ingress VIP(DNAT) → WEB/APP(내부 IP, 허용 포트) → Egress VIP(SNAT) → Partner API 구간.
+`examples/gateway-nat-topology.json` (합성) — Client → Edge FW(공인 IP) → Ingress VIP(DNAT) → WEB(이중 노드)/APP(dual 이중화)/DB(내부 FW 2중 경계, primary+replica) → Egress VIP(SNAT) → Partner API 구간, 별도 시나리오로 Bastion 관리망의 서버별 SSH 접속(허용 포트가 계층마다 다름을 보여주는) FLOW.
