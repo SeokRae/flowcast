@@ -633,13 +633,16 @@ def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
     """흐름 설명 표 모델 — SVG(셀 rect)/pptx(네이티브 add_table) 공용.
 
     항목이 많으면 여러 열로 나눠(다단) 세로 높이를 줄인다 — 슬라이드 fit 시 상단
-    다이어그램이 긴 legend 때문에 축소되는 것을 막기 위함. 각 표는 3열 [# | 단계 | 설명 · 기술].
+    다이어그램이 긴 legend 때문에 축소되는 것을 막기 위함. 각 표는 3열 [# | 단계 | 설명 · 기술] —
+    단, `labelled` 라벨 중 `_split_step_label`이 실제로 단계를 뽑아낸 것이 하나도 없으면
+    단계 열 자체를 생략한 2열 [# | 설명 · 기술]로 낸다(모든 행이 항상 빈칸인 열을 보여주지 않기 위함).
     반환: (tables, maxy, maxx). 각 table =
-      {x, y, w, col_w:[badge,step,desc], header_h, total_h,
+      {x, y, w, col_w:[badge,step,desc], has_step, header_h, total_h,
        rows:[{n, step, desc:[wrapped lines], meta:[wrapped lines], h}]}.
     """
     parsed = [(_split_step_label(sg["label"]), sg) for sg in labelled]
     n = len(labelled)
+    any_step = any(s for (s, _), _ in parsed)
     avail_w = max(diagram_right - leg_x, 360.0)
     max_cols = max(1, int(avail_w // 360))          # 열당 최소 ~360px 확보
     ncol = min(max_cols, max(1, (n + 7) // 8))       # 열당 ~8행 목표 → 세로 높이 억제
@@ -647,7 +650,7 @@ def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
     per_col = (n + ncol - 1) // ncol
     step_chars = max((len(s) for (s, _), _ in parsed), default=0)
     badge_w = T_LEG_BADGE_W
-    step_w = min(max(step_chars * 7.4 + 16, 66), 150)
+    step_w = min(max(step_chars * 7.4 + 16, 66), 150) if any_step else 0
     desc_w = max(col_w - badge_w - step_w - 8, 120)
     desc_wrap = max(18, int(desc_w / 6.6))
     tbl_w = badge_w + step_w + desc_w
@@ -666,7 +669,7 @@ def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
             rows.append({"n": sg.get("n"), "step": step, "desc": dlines, "meta": mlines, "h": rh})
         total_h = T_LEG_HDR_H + sum(r["h"] for r in rows)
         tables.append({"x": tx, "y": tbl_y, "w": tbl_w, "col_w": [badge_w, step_w, desc_w],
-                       "header_h": T_LEG_HDR_H, "total_h": total_h, "rows": rows})
+                       "has_step": any_step, "header_h": T_LEG_HDR_H, "total_h": total_h, "rows": rows})
         maxx = max(maxx, tx + tbl_w)
         bottoms.append(tbl_y + total_h)
     maxy = max(bottoms) if bottoms else tbl_y + T_LEG_HDR_H
@@ -957,18 +960,22 @@ def render_svg_topology(data, scenario):
         for tb in tables:
             tx, ty, tw = tb["x"], tb["y"], tb["w"]
             bw, sw, _dw = tb["col_w"]
+            has_step = tb.get("has_step", True)
             hh, th = tb["header_h"], tb["total_h"]
-            cx1, cx2 = tx + bw, tx + bw + sw           # 열 경계 x (# | 단계 | 설명)
+            cx1, cx2 = tx + bw, tx + bw + sw           # 열 경계 x (# | 단계? | 설명)
+            desc_x = cx2 + 8
             # 헤더 음영 + 외곽/열 경계
             leg_lines.append(f'<rect class="topo-legtbl-hdr" x="{tx}" y="{ty}" width="{tw}" height="{hh}"/>')
             leg_lines.append(f'<rect class="topo-legtbl" x="{tx}" y="{ty}" width="{tw}" height="{th}"/>')
-            for vx in (cx1, cx2):
+            dividers = (cx1, cx2) if has_step else (cx1,)
+            for vx in dividers:
                 leg_lines.append(f'<line class="topo-leggrid" x1="{vx}" y1="{ty}" x2="{vx}" y2="{ty + th}"/>')
             # 헤더 텍스트 (# · 단계 = 중앙, 설명 · 기술 = 좌측)
             step_mid = (cx1 + cx2) / 2
             leg_lines.append(f'<text class="topo-legend-hdr" x="{tx + bw / 2:.1f}" y="{ty + hh - 7}" text-anchor="middle">#</text>')
-            leg_lines.append(f'<text class="topo-legend-hdr" x="{step_mid:.1f}" y="{ty + hh - 7}" text-anchor="middle">단계</text>')
-            leg_lines.append(f'<text class="topo-legend-hdr" x="{cx2 + 8}" y="{ty + hh - 7}">설명 · 기술</text>')
+            if has_step:
+                leg_lines.append(f'<text class="topo-legend-hdr" x="{step_mid:.1f}" y="{ty + hh - 7}" text-anchor="middle">단계</text>')
+            leg_lines.append(f'<text class="topo-legend-hdr" x="{desc_x}" y="{ty + hh - 7}">설명 · 기술</text>')
             # 데이터 행
             ry = ty + hh
             for row in tb["rows"]:
@@ -976,14 +983,14 @@ def render_svg_topology(data, scenario):
                 mid_y = ry + row["h"] / 2 + 4                # # · 단계 수직 중앙
                 if row["n"] is not None:
                     leg_lines.append(f'<text class="topo-legnum" x="{tx + bw / 2:.1f}" y="{mid_y:.1f}" text-anchor="middle">{esc(row["n"])}</text>')
-                if row["step"]:
+                if has_step and row["step"]:
                     leg_lines.append(f'<text class="topo-legend-step" x="{step_mid:.1f}" y="{mid_y:.1f}" text-anchor="middle">{esc(row["step"])}</text>')
                 ly = ry + 15
                 for ln in row["desc"]:
-                    leg_lines.append(f'<text class="topo-legend-tx" x="{cx2 + 8}" y="{ly}">{esc(ln)}</text>')
+                    leg_lines.append(f'<text class="topo-legend-tx" x="{desc_x}" y="{ly}">{esc(ln)}</text>')
                     ly += T_LEG_ROW_LH
                 for ln in row["meta"]:
-                    leg_lines.append(f'<text class="topo-legend-meta" x="{cx2 + 8}" y="{ly}">{esc(ln)}</text>')
+                    leg_lines.append(f'<text class="topo-legend-meta" x="{desc_x}" y="{ly}">{esc(ln)}</text>')
                     ly += T_LEG_ROW_LH
                 ry += row["h"]
     else:

@@ -646,27 +646,33 @@ def export_topology(data, out_path, slide_size="wide"):
             HDR_FILL = (0xEC, 0xEF, 0xF3)
             STEP_C, DESC_C, META_C = (0x1B, 0x26, 0x35), (0x1B, 0x26, 0x35), (0x54, 0x66, 0x7E)
             for tb in leg_tables:
-                gf = shapes.add_table(1 + len(tb["rows"]), 3,
+                has_step = tb.get("has_step", True)
+                ncols = 3 if has_step else 2
+                desc_col = ncols - 1
+                gf = shapes.add_table(1 + len(tb["rows"]), ncols,
                                       emu(tb["x"] + ox), emu(tb["y"] + oy),
                                       emu(tb["w"]), emu(tb["total_h"]))
                 _leg_table_style(gf)
                 table = gf.table
                 bw, sw, dw = tb["col_w"]
                 table.columns[0].width = emu(bw)
-                table.columns[1].width = emu(sw)
-                table.columns[2].width = emu(dw)
+                if has_step:
+                    table.columns[1].width = emu(sw)
+                table.columns[desc_col].width = emu(dw)
                 _leg_cell(table.cell(0, 0), [("#", 8, True, META_C)], PP_ALIGN.CENTER, HDR_FILL, MSO_ANCHOR.MIDDLE)
-                _leg_cell(table.cell(0, 1), [("단계", 8, True, META_C)], PP_ALIGN.CENTER, HDR_FILL, MSO_ANCHOR.MIDDLE)
-                _leg_cell(table.cell(0, 2), [("설명 · 기술", 8, True, META_C)], PP_ALIGN.LEFT, HDR_FILL, MSO_ANCHOR.MIDDLE)
+                if has_step:
+                    _leg_cell(table.cell(0, 1), [("단계", 8, True, META_C)], PP_ALIGN.CENTER, HDR_FILL, MSO_ANCHOR.MIDDLE)
+                _leg_cell(table.cell(0, desc_col), [("설명 · 기술", 8, True, META_C)], PP_ALIGN.LEFT, HDR_FILL, MSO_ANCHOR.MIDDLE)
                 table.rows[0].height = emu(tb["header_h"])
                 for ri, row in enumerate(tb["rows"], 1):
                     num = "" if row["n"] is None else str(row["n"])
                     _leg_cell(table.cell(ri, 0), [(num, 9, True, ACCENT)], PP_ALIGN.CENTER, None, MSO_ANCHOR.MIDDLE)
-                    _leg_cell(table.cell(ri, 1), [(row["step"] or "", 8.5, True, STEP_C)],
-                              PP_ALIGN.CENTER, None, MSO_ANCHOR.MIDDLE)
+                    if has_step:
+                        _leg_cell(table.cell(ri, 1), [(row["step"] or "", 8.5, True, STEP_C)],
+                                  PP_ALIGN.CENTER, None, MSO_ANCHOR.MIDDLE)
                     paras = [(ln, 8.5, False, DESC_C) for ln in row["desc"]] + \
                             [(ln, 7.5, False, META_C) for ln in row["meta"]]
-                    _leg_cell(table.cell(ri, 2), paras or [("", 8.5, False, DESC_C)])
+                    _leg_cell(table.cell(ri, desc_col), paras or [("", 8.5, False, DESC_C)])
                     table.rows[ri].height = emu(row["h"])
 
     prs.save(str(out_path))

@@ -386,6 +386,25 @@ def test_topology_render_overlay_scenario():
     assert w > 0 and h > 0
 
 
+def test_topology_legend_hides_step_column_when_absent():
+    # 세그먼트 label 이 전부 "단계 — 설명" 대시 표기를 쓰지 않으면 단계 열 자체를 생략한다
+    # (모든 행이 항상 빈칸인 열을 보여주지 않기 위함).
+    data = _topo()
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert ">단계<" not in svg
+    assert 'class="topo-legend-step"' not in svg
+    assert ">설명 · 기술<" in svg and ">#<" in svg
+
+
+def test_topology_legend_shows_step_column_when_present():
+    # label 이 "단계 — 설명" 형식(대시, ≤12자 앞구절)을 쓰면 단계 열이 채워진다 (#49 연장).
+    data = _topo()
+    data["scenarios"][1]["segments"][0]["label"] = "요청 접수 — 클라이언트가 호출"
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert ">단계<" in svg
+    assert 'class="topo-legend-step"' in svg and "요청 접수" in svg
+
+
 def test_topology_render_pure_diagram_no_badges():
     data = _topo()
     svg, _, _ = render_svg_topology(data, data["scenarios"][0])  # segments 없음

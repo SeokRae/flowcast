@@ -345,7 +345,9 @@ def test_topology_badges_and_legend(tmp_path):
 
 
 def test_topology_legend_native_table(tmp_path):
-    # 흐름 설명 범례 = 네이티브 표(GraphicFrame) — 헤더 [# | 단계 | 설명 · 기술] + 세그먼트당 1행
+    # 흐름 설명 범례 = 네이티브 표(GraphicFrame) — 헤더 [# | (단계?) | 설명 · 기술] + 세그먼트당 1행.
+    # 단계 열은 라벨 중 하나라도 "단계 — 설명" 형식으로 단계가 뽑힐 때만 낸다(render.py 패리티).
+    R = _mod._load_render()
     data, out, _ = _export_topo(tmp_path)
     prs = Presentation(str(out))
     for i, sc in enumerate(data["scenarios"]):
@@ -355,12 +357,15 @@ def test_topology_legend_native_table(tmp_path):
             assert not tables            # 라벨 없으면 범례 표 없음
             continue
         assert tables
+        any_step = any(R._split_step_label(sg["label"])[0] for sg in labelled)
+        ncols = 3 if any_step else 2
+        expected_header = ["#", "단계", "설명 · 기술"] if any_step else ["#", "설명 · 기술"]
         for t in tables:
-            assert [t.cell(0, c).text for c in range(3)] == ["#", "단계", "설명 · 기술"]
+            assert [t.cell(0, c).text for c in range(ncols)] == expected_header
         data_rows = sum(len(t.rows) - 1 for t in tables)   # 헤더 제외
         assert data_rows == len(labelled)
         cell_text = "\n".join(t.cell(r, c).text
-                              for t in tables for r in range(len(t.rows)) for c in range(3))
+                              for t in tables for r in range(len(t.rows)) for c in range(ncols))
         for sg in labelled:
             assert sg["label"][:12] in cell_text
 
