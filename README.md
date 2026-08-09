@@ -68,6 +68,12 @@ flowcast:dataflow      {파이프라인을 아는 만큼만 — 문서 없어도
 flowcast:network-nat   {IP/VIP/NAT/방화벽 구성을 아는 만큼만 — 문서 없어도 됨, topology 위임}
 ```
 
+**독립 스킬** — 정적 스냅샷이 아니라 계속 바뀌는 상태를 보여주고 싶을 때(`render.py` 파이프라인 밖, 위임 없이 자체 self-contained HTML+JS를 만든다):
+
+```
+flowcast:state-loop     {알고리즘/프로토콜/상태 전이 — STATE→STEP→RENDER→LOOP로 무한 루프 애니메이션 생성}
+```
+
 아래 `python3 scripts/…` 명령은 **레포를 체크아웃한 기준**이다. 플러그인으로 설치해 쓰는 경우 스크립트는 설치 캐시 안에 있다 — 경로는 `~/.claude/plugins/installed_plugins.json`의 `installPath`로 확인한다(설치 경로는 마켓플레이스마다 다르므로 고정 경로를 가정하지 않는다). 스킬·에이전트는 이 해석을 자동으로 한다.
 
 **PPT 입력 변환** — `.pptx` 슬라이드에서 도형·라벨·좌표·커넥터를 draft JSON으로 추출 (drawer가 정제):

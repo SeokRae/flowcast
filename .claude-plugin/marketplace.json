@@ -5,15 +5,15 @@
     "email": "kslbsh@gmail.com"
   },
   "metadata": {
-    "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력하는 Claude Code 플러그인",
-    "version": "0.17.0"
+    "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력하는 Claude Code 플러그인. flowcast:state-loop는 무한 루프로 도는 알고리즘/상태 시각화를 만드는 독립 스킬",
+    "version": "0.18.0"
   },
   "plugins": [
     {
       "name": "flowcast",
       "source": "./",
-      "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력",
-      "version": "0.17.0",
+      "description": "IF/서비스 흐름도 작업 하네스 — 데이터·.pptx를 다이어그램 단위로 라우팅·검증하고 drawer 서브에이전트를 병렬 팬아웃해 sequence·topology·component 뷰를 렌더링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml로 출력. flowcast:state-loop는 무한 루프로 도는 알고리즘/상태 시각화를 만드는 독립 스킬",
+      "version": "0.18.0",
       "author": {
         "name": "SeokRae",
         "email": "kslbsh@gmail.com"
@@ -36,7 +36,10 @@
         "elt",
         "network-topology",
         "nat",
-        "firewall"
+        "firewall",
+        "algorithm-visualization",
+        "animation",
+        "infinite-loop"
       ]
     }
   ]

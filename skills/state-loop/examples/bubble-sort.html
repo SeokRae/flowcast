@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop Engine — Bubble Sort</title>
+<style>
+  :root {
+    --bg: #EEF1E8;
+    --paper: #FFFFFF;
+    --ink: #1B231C;
+    --ink-dim: #57624F;
+    --hairline: rgba(27, 35, 28, 0.14);
+    --accent-signal: #2E7D5B;
+    --accent-compare: #B9762A;
+    --accent-swap: #C2472C;
+    --shadow: 0 1px 2px rgba(20, 26, 18, 0.06), 0 10px 28px -14px rgba(20, 26, 18, 0.22);
+    --radius: 8px;
+
+    /* scope screen is a deliberately fixed dark instrument display —
+       independent of page theme, like real hardware */
+    --scope-bg: #0D1712;
+    --scope-bg-2: #0A130F;
+    --scope-grid: rgba(255, 255, 255, 0.07);
+    --scope-ink: #DCE7DA;
+    --scope-ink-dim: #8FA08D;
+    --scope-signal: #57D69B;
+    --scope-signal-dim: #2E8E68;
+    --scope-compare: #F0B15B;
+    --scope-swap: #F0745A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11150F;
+      --paper: #171D15;
+      --ink: #E7ECE0;
+      --ink-dim: #93A088;
+      --hairline: rgba(231, 236, 224, 0.14);
+      --accent-signal: #4FAE82;
+      --accent-compare: #E3A458;
+      --accent-swap: #E3735A;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 34px -16px rgba(0, 0, 0, 0.65);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11150F;
+    --paper: #171D15;
+    --ink: #E7ECE0;
+    --ink-dim: #93A088;
+    --hairline: rgba(231, 236, 224, 0.14);
+    --accent-signal: #4FAE82;
+    --accent-compare: #E3A458;
+    --accent-swap: #E3735A;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 34px -16px rgba(0, 0, 0, 0.65);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Segoe UI", -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-signal);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: "Helvetica Neue Condensed", "Roboto Condensed", "Arial Narrow", "Noto Sans KR", sans-serif;
+    font-weight: 700;
+    font-size: clamp(28px, 4.6vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 62ch;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: var(--ink-dim);
+  }
+
+  .scope {
+    background: var(--scope-bg);
+    background-image: radial-gradient(120% 140% at 15% -10%, var(--scope-bg-2), var(--scope-bg) 60%);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .scope svg { display: block; width: 100%; height: auto; }
+
+  .scope-label {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    fill: var(--scope-ink-dim);
+  }
+
+  .bar { transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1); }
+  .bar-rect {
+    fill: var(--scope-signal-dim);
+    transition: fill 150ms ease, opacity 150ms ease;
+  }
+  .bar.is-compare .bar-rect { fill: var(--scope-compare); }
+  .bar.is-swap .bar-rect { fill: var(--scope-swap); }
+  .bar.is-settled .bar-rect { fill: var(--scope-signal); }
+  .bar-label {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
+    text-anchor: middle;
+    fill: var(--scope-ink-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rec-dot {
+    fill: var(--scope-swap);
+    animation: pulse 2.1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  @media (prefers-reduced-motion: reduce) {
+    .bar { transition: none; }
+    .rec-dot { animation: none; opacity: 1; }
+  }
+
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .readout-cell {
+    padding: 14px 16px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .readout-cell:first-child { border-left: none; }
+  .readout-label {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--scope-ink-dim);
+    margin: 0 0 6px;
+  }
+  .readout-value {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 18px;
+    color: var(--scope-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button, .segmented button {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 9px 14px;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(20, 26, 18, 0.04);
+  }
+  button:hover { border-color: var(--accent-signal); color: var(--accent-signal); }
+  button:focus-visible {
+    outline: 2px solid var(--accent-signal);
+    outline-offset: 2px;
+  }
+  .segmented { display: inline-flex; border: 1px solid var(--hairline); border-radius: 6px; overflow: hidden; }
+  .segmented button { border: none; border-radius: 0; box-shadow: none; }
+  .segmented button + button { border-left: 1px solid var(--hairline); }
+  .segmented button[aria-pressed="true"] { background: var(--accent-signal); color: #fff; }
+  #playToggle[aria-pressed="true"] { border-color: var(--accent-signal); color: var(--accent-signal); }
+
+  .arch h2 {
+    font-family: "Helvetica Neue Condensed", "Roboto Condensed", "Arial Narrow", "Noto Sans KR", sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    margin: 0 0 6px;
+  }
+  .arch .lede { margin-bottom: 20px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .card-tag {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--accent-signal);
+    margin: 0 0 8px;
+  }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-dim); }
+
+  .code {
+    background: var(--scope-bg);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    overflow-x: auto;
+  }
+  .code pre {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--scope-ink);
+    white-space: pre;
+  }
+  .code-caption {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    margin: 0 0 10px;
+  }
+
+  footer {
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    border-top: 1px solid var(--hairline);
+    padding-top: 18px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">Pattern proof · state → step → render → loop</p>
+    <h1>버블 정렬, 무한히 반복하다</h1>
+    <p class="lede">
+      알고리즘 한 스텝을 상태로 표현하고 그 상태를 그림으로 옮기는 최소 엔진입니다.
+      정렬이 끝나면 잠깐 멈췄다가 배열을 다시 섞어 처음부터 반복합니다 —
+      이 리셋이 있어야 루프가 무한해집니다.
+    </p>
+  </header>
+
+  <section class="scope" aria-label="버블 정렬 라이브 시각화">
+    <svg id="stage" viewBox="0 0 720 240" role="img" aria-label="12개 막대가 값 순서대로 정렬되는 과정을 실시간으로 보여주는 버블 정렬 애니메이션">
+      <text class="scope-label" x="24" y="22">BUBBLE SORT — LIVE</text>
+      <circle class="rec-dot" cx="694" cy="18" r="4"></circle>
+      <line x1="54" y1="180" x2="666" y2="180" stroke="var(--scope-grid)" stroke-width="1"></line>
+      <line x1="54" y1="130" x2="666" y2="130" stroke="var(--scope-grid)" stroke-width="1" stroke-dasharray="2 4"></line>
+      <line x1="54" y1="80" x2="666" y2="80" stroke="var(--scope-grid)" stroke-width="1" stroke-dasharray="2 4"></line>
+      <g id="bars"></g>
+    </svg>
+    <div class="readout" id="readout" aria-live="off">
+      <div class="readout-cell">
+        <p class="readout-label">Loop</p>
+        <p class="readout-value" id="stat-loop">1</p>
+      </div>
+      <div class="readout-cell">
+        <p class="readout-label">Pass</p>
+        <p class="readout-value" id="stat-pass">1</p>
+      </div>
+      <div class="readout-cell">
+        <p class="readout-label">Comparisons</p>
+        <p class="readout-value" id="stat-comparisons">0</p>
+      </div>
+      <div class="readout-cell">
+        <p class="readout-label">Phase</p>
+        <p class="readout-value" id="stat-phase">COMPARE</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button id="playToggle" type="button" aria-pressed="true">Pause</button>
+    <div class="segmented" role="group" aria-label="재생 속도">
+      <button type="button" data-speed="slow" aria-pressed="false">느리게</button>
+      <button type="button" data-speed="normal" aria-pressed="true">보통</button>
+      <button type="button" data-speed="fast" aria-pressed="false">빠르게</button>
+    </div>
+    <button id="reshuffle" type="button">지금 다시 섞기</button>
+  </div>
+
+  <section class="arch">
+    <h2>이 패턴을 다른 알고리즘에 쓰려면</h2>
+    <p class="lede">네 조각으로 나뉩니다. 알고리즘이 바뀌어도 STEP 하나만 새로 짜면 되고, RENDER·LOOP는 그대로 재사용합니다.</p>
+    <div class="cards">
+      <div class="card">
+        <p class="card-tag">STATE</p>
+        <p>정렬 배열, 비교 중인 인덱스, 비교·스왑 횟수, 완료 여부. 알고리즘이 "지금 어디에 있는지"를 통째로 담는 순수 객체입니다.</p>
+      </div>
+      <div class="card">
+        <p class="card-tag">STEP</p>
+        <p>한 번 호출하면 정확히 한 번의 비교(필요하면 스왑)만 진행합니다. 알고리즘 로직은 여기 한 곳에만 있어서, 다른 알고리즘으로 바꿀 땐 이 함수만 새로 짜면 됩니다.</p>
+      </div>
+      <div class="card">
+        <p class="card-tag">RENDER</p>
+        <p>state.arr의 순서를 읽어 각 막대를 자기 슬롯으로 옮길 뿐, 정렬 로직은 전혀 모릅니다. CSS transition이 이동을 매끄럽게 그려줍니다.</p>
+      </div>
+      <div class="card">
+        <p class="card-tag">LOOP</p>
+        <p>state.sorted가 되면 잠깐 멈췄다가 배열을 다시 섞어 state를 초기화합니다. 이 리셋이 있어야 "무한히 도는 이미지"가 됩니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="code">
+    <p class="code-caption">실제로 쓰인 STEP 함수 — 이 화면이 매 260ms마다 부르는 전부입니다</p>
+    <pre><code>function doStep(state) {
+  const { arr, n } = state;
+  if (state.j > n - state.i - 2) {
+    state.i += 1; state.j = 0;
+    if (state.i >= n - 1) { state.sorted = true; state.phase = 'sorted'; state.active = []; return; }
+  }
+  const a = state.j, b = state.j + 1;
+  state.active = [a, b];
+  state.comparisons += 1;
+  if (arr[a].value > arr[b].value) {
+    [arr[a], arr[b]] = [arr[b], arr[a]];
+    state.phase = 'swap'; state.swaps += 1;
+  } else {
+    state.phase = 'compare';
+  }
+  state.j += 1;
+}</code></pre>
+  </section>
+
+  <footer>
+    O(n²) 비교 · 매 루프 시작마다 12개 값을 다시 섞어 처음부터 재생합니다.
+    <br>reduced-motion 환경에서는 막대 이동 애니메이션과 REC 점멸을 끕니다.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var N = 12;
+  var VALUE_POOL = [12, 18, 24, 31, 37, 44, 50, 57, 63, 70, 79, 88];
+  var SPEEDS = { slow: 900, normal: 520, fast: 240 };
+  var PAUSE_MS = 1500;
+  var MARGIN = 54, BAR_W = 40, GAP = 12, PLOT_BOTTOM = 180, PLOT_HEIGHT = 150;
+
+  var svgBars = document.getElementById('bars');
+  var barEls = {};
+  var barRects = {};
+
+  function shuffled(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function makeItems() {
+    return VALUE_POOL.map(function (v, id) { return { id: id, value: v }; });
+  }
+
+  function slotX(index) { return MARGIN + index * (BAR_W + GAP); }
+
+  function setupBars(items) {
+    items.forEach(function (item) {
+      var h = (item.value / 100) * PLOT_HEIGHT;
+      var y = PLOT_BOTTOM - h;
+      var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'bar');
+      g.id = 'bar-' + item.id;
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('class', 'bar-rect');
+      rect.setAttribute('width', BAR_W);
+      rect.setAttribute('height', h);
+      rect.setAttribute('x', 0);
+      rect.setAttribute('y', y);
+      rect.setAttribute('rx', 3);
+      var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('class', 'bar-label');
+      text.setAttribute('x', BAR_W / 2);
+      text.setAttribute('y', PLOT_BOTTOM + 16);
+      text.textContent = item.value;
+      g.appendChild(rect);
+      g.appendChild(text);
+      svgBars.appendChild(g);
+      barEls[item.id] = g;
+      barRects[item.id] = rect;
+    });
+  }
+
+  function freshState() {
+    return {
+      arr: shuffled(makeItems()),
+      i: 0, j: 0, n: N,
+      comparisons: 0, swaps: 0,
+      phase: 'compare', active: [], sorted: false,
+      loop: 1
+    };
+  }
+
+  var state = freshState();
+  setupBars(state.arr);
+
+  function doStep(state) {
+    var arr = state.arr, n = state.n;
+    if (state.j > n - state.i - 2) {
+      state.i += 1; state.j = 0;
+      if (state.i >= n - 1) { state.sorted = true; state.phase = 'sorted'; state.active = []; return; }
+    }
+    var a = state.j, b = state.j + 1;
+    state.active = [a, b];
+    state.comparisons += 1;
+    if (arr[a].value > arr[b].value) {
+      var t = arr[a]; arr[a] = arr[b]; arr[b] = t;
+      state.phase = 'swap'; state.swaps += 1;
+    } else {
+      state.phase = 'compare';
+    }
+    state.j += 1;
+  }
+
+  function restart(state) {
+    var loop = state.loop + 1;
+    var fresh = freshState();
+    fresh.loop = loop;
+    Object.assign(state, fresh);
+  }
+
+  function render(state) {
+    state.arr.forEach(function (item, idx) {
+      var g = barEls[item.id];
+      g.style.transform = 'translateX(' + slotX(idx) + 'px)';
+      var isActive = state.active.indexOf(idx) !== -1;
+      var isSettled = idx >= state.n - state.i;
+      g.classList.toggle('is-compare', isActive && state.phase === 'compare');
+      g.classList.toggle('is-swap', isActive && state.phase === 'swap');
+      g.classList.toggle('is-settled', state.sorted || (isSettled && !isActive));
+    });
+
+    document.getElementById('stat-loop').textContent = state.loop;
+    document.getElementById('stat-pass').textContent = state.sorted ? '완료' : (state.i + 1);
+    document.getElementById('stat-comparisons').textContent = state.comparisons;
+    var phaseLabel = state.sorted ? 'SORTED' : (state.phase === 'swap' ? 'SWAP' : 'COMPARE');
+    document.getElementById('stat-phase').textContent = phaseLabel;
+  }
+
+  render(state);
+
+  var playing = true;
+  var speed = 'normal';
+  var timer = null;
+
+  function scheduleNext() {
+    clearTimeout(timer);
+    if (!playing) return;
+    var delay = state.sorted ? PAUSE_MS : SPEEDS[speed];
+    timer = setTimeout(tick, delay);
+  }
+
+  function tick() {
+    if (state.sorted) { restart(state); } else { doStep(state); }
+    render(state);
+    scheduleNext();
+  }
+
+  scheduleNext();
+
+  document.getElementById('playToggle').addEventListener('click', function () {
+    playing = !playing;
+    this.textContent = playing ? 'Pause' : 'Play';
+    this.setAttribute('aria-pressed', String(playing));
+    if (playing) scheduleNext(); else clearTimeout(timer);
+  });
+
+  document.querySelectorAll('.segmented button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      speed = btn.getAttribute('data-speed');
+      document.querySelectorAll('.segmented button').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      scheduleNext();
+    });
+  });
+
+  document.getElementById('reshuffle').addEventListener('click', function () {
+    restart(state);
+    render(state);
+    scheduleNext();
+  });
+})();
+</script>
+</body>
+</html>
