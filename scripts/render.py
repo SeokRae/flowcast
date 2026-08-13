@@ -1191,7 +1191,7 @@ LIGHT_VARS = """
       --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
       --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
       --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
-      --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
+      --line:#3f4b5c; --line-soft:#93a1b3;
       --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
       --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
       --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
@@ -1205,7 +1205,7 @@ CSS = """
       --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
       --tone-danger:#f87171; --tone-warn:#fbbf24; --tone-info:#38bdf8;
       --atone-slate:#64748b; --atone-violet:#7c74ff; --atone-deep:#2a2170; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.72);
-      --line:rgba(104,182,255,0.75); --line-soft:rgba(140,166,205,0.55);
+      --line:#c3cedd; --line-soft:#76839a;
       --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
       --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
       --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
@@ -1242,7 +1242,7 @@ CSS = """
     .mk-req,.mk-self{fill:var(--line);}
     .mk-res,.mk-relay{fill:var(--line-soft);}
     text{font-family:var(--font);}
-    .lb-req,.lb-self{fill:var(--accent);font-size:12px;font-weight:600;}
+    .lb-req,.lb-self{fill:var(--text);font-size:12px;font-weight:600;}
     .lb-res{fill:var(--muted);font-size:12px;}
     .lb-relay{fill:var(--muted);font-size:11.5px;font-style:italic;}
     .lb-sub{fill:var(--muted);font-size:11px;font-weight:400;font-family:var(--mono);}
