@@ -174,6 +174,28 @@ def test_validate_bad_kind():
     assert any("잘못된 kind" in e for e in errors)
 
 
+def test_validate_bad_tone():
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "critical"
+    errors, _ = validate(data)
+    assert any("잘못된 tone" in e for e in errors)
+
+
+def test_validate_bad_actor_tone():
+    data = _base()
+    data["actors"][0]["tone"] = "neon"
+    errors, _ = validate(data)
+    assert any("잘못된 tone" in e for e in errors)
+
+
+def test_validate_accepts_valid_tones():
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "danger"
+    data["actors"][0]["tone"] = "slate"
+    errors, _ = validate(data)
+    assert errors == []
+
+
 def test_validate_duplicate_n_is_warning_not_error():
     data = _base()
     data["scenarios"][0]["steps"][1]["n"] = 1
@@ -348,9 +370,49 @@ def test_render_svg_contains_core_elements():
     svg, w, h = render_svg(data, data["scenarios"][0])
     assert "액터A" in svg and "액터B" in svg and "존1" in svg
     assert 'class="ar-req ar"' in svg and 'class="ar-res ar"' in svg
-    assert 'class="lifeline"' in svg and 'class="act-bar"' in svg
+    assert 'class="lifeline"' in svg
     assert "1. 요청" in svg and "2. 응답" in svg
     assert w > 0 and h > 0
+
+
+def test_activation_bars_are_off_by_default():
+    """액티베이션 바는 기본으로 그리지 않는다 (#128).
+
+    막대가 화살표의 시작·끝을 가리고 세로 시각 요소를 배로 늘려 흐름이 덜 읽힌다.
+    """
+    svg, _, _ = render_svg(_base(), _base()["scenarios"][0])
+    assert 'class="act-bar"' not in svg
+
+
+def test_activation_bars_opt_in_and_split_by_step():
+    """bars=true 면 그리되, 참여자별 통짜가 아니라 스텝 단위로 끊는다 (#128)."""
+    data = _base()
+    data["bars"] = True
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert svg.count('class="act-bar"') >= 2
+
+
+def test_tone_marks_line_and_label():
+    """tone 은 kind 와 직교한다 — 같은 req 라도 의미색이 따로 붙는다 (#128)."""
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "danger"
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert "ar-req ar tone-danger" in svg
+    assert "lb-req tone-danger" in svg
+    assert "url(#mk-tone-danger)" in svg
+
+
+def test_actor_tone_marks_box():
+    data = _base()
+    data["actors"][0]["tone"] = "violet"
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert 'class="actor atone-violet"' in svg
+
+
+def test_step_without_tone_renders_as_before():
+    """tone 없는 입력은 종전과 같아야 한다 — 기존 JSON 무영향 보증."""
+    svg, _, _ = render_svg(_base(), _base()["scenarios"][0])
+    assert "tone-" not in svg.replace("mk-tone-", "")  # defs 의 marker 정의는 제외
 
 
 def test_render_svg_empty_label_res_has_arrow_only():

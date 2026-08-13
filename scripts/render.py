@@ -8,11 +8,13 @@
     system    : 시스템명 (필수)
     source    : 원본 출처 표기 (권장 — 없으면 계보 warning, 라이트 경로 예외)
     zones[]   : { id, name } — 액터 그룹 밴드 (선택)
-    actors[]  : { id, name, zone?, port?, line? } — 배열 순서 = 좌→우 레인 순서
+    actors[]  : { id, name, zone?, port?, line?, tone? } — 배열 순서 = 좌→우 레인 순서
     scenarios[]: { title, steps[] }
-    steps[]   : { n?, from, to, label, kind, sub?, protocol? }
+    steps[]   : { n?, from, to, label, kind, sub?, protocol?, tone? }
                 kind: req(실선) | res(점선 응답) | relay(중계) | self(자기호출) | note(설명 박스)
+                tone: 선의 의미(형태와 직교) — danger(취소·차단) | warn(환불·되돌림) | info(선택 단계)
                 label 개행(\\n) = 다단 라벨. n 중복은 warning(원문 보존 허용).
+    bars      : true 면 액티베이션 바를 그린다 (기본 false — 아래 설계 결정 참조)
 
     view      : "sequence"(기본) | "topology" | "component"
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
@@ -46,6 +48,11 @@ if str(_HERE) not in sys.path:
 from _cli import load_json  # noqa: E402
 
 KINDS = {"req", "res", "relay", "self", "note"}
+# 선의 "형태"는 kind, "의미"는 tone 으로 나눈다. 한 축에 섞으면 점선인 환불 응답 같은
+# 조합을 표현할 수 없고 kind 가 조합마다 늘어난다.
+TONES = {"danger", "warn", "info"}
+# 액터 박스 색. 역할이 여럿일 때 레인을 색으로 구분한다.
+ACTOR_TONES = {"slate", "violet", "deep"}
 
 # ── 레이아웃 상수 ──────────────────────────────────────────────
 LANE_W = 170          # 레인 폭
@@ -194,6 +201,9 @@ def validate(data):
             errors.append(f"actors[{ai}]: actor는 object여야 함")
             continue
         valid_actors.append(actor)
+        atone = actor.get("tone")
+        if atone is not None and (not isinstance(atone, str) or atone not in ACTOR_TONES):
+            errors.append(f"actors[{ai}]: 잘못된 tone '{atone}' (허용: {sorted(ACTOR_TONES)})")
         actor_id = actor.get("id")
         if _valid_id(actor_id):
             ids.append(actor_id)
@@ -237,6 +247,9 @@ def validate(data):
                     errors.append(f"{where}: 미정의 actor 참조 {key}='{st.get(key)}'")
             if kind == "note" and not st.get("label"):
                 errors.append(f"{where}: note에 label 필수")
+            tone = st.get("tone")
+            if tone is not None and (not isinstance(tone, str) or tone not in TONES):
+                errors.append(f"{where}: 잘못된 tone '{tone}' (허용: {sorted(TONES)})")
             n = st.get("n")
             if n is not None:
                 _append_duplicate_warning(
@@ -424,6 +437,7 @@ def layout_sequence(data, scenario):
         touched.setdefault(aid, []).append(y)
 
     cur = y0
+    msgs = []          # (y, from, to) — 액티베이션 구간 계산용
     for st in scenario["steps"]:
         kind = st["kind"]
         label = st.get("label", "")
@@ -443,9 +457,10 @@ def layout_sequence(data, scenario):
         xa, xb = cx[st["from"]], cx[st["to"]]
         touch(st["from"], y)
         touch(st["to"], y)
+        msgs.append((y, st["from"], st["to"]))
         mid = (xa + xb) / 2
 
-        rec = {"type": "msg", "kind": kind, "self": kind == "self", "y": y,
+        rec = {"type": "msg", "kind": kind, "tone": st.get("tone"), "self": kind == "self", "y": y,
                "mid": mid, "lines": lines, "x1": None, "x2": None, "self_x": None, "extras": []}
         if kind == "self":
             rec["self_x"] = xa + ACT_W / 2
@@ -470,15 +485,41 @@ def layout_sequence(data, scenario):
         zx2 = ML + LANE_W * idx[-1] + LANE_W - 8
         zone_bands.append({"name": z["name"], "x1": zx1, "x2": zx2})
 
-    actor_recs = [{"id": a["id"], "x": cx[a["id"]], "name": a["name"],
+    actor_recs = [{"id": a["id"], "x": cx[a["id"]], "name": a["name"], "tone": a.get("tone"),
                    "attrs": " · ".join(str(a[k]) for k in ("port", "line") if a.get(k))}
                   for a in actors]
-    bars = [{"x": cx[aid] - ACT_W / 2, "y": min(ys) - 10, "h": max(ys) - min(ys) + 20}
-            for aid, ys in touched.items()]
+    bars = _activation_bars(msgs, cx) if data.get("bars") else []
 
     return {"width": width, "height": height, "zone_y": zone_y, "box_y": box_y,
             "bottom": bottom, "actors": actor_recs, "zones": zone_bands,
             "steps": steps, "bars": bars}
+
+
+def _activation_bars(msgs, cx):
+    """액티베이션 바 — 받은 시점부터 자신이 다음으로 보내는 시점까지. 겹치면 병합.
+
+    전 구간을 통으로 칠하면 2~3자 시퀀스에서 거의 항상 처음부터 끝까지가 되어
+    굵은 라이프라인과 다를 바 없다(#128). 기본은 아예 그리지 않는다 — 막대가
+    화살표의 시작·끝을 가리고 세로 시각 요소를 배로 늘려 흐름이 덜 읽힌다.
+    """
+    PAD, MIN_H = 10, 20
+    spans = {}
+    for i, (y, src, dst) in enumerate(msgs):
+        end = next((y2 for y2, s2, _ in msgs[i + 1:] if s2 == dst), None)
+        spans.setdefault(dst, []).append([y - PAD, (end if end is not None else y + MIN_H) + PAD])
+        spans.setdefault(src, []).append([y - PAD, y + PAD])
+
+    bars = []
+    for aid, runs in spans.items():
+        runs.sort()
+        merged = []
+        for lo, hi in runs:
+            if merged and lo <= merged[-1][1] + 2:
+                merged[-1][1] = max(merged[-1][1], hi)
+            else:
+                merged.append([lo, hi])
+        bars += [{"x": cx[aid] - ACT_W / 2, "y": lo, "h": hi - lo} for lo, hi in merged]
+    return bars
 
 
 # ── SVG 생성 ──────────────────────────────────────────────────
@@ -496,20 +537,24 @@ def render_svg(data, scenario):
             continue
 
         kind, y, lines, mid = st["kind"], st["y"], st["lines"], st["mid"]
+        # 형태(kind)와 의미(tone)는 직교한다 — 클래스를 겹쳐 얹고 CSS 가 색만 덮는다.
+        tone = st.get("tone")
+        tcls = f" tone-{tone}" if tone else ""
+        mk = f"mk-tone-{tone}" if tone else f"mk-{kind}"
         if st["self"]:
             x = st["self_x"]
-            body.append(f'<path class="ar-{kind} ar" d="M{x},{y - 14} C{x + 44},{y - 14} {x + 44},{y} {x},{y}" marker-end="url(#mk-{kind})"/>')
+            body.append(f'<path class="ar-{kind} ar{tcls}" d="M{x},{y - 14} C{x + 44},{y - 14} {x + 44},{y} {x},{y}" marker-end="url(#{mk})"/>')
             for i, ln in enumerate(lines):
-                body.append(f'<text class="lb-{kind}" x="{x + 52}" y="{y - 14 - 4 - LBL_LH * (len(lines) - 1 - i)}">{esc(ln)}</text>')
+                body.append(f'<text class="lb-{kind}{tcls}" x="{x + 52}" y="{y - 14 - 4 - LBL_LH * (len(lines) - 1 - i)}">{esc(ln)}</text>')
         else:
             x1, x2 = st["x1"], st["x2"]
-            body.append(f'<line class="ar-{kind} ar" x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" marker-end="url(#mk-{kind})"/>')
+            body.append(f'<line class="ar-{kind} ar{tcls}" x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" marker-end="url(#{mk})"/>')
             for i, ln in enumerate(lines):
-                body.append(f'<text class="lb-{kind}" x="{mid}" y="{y - 6 - LBL_LH * (len(lines) - 1 - i)}" text-anchor="middle">{esc(ln)}</text>')
+                body.append(f'<text class="lb-{kind}{tcls}" x="{mid}" y="{y - 6 - LBL_LH * (len(lines) - 1 - i)}" text-anchor="middle">{esc(ln)}</text>')
 
         extra_y = y + EXTRA_LH
         for cls, val in st["extras"]:
-            body.append(f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">( {esc(val)} )</text>' if cls == "proto"
+            body.append(f'<text class="lb-{cls}{tcls}" x="{mid}" y="{extra_y}" text-anchor="middle">( {esc(val)} )</text>' if cls == "proto"
                         else f'<text class="lb-{cls}" x="{mid}" y="{extra_y}" text-anchor="middle">{esc(val)}</text>')
             extra_y += EXTRA_LH
 
@@ -525,11 +570,12 @@ def render_svg(data, scenario):
         head.append(f'<line class="lifeline" x1="{x}" y1="{box_y + BOX_H}" x2="{x}" y2="{bottom}"/>')
     for a in L["actors"]:
         x, attrs = a["x"], a["attrs"]
-        head.append(f'<rect class="actor" x="{x - BOX_W / 2}" y="{box_y}" width="{BOX_W}" height="{BOX_H}" rx="9"/>')
+        atone = f' atone-{a["tone"]}' if a.get("tone") else ""
+        head.append(f'<rect class="actor{atone}" x="{x - BOX_W / 2}" y="{box_y}" width="{BOX_W}" height="{BOX_H}" rx="9"/>')
         ny = box_y + (BOX_H / 2 + 4 if not attrs else BOX_H / 2 - 3)
-        head.append(f'<text class="actor-tx" x="{x}" y="{ny}" text-anchor="middle">{esc(a["name"])}</text>')
+        head.append(f'<text class="actor-tx{atone}" x="{x}" y="{ny}" text-anchor="middle">{esc(a["name"])}</text>')
         if attrs:
-            head.append(f'<text class="actor-sub" x="{x}" y="{box_y + BOX_H / 2 + 15}" text-anchor="middle">{esc(attrs)}</text>')
+            head.append(f'<text class="actor-sub{atone}" x="{x}" y="{box_y + BOX_H / 2 + 15}" text-anchor="middle">{esc(attrs)}</text>')
     for b in L["bars"]:
         head.append(f'<rect class="act-bar" x="{b["x"]}" y="{b["y"]}" width="{ACT_W}" height="{b["h"]}" rx="2"/>')
 
@@ -537,6 +583,10 @@ def render_svg(data, scenario):
         f'<marker id="mk-{k}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'
         f'<path class="mk mk-{k}" d="M0,0 L0,8 L8,4z"/></marker>'
         for k in ("req", "res", "relay", "self"))
+    markers += "".join(
+        f'<marker id="mk-tone-{t}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'
+        f'<path class="mk mk-tone-{t}" d="M0,0 L0,8 L8,4z"/></marker>'
+        for t in sorted(TONES))
     svg = (f'<svg viewBox="0 0 {width} {height}" style="width:100%;display:block;" '
            f'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{esc(scenario["title"])}">'
            f'<defs>{markers}</defs>{"".join(head)}{"".join(body)}</svg>')
@@ -1136,6 +1186,8 @@ def render_svg_component(data, scenario):
 LIGHT_VARS = """
       --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
       --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
       --line:rgba(31,111,208,0.42); --line-soft:rgba(31,111,208,0.30);
       --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
       --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
@@ -1148,6 +1200,8 @@ CSS = """
     :root {
       --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
       --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --tone-danger:#f87171; --tone-warn:#fbbf24; --tone-info:#38bdf8;
+      --atone-slate:#64748b; --atone-violet:#7c74ff; --atone-deep:#2a2170; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.72);
       --line:rgba(104,182,255,0.75); --line-soft:rgba(140,166,205,0.55);
       --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
       --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
@@ -1188,10 +1242,21 @@ CSS = """
     .lb-req,.lb-self{fill:var(--accent);font-size:12px;font-weight:600;}
     .lb-res{fill:var(--muted);font-size:12px;}
     .lb-relay{fill:var(--muted);font-size:11.5px;font-style:italic;}
-    .lb-sub{fill:var(--warn);font-size:11px;font-weight:600;}
+    .lb-sub{fill:var(--muted);font-size:11px;font-weight:400;font-family:var(--mono);}
     .lb-proto{fill:var(--muted);font-size:10.5px;font-family:var(--mono);}
-    .note{fill:var(--note-bg);stroke:var(--note-bd);stroke-width:1.3;}
-    .note-tx{fill:var(--text);font-size:11.5px;}
+    .note{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.2;stroke-dasharray:4,3;}
+    .note-tx{fill:var(--accent);font-size:11.5px;font-weight:600;}
+    .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
+    .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
+    .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}
+    .mk-tone-danger{fill:var(--tone-danger);}
+    .mk-tone-warn{fill:var(--tone-warn);}
+    .mk-tone-info{fill:var(--tone-info);}
+    .actor.atone-slate{fill:var(--atone-slate);stroke:var(--atone-slate);}
+    .actor.atone-violet{fill:var(--atone-violet);stroke:var(--atone-violet);}
+    .actor.atone-deep{fill:var(--atone-deep);stroke:var(--atone-deep);}
+    .actor-tx.atone-slate,.actor-tx.atone-violet,.actor-tx.atone-deep{fill:var(--atone-tx);}
+    .actor-sub.atone-slate,.actor-sub.atone-violet,.actor-sub.atone-deep{fill:var(--atone-sub);}
     /* ── 토폴로지(구성도) 뷰 ── */
     .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
     .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
