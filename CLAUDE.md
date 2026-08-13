@@ -69,6 +69,12 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **z-순서** — topology·component는 존 → 커넥터 → 노드 순으로 그린다. 노드가 관통 선을 가려야 해서다. HTML·pptx 양쪽 동일 (#25).
 - **rectangle 뷰 기본 레이아웃은 dot** — `!pragma layout smetana`는 캔버스를 클리핑한다(자체 예제에서 라벨 절단 확인). `--smetana`는 graphviz 없는 환경용 opt-in이며 요청 없이 켜지 않는다 (#55).
 - **topology `.puml`은 엣지에 번호만, 설명은 `legend`로** — 한 pair에 링크와 세그먼트가 겹치면 PlantUML이 라벨을 같은 지점에 스택해 노드명까지 가린다 (#57).
+- **액티베이션 바는 스텝 단위로 끊는다** — 참여자별 `min~max` 통짜로 그리면 2~3자 시퀀스에서 거의 항상 전 구간이 되어 굵은 라이프라인과 다를 바 없다. `_activation_bars`가 "받은 시점 → 자신이 다음으로 보내는 시점"으로 나눠 그린다. 끄려면 `"bars": false`. `pptx_export.py:807`이 같은 `L["bars"]`를 읽으므로 HTML과 PPT가 함께 움직인다 (#128).
+- **`note`는 전체 폭 구분선 + 가운데 칩** — 참여자 두 개 사이만 덮는 박스로 그리면 "여기서부터 조건부"가 그 두 레인에만 걸린 것처럼 읽힌다. 칩 폭은 `_text_width`가 문자 종류로 어림한다(CJK 전각, 그 외 반각) — SVG 는 렌더 전에 텍스트를 실측할 수 없다 (#128).
+- **선은 중립색, 강조는 tone과 번호 배지가 맡는다** — `--line`/`--line-soft`가 accent 파랑이던 시절에는 화면 전체가 파랗게 물들어 의미색(tone)과 topology 번호 구간이 묻혔다. 기본 선을 중립 회색으로 내리고 메시지 라벨도 `--text`로 맞췄다. 세 뷰가 같은 변수를 공유하므로 sequence·topology·component가 함께 움직인다 (#128).
+- **메시지 화살표는 라이프라인까지 긋는다** — 액티베이션 바 가장자리(`ACT_W/2`)에서 끊으면 선이 짧아 보이고 흐름이 덜 읽힌다. `off = 1`로 두고 막대를 관통시키되, `head`(막대) → `body`(화살표) 순서라 화살표가 위에 남는다 (#128).
+- **레인 폭은 액터 박스 여백을 결정한다** — `LANE_W(220) - BOX_W(150) = 70`이 박스 사이 간격이다. 170이던 시절에는 20px이라 박스가 붙어 보였다 (#128).
+- **`kind`(형태)와 `tone`(의미)은 직교한다** — 한 축에 섞으면 "점선인 환불 응답" 같은 조합을 표현할 수 없고 조합마다 `kind`가 늘어난다. `tone`은 HTML 렌더 전용이고 pptx·plantuml export는 무시한다 — 세 출력의 색 체계를 맞추는 것은 별도 과제다 (#128).
 - **PlantUML SVG 재생성은 `-nometadata` 필수** — 없으면 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다 (#73).
 
 ## 라이선스

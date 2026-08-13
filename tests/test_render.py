@@ -22,6 +22,7 @@ validate_topology = _mod.validate_topology
 validate_component = _mod.validate_component
 render_svg_component = _mod.render_svg_component
 render_svg = _mod.render_svg
+layout_sequence = _mod.layout_sequence
 render_svg_topology = _mod.render_svg_topology
 build_html = _mod.build_html
 _split_step_label = _mod._split_step_label
@@ -172,6 +173,28 @@ def test_validate_bad_kind():
     data["scenarios"][0]["steps"][0]["kind"] = "arrow"
     errors, _ = validate(data)
     assert any("잘못된 kind" in e for e in errors)
+
+
+def test_validate_bad_tone():
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "critical"
+    errors, _ = validate(data)
+    assert any("잘못된 tone" in e for e in errors)
+
+
+def test_validate_bad_actor_tone():
+    data = _base()
+    data["actors"][0]["tone"] = "neon"
+    errors, _ = validate(data)
+    assert any("잘못된 tone" in e for e in errors)
+
+
+def test_validate_accepts_valid_tones():
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "danger"
+    data["actors"][0]["tone"] = "slate"
+    errors, _ = validate(data)
+    assert errors == []
 
 
 def test_validate_duplicate_n_is_warning_not_error():
@@ -348,9 +371,97 @@ def test_render_svg_contains_core_elements():
     svg, w, h = render_svg(data, data["scenarios"][0])
     assert "액터A" in svg and "액터B" in svg and "존1" in svg
     assert 'class="ar-req ar"' in svg and 'class="ar-res ar"' in svg
-    assert 'class="lifeline"' in svg and 'class="act-bar"' in svg
+    assert 'class="lifeline"' in svg
     assert "1. 요청" in svg and "2. 응답" in svg
     assert w > 0 and h > 0
+
+
+def test_note_spans_full_canvas_width():
+    """구간 안내는 캔버스 전체 폭을 가로지른다 (#128).
+
+    참여자 두 개 사이만 덮으면 "여기서부터 조건부"라는 뜻이 그 두 레인에만 걸린 것처럼 읽힌다.
+    """
+    data = _base()
+    data["scenarios"][0]["steps"].append(
+        {"from": "a", "to": "b", "kind": "note", "label": "여기서부터 조건부"})
+    layout = layout_sequence(data, data["scenarios"][0])
+    note = next(st for st in layout["steps"] if st["type"] == "note")
+
+    assert note["x1"] < min(a["x"] for a in layout["actors"])
+    assert note["x2"] > max(a["x"] for a in layout["actors"])
+    assert note["x2"] - note["x1"] > layout["width"] * 0.9
+
+
+def test_note_draws_rule_and_centered_chip():
+    data = _base()
+    data["scenarios"][0]["steps"].append(
+        {"from": "a", "to": "b", "kind": "note", "label": "여기서부터 조건부"})
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+
+    assert 'class="note-rule"' in svg          # 전체 폭 구분선
+    assert 'class="note"' in svg               # 라벨 칩
+    assert 'text-anchor="middle"' in svg       # 칩 안에서 가운데 정렬
+
+
+def test_text_width_counts_cjk_as_full_width():
+    """칩 폭 추정 — 한글은 전각, 영문은 반각에 가깝다. 좁게 잡으면 글자가 칩을 넘는다."""
+    tw = _mod._text_width
+    assert tw("한글") > tw("ab")
+    assert tw("수동매입 시 추가 단계") > tw("manual")
+
+
+def test_activation_bars_split_by_step():
+    """액티베이션 바는 참여자별 통짜가 아니라 스텝 단위로 끊어 그린다 (#128).
+
+    통짜로 그리면 2~3자 시퀀스에서 거의 항상 전 구간이 되어 굵은 라이프라인과 다를 바 없다.
+    """
+    svg, _, _ = render_svg(_base(), _base()["scenarios"][0])
+    assert svg.count('class="act-bar"') >= 2
+
+
+def test_activation_bars_can_be_turned_off():
+    data = _base()
+    data["bars"] = False
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert 'class="act-bar"' not in svg
+
+
+def test_arrow_reaches_lifeline_not_bar_edge():
+    """화살표는 막대 가장자리가 아니라 라이프라인까지 긋는다 (#128).
+
+    막대에서 끊으면 선이 짧아 보이고 어디서 어디로 가는지가 덜 읽힌다.
+    """
+    data = _base()
+    layout = layout_sequence(data, data["scenarios"][0])
+    xs = {a["id"]: a["x"] for a in layout["actors"]}
+    msg = next(st for st in layout["steps"] if st["type"] == "msg" and not st["self"])
+    lane_gap = abs(xs["b"] - xs["a"])
+    drawn = abs(msg["x2"] - msg["x1"])
+    # 라이프라인 사이 거리의 95% 이상을 실제로 긋는다 (양끝 1px 여백만 남긴다)
+    assert drawn > lane_gap * 0.95
+
+
+def test_tone_marks_line_and_label():
+    """tone 은 kind 와 직교한다 — 같은 req 라도 의미색이 따로 붙는다 (#128)."""
+    data = _base()
+    data["scenarios"][0]["steps"][0]["tone"] = "danger"
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert "ar-req ar tone-danger" in svg
+    assert "lb-req tone-danger" in svg
+    assert "url(#mk-tone-danger)" in svg
+
+
+def test_actor_tone_marks_box():
+    data = _base()
+    data["actors"][0]["tone"] = "violet"
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert 'class="actor atone-violet"' in svg
+
+
+def test_step_without_tone_renders_as_before():
+    """tone 없는 입력은 종전과 같아야 한다 — 기존 JSON 무영향 보증."""
+    svg, _, _ = render_svg(_base(), _base()["scenarios"][0])
+    assert "tone-" not in svg.replace("mk-tone-", "")  # defs 의 marker 정의는 제외
 
 
 def test_render_svg_empty_label_res_has_arrow_only():
