@@ -55,13 +55,13 @@ TONES = {"danger", "warn", "info"}
 ACTOR_TONES = {"slate", "violet", "deep"}
 
 # ── 레이아웃 상수 ──────────────────────────────────────────────
-LANE_W = 220          # 레인 폭 — BOX_W(150)와의 차가 곧 박스 사이 여백이다
+LANE_W = 200          # 레인 폭 — BOX_W(132)와의 차가 곧 박스 사이 여백이다
 ML = MR = 28          # 좌우 여백
-BOX_W, BOX_H = 150, 52
+BOX_W, BOX_H = 132, 44
 ZONE_H, ZONE_GAP = 30, 8
-ROW = 26              # 스텝 간 세로 간격
-LBL_LH = 15           # 라벨 줄 높이
-EXTRA_LH = 15         # sub/protocol 줄 높이
+ROW = 22              # 스텝 간 세로 간격
+LBL_LH = 13           # 라벨 줄 높이
+EXTRA_LH = 13         # sub/protocol 줄 높이
 ACT_W = 12            # 액티베이션바 폭
 
 # ── 토폴로지(구성도) 뷰 상수 ──────────────────────────────────
@@ -94,6 +94,18 @@ C_LBL_LH = 14         # 엣지 라벨 줄 높이
 # 좌표 차이를 제곱하는 기하 계산에서 float overflow가 나지 않는 입력 상한.
 # 그리드 좌표는 최대 셀 간격만큼 확대되므로 여유 계수 4를 둔다.
 MAX_RENDER_NUMBER = math.sqrt(sys.float_info.max) / (4 * max(T_CELL_W, C_CELL_W))
+
+
+def _text_width(text, size=10.5):
+    """라벨 칩 폭 추정. SVG 는 렌더 전에 텍스트를 실측할 수 없어 문자 종류로 어림한다.
+
+    한글·CJK 는 전각(1.0em), 그 외는 반각에 가깝다(0.55em). 칩이 글자를 자르지 않는 것이
+    목적이므로 넉넉한 쪽으로 잡는다.
+    """
+    w = 0.0
+    for ch in text:
+        w += 1.0 if ord(ch) > 0x2E7F else 0.55
+    return w * size
 
 
 def esc(s):
@@ -443,11 +455,12 @@ def layout_sequence(data, scenario):
         label = st.get("label", "")
         lines = label.split("\n") if label else []
         if kind == "note":
-            x1 = min(cx[st["from"]], cx[st["to"]]) - 70
-            x2 = max(cx[st["from"]], cx[st["to"]]) + 70
-            h = 18 * len(lines) + 16
-            steps.append({"type": "note", "x1": x1, "x2": x2, "y": cur, "h": h, "lines": lines})
-            cur += h + 18
+            # 구간 안내는 캔버스 전체 폭을 가로지르는 구분선으로 그린다. 참여자 두 개 사이만
+            # 덮으면 "여기서부터 조건부"라는 뜻이 그 두 레인에만 걸린 것처럼 읽힌다.
+            h = 16 * len(lines) + 6
+            steps.append({"type": "note", "x1": ML, "x2": width - MR,
+                          "y": cur, "h": h, "lines": lines})
+            cur += h + 16
             continue
 
         if lines and st.get("n") is not None:
@@ -534,9 +547,14 @@ def render_svg(data, scenario):
     for st in L["steps"]:
         if st["type"] == "note":
             x1, x2, y, h, lines = st["x1"], st["x2"], st["y"], st["h"], st["lines"]
-            body.append(f'<rect class="note" x="{x1}" y="{y}" width="{x2 - x1}" height="{h}" rx="8"/>')
+            mid_x, mid_y = (x1 + x2) / 2, y + h / 2
+            chip_w = max(_text_width(ln) for ln in lines) + 22
+            body.append(f'<line class="note-rule" x1="{x1}" y1="{mid_y}" x2="{x2}" y2="{mid_y}"/>')
+            body.append(f'<rect class="note" x="{mid_x - chip_w / 2}" y="{y}" '
+                        f'width="{chip_w}" height="{h}" rx="4"/>')
             for i, ln in enumerate(lines):
-                body.append(f'<text class="note-tx" x="{x1 + 14}" y="{y + 22 + i * 18}">{esc(ln)}</text>')
+                ly = mid_y + 4 - 16 * (len(lines) - 1) / 2 + 16 * i
+                body.append(f'<text class="note-tx" x="{mid_x}" y="{ly}" text-anchor="middle">{esc(ln)}</text>')
             continue
 
         kind, y, lines, mid = st["kind"], st["y"], st["lines"], st["mid"]
@@ -1228,10 +1246,10 @@ CSS = """
     .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
     /* ── SVG ── */
     .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
-    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:12px;font-weight:700;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:11px;font-weight:700;}
     .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
-    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:12.5px;font-weight:700;}
-    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:10px;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:11.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:9px;}
     .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
     .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
     .ar{fill:none;}
@@ -1242,13 +1260,14 @@ CSS = """
     .mk-req,.mk-self{fill:var(--line);}
     .mk-res,.mk-relay{fill:var(--line-soft);}
     text{font-family:var(--font);}
-    .lb-req,.lb-self{fill:var(--text);font-size:12px;font-weight:600;}
-    .lb-res{fill:var(--muted);font-size:12px;}
-    .lb-relay{fill:var(--muted);font-size:11.5px;font-style:italic;}
-    .lb-sub{fill:var(--muted);font-size:11px;font-weight:400;font-family:var(--mono);}
-    .lb-proto{fill:var(--muted);font-size:10.5px;font-family:var(--mono);}
-    .note{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.2;stroke-dasharray:4,3;}
-    .note-tx{fill:var(--accent);font-size:11.5px;font-weight:600;}
+    .lb-req,.lb-self{fill:var(--text);font-size:10.5px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:10.5px;}
+    .lb-relay{fill:var(--muted);font-size:10.5px;font-style:italic;}
+    .lb-sub{fill:var(--muted);font-size:10px;font-weight:400;font-family:var(--mono);}
+    .lb-proto{fill:var(--muted);font-size:9.5px;font-family:var(--mono);}
+    .note-rule{stroke:var(--zone-bd);stroke-width:1;stroke-dasharray:4,4;}
+    .note{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1;}
+    .note-tx{fill:var(--accent);font-size:10.5px;font-weight:600;}
     .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
     .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
     .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}

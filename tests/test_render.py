@@ -376,6 +376,40 @@ def test_render_svg_contains_core_elements():
     assert w > 0 and h > 0
 
 
+def test_note_spans_full_canvas_width():
+    """구간 안내는 캔버스 전체 폭을 가로지른다 (#128).
+
+    참여자 두 개 사이만 덮으면 "여기서부터 조건부"라는 뜻이 그 두 레인에만 걸린 것처럼 읽힌다.
+    """
+    data = _base()
+    data["scenarios"][0]["steps"].append(
+        {"from": "a", "to": "b", "kind": "note", "label": "여기서부터 조건부"})
+    layout = layout_sequence(data, data["scenarios"][0])
+    note = next(st for st in layout["steps"] if st["type"] == "note")
+
+    assert note["x1"] < min(a["x"] for a in layout["actors"])
+    assert note["x2"] > max(a["x"] for a in layout["actors"])
+    assert note["x2"] - note["x1"] > layout["width"] * 0.9
+
+
+def test_note_draws_rule_and_centered_chip():
+    data = _base()
+    data["scenarios"][0]["steps"].append(
+        {"from": "a", "to": "b", "kind": "note", "label": "여기서부터 조건부"})
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+
+    assert 'class="note-rule"' in svg          # 전체 폭 구분선
+    assert 'class="note"' in svg               # 라벨 칩
+    assert 'text-anchor="middle"' in svg       # 칩 안에서 가운데 정렬
+
+
+def test_text_width_counts_cjk_as_full_width():
+    """칩 폭 추정 — 한글은 전각, 영문은 반각에 가깝다. 좁게 잡으면 글자가 칩을 넘는다."""
+    tw = _mod._text_width
+    assert tw("한글") > tw("ab")
+    assert tw("수동매입 시 추가 단계") > tw("manual")
+
+
 def test_activation_bars_split_by_step():
     """액티베이션 바는 참여자별 통짜가 아니라 스텝 단위로 끊어 그린다 (#128).
 
