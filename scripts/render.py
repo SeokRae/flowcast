@@ -14,7 +14,7 @@
                 kind: req(실선) | res(점선 응답) | relay(중계) | self(자기호출) | note(설명 박스)
                 tone: 선의 의미(형태와 직교) — danger(취소·차단) | warn(환불·되돌림) | info(선택 단계)
                 label 개행(\\n) = 다단 라벨. n 중복은 warning(원문 보존 허용).
-    bars      : true 면 액티베이션 바를 그린다 (기본 false — 아래 설계 결정 참조)
+    bars      : false 면 액티베이션 바를 그리지 않는다 (기본 true, 스텝 단위로 끊어 그림)
 
     view      : "sequence"(기본) | "topology" | "component"
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
@@ -55,7 +55,7 @@ TONES = {"danger", "warn", "info"}
 ACTOR_TONES = {"slate", "violet", "deep"}
 
 # ── 레이아웃 상수 ──────────────────────────────────────────────
-LANE_W = 170          # 레인 폭
+LANE_W = 220          # 레인 폭 — BOX_W(150)와의 차가 곧 박스 사이 여백이다
 ML = MR = 28          # 좌우 여백
 BOX_W, BOX_H = 150, 52
 ZONE_H, ZONE_GAP = 30, 8
@@ -465,7 +465,10 @@ def layout_sequence(data, scenario):
         if kind == "self":
             rec["self_x"] = xa + ACT_W / 2
         else:
-            off = ACT_W / 2 + 1
+            # 화살표는 막대 가장자리가 아니라 라이프라인까지 긋는다 (#128). 막대에서 끊으면
+            # 선이 짧아 보이고 어디서 어디로 가는지가 덜 읽힌다. 화살표를 막대보다 나중에
+            # 그리므로(head → body) 관통해도 위에 남는다.
+            off = 1
             rec["x1"], rec["x2"] = (xa + off, xb - off - 1) if xb > xa else (xa - off, xb + off + 1)
         for cls, val in (("proto", st.get("protocol")), ("sub", st.get("sub"))):
             if val:
@@ -488,7 +491,7 @@ def layout_sequence(data, scenario):
     actor_recs = [{"id": a["id"], "x": cx[a["id"]], "name": a["name"], "tone": a.get("tone"),
                    "attrs": " · ".join(str(a[k]) for k in ("port", "line") if a.get(k))}
                   for a in actors]
-    bars = _activation_bars(msgs, cx) if data.get("bars") else []
+    bars = _activation_bars(msgs, cx) if data.get("bars", True) else []
 
     return {"width": width, "height": height, "zone_y": zone_y, "box_y": box_y,
             "bottom": bottom, "actors": actor_recs, "zones": zone_bands,

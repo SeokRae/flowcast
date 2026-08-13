@@ -22,6 +22,7 @@ validate_topology = _mod.validate_topology
 validate_component = _mod.validate_component
 render_svg_component = _mod.render_svg_component
 render_svg = _mod.render_svg
+layout_sequence = _mod.layout_sequence
 render_svg_topology = _mod.render_svg_topology
 build_html = _mod.build_html
 _split_step_label = _mod._split_step_label
@@ -375,21 +376,35 @@ def test_render_svg_contains_core_elements():
     assert w > 0 and h > 0
 
 
-def test_activation_bars_are_off_by_default():
-    """액티베이션 바는 기본으로 그리지 않는다 (#128).
+def test_activation_bars_split_by_step():
+    """액티베이션 바는 참여자별 통짜가 아니라 스텝 단위로 끊어 그린다 (#128).
 
-    막대가 화살표의 시작·끝을 가리고 세로 시각 요소를 배로 늘려 흐름이 덜 읽힌다.
+    통짜로 그리면 2~3자 시퀀스에서 거의 항상 전 구간이 되어 굵은 라이프라인과 다를 바 없다.
     """
     svg, _, _ = render_svg(_base(), _base()["scenarios"][0])
+    assert svg.count('class="act-bar"') >= 2
+
+
+def test_activation_bars_can_be_turned_off():
+    data = _base()
+    data["bars"] = False
+    svg, _, _ = render_svg(data, data["scenarios"][0])
     assert 'class="act-bar"' not in svg
 
 
-def test_activation_bars_opt_in_and_split_by_step():
-    """bars=true 면 그리되, 참여자별 통짜가 아니라 스텝 단위로 끊는다 (#128)."""
+def test_arrow_reaches_lifeline_not_bar_edge():
+    """화살표는 막대 가장자리가 아니라 라이프라인까지 긋는다 (#128).
+
+    막대에서 끊으면 선이 짧아 보이고 어디서 어디로 가는지가 덜 읽힌다.
+    """
     data = _base()
-    data["bars"] = True
-    svg, _, _ = render_svg(data, data["scenarios"][0])
-    assert svg.count('class="act-bar"') >= 2
+    layout = layout_sequence(data, data["scenarios"][0])
+    xs = {a["id"]: a["x"] for a in layout["actors"]}
+    msg = next(st for st in layout["steps"] if st["type"] == "msg" and not st["self"])
+    lane_gap = abs(xs["b"] - xs["a"])
+    drawn = abs(msg["x2"] - msg["x1"])
+    # 라이프라인 사이 거리의 95% 이상을 실제로 긋는다 (양끝 1px 여백만 남긴다)
+    assert drawn > lane_gap * 0.95
 
 
 def test_tone_marks_line_and_label():
