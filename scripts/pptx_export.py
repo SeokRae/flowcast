@@ -257,7 +257,7 @@ def _scene_geometry(R, scenario):
     return rects, zone_boxes, bbox
 
 
-def export_component(data, out_path, slide_size="wide"):
+def export_component(data, out_path, slide_size="wide", prs=None):
     """component 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장)."""
     from pptx import Presentation
     from pptx.util import Emu, Pt
@@ -276,7 +276,8 @@ def export_component(data, out_path, slide_size="wide"):
     SW, SH, s, dx, dy = _fit(max_w, max_h, _parse_slide_size(slide_size))
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
 
-    prs = Presentation()
+    _own = prs is None      # 주입분이면 append 모드 — 캔버스는 첫 덱이 정하고 저장도 호출부가 한다
+    prs = prs or Presentation()
     prs.slide_width = Emu(SW * PX_TO_EMU)
     prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
@@ -386,11 +387,12 @@ def export_component(data, out_path, slide_size="wide"):
                 r.text = proto
                 r.font.size = Pt(_fpt(8, s))
 
-    prs.save(str(out_path))
+    if _own:
+        prs.save(str(out_path))
     return len(scenarios)
 
 
-def export_topology(data, out_path, slide_size="wide"):
+def export_topology(data, out_path, slide_size="wide", prs=None):
     """topology 뷰 JSON → .pptx. nodes/links/zones 공유(모든 슬라이드) + 시나리오별 segments 오버레이.
 
     세그먼트 라벨은 render.py 패리티 — 엣지엔 원형 번호 배지만, 전문은 하단 "흐름 설명" 범례.
@@ -456,7 +458,8 @@ def export_topology(data, out_path, slide_size="wide"):
     SW, SH, s, dx, dy = _fit(maxx - minx, maxy - miny, _parse_slide_size(slide_size))
     ox, oy = -minx + dx, -miny + dy   # 헤더 밴드 아래 중앙 배치
     emu = lambda px: Emu(int(round(px * s * PX_TO_EMU)))
-    prs = Presentation()
+    _own = prs is None      # 주입분이면 append 모드 — 캔버스는 첫 덱이 정하고 저장도 호출부가 한다
+    prs = prs or Presentation()
     prs.slide_width = Emu(SW * PX_TO_EMU)
     prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
@@ -681,7 +684,8 @@ def export_topology(data, out_path, slide_size="wide"):
                     _leg_cell(table.cell(ri, desc_col), paras or [("", 8.5, False, DESC_C)])
                     table.rows[ri].height = emu(row["h"])
 
-    prs.save(str(out_path))
+    if _own:
+        prs.save(str(out_path))
     return len(scenarios)
 
 
@@ -725,7 +729,7 @@ def _paginate_sequences(R, data, scenarios, size):
     return out
 
 
-def export_sequence(data, out_path, slide_size="wide", paginate=True):
+def export_sequence(data, out_path, slide_size="wide", paginate=True, prs=None):
     """sequence 뷰 JSON → .pptx (시나리오 1개 = 슬라이드 1장, 길면 자동 페이지 분할).
 
     render.py 의 layout_sequence() 기하를 그대로 소비 — actor 박스·라이프라인·
@@ -755,7 +759,8 @@ def export_sequence(data, out_path, slide_size="wide", paginate=True):
     Y = lambda px: emu(px + dy)                            # 위치(y) — 헤더 밴드 아래
     BOX_W, BOX_H, ACT_W, ZONE_H = R.BOX_W, R.BOX_H, R.ACT_W, R.ZONE_H
 
-    prs = Presentation()
+    _own = prs is None      # 주입분이면 append 모드 — 캔버스는 첫 덱이 정하고 저장도 호출부가 한다
+    prs = prs or Presentation()
     prs.slide_width = Emu(SW * PX_TO_EMU)
     prs.slide_height = Emu(SH * PX_TO_EMU)
     blank = prs.slide_layouts[6]
@@ -895,7 +900,8 @@ def export_sequence(data, out_path, slide_size="wide", paginate=True):
                 _labels(shapes, mid - 70, y + 2, 140, 15 * len(extra_specs) + 4,
                         extra_specs, PP_ALIGN.CENTER, MSO_ANCHOR.TOP)
 
-    prs.save(str(out_path))
+    if _own:
+        prs.save(str(out_path))
     return len(layouts)
 
 
@@ -909,8 +915,10 @@ _DISPATCH = {
 
 def main():
     ap = argparse.ArgumentParser(description="flowcast 흐름도 → 편집가능 .pptx export (sequence·component·topology)")
-    ap.add_argument("data", help="흐름도 뷰 JSON 경로 (view: sequence|component|topology)")
-    ap.add_argument("-o", "--out", help="출력 .pptx (기본: 입력과 같은 위치 .pptx)")
+    ap.add_argument("data", nargs="+",
+                    help="흐름도 뷰 JSON 경로 (view: sequence|component|topology). "
+                         "여러 개를 주면 입력 순서대로 슬라이드를 이어붙여 한 덱으로 만든다 — 뷰가 섞여도 된다")
+    ap.add_argument("-o", "--out", help="출력 .pptx (기본: 입력과 같은 위치 .pptx · 다중 입력이면 필수)")
     ap.add_argument("--slide-size", default="wide",
                     help="슬라이드 캔버스: wide(1920x1080, 기본)|auto(content-fit)|{W}x{H} px")
     ap.add_argument("--no-paginate", action="store_true",
@@ -922,35 +930,60 @@ def main():
               "  pip install python-pptx", file=sys.stderr)
         return 2
 
+    paths = [Path(p) for p in args.data]
+    multi = len(paths) > 1
+    if multi and not args.out:
+        print("error: 다중 입력은 -o/--out 이 필요합니다 (합칠 덱의 경로).", file=sys.stderr)
+        return 1
+    if multi and args.slide_size == "auto":
+        # auto 는 덱마다 캔버스 크기가 달라진다 — 한 파일에 섞으면 슬라이드가 제각각이 된다.
+        print("error: --slide-size auto 는 다중 입력에 쓸 수 없습니다 (덱마다 캔버스가 달라짐). "
+              "wide 또는 {W}x{H} 를 쓰세요.", file=sys.stderr)
+        return 1
+
     # 의존성 검사(exit 2)는 위에서 이미 통과 — 그 뒤에 입력을 로드해야 python-pptx 없는
     # 환경에서 잘못된 JSON 을 줘도 exit 2(partial)로 보고된다 (#71 순서 고정).
-    path = Path(args.data)
-    data = load_json(path)
-    # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주.
-    # 최상위가 object 가 아니면(배열·스칼라) isinstance 가드로 data.get 트레이스백을 막고,
-    # 검증기가 "최상위 JSON은 object여야 함" 한 줄로 거른다.
-    view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
-    if view not in _DISPATCH:
-        print(f"error: 이 export 는 sequence·component·topology 뷰를 지원합니다 (view={view!r}).",
-              file=sys.stderr)
-        return 1
+    # 다중 입력은 한 장도 그리기 전에 전량 검증한다 — 뒤쪽 JSON 오류로 반쪽 덱이 남지 않게.
+    jobs = []
+    for path in paths:
+        data = load_json(path)
+        # sequence 는 view 미지정이 기본값 → render.py 와 동일하게 sequence 로 간주.
+        # 최상위가 object 가 아니면(배열·스칼라) isinstance 가드로 data.get 트레이스백을 막고,
+        # 검증기가 "최상위 JSON은 object여야 함" 한 줄로 거른다.
+        view = data.get("view", "sequence") if isinstance(data, dict) else "sequence"
+        if view not in _DISPATCH:
+            print(f"error: 이 export 는 sequence·component·topology 뷰를 지원합니다 "
+                  f"(view={view!r}, {path}).", file=sys.stderr)
+            return 1
+        # 렌더와 같은 검증을 먼저 통과시킨다 — 없으면 미정의 참조가 KeyError 트레이스백으로 샌다.
+        exporter, validator_name = _DISPATCH[view]
+        errors, warnings = getattr(_load_render(), validator_name)(data)
+        for w in warnings:
+            print(f"warning: {w}", file=sys.stderr)
+        if errors:
+            for e in errors:
+                print(f"error: {e}", file=sys.stderr)
+            return 1
+        jobs.append((path, data, view, exporter))
 
-    # 렌더와 같은 검증을 먼저 통과시킨다 — 없으면 미정의 참조가 KeyError 트레이스백으로 샌다.
-    exporter, validator_name = _DISPATCH[view]
-    errors, warnings = getattr(_load_render(), validator_name)(data)
-    for w in warnings:
-        print(f"warning: {w}", file=sys.stderr)
-    if errors:
-        for e in errors:
-            print(f"error: {e}", file=sys.stderr)
-        return 1
-
-    out = Path(args.out) if args.out else path.with_suffix(".pptx")
-    kwargs = {"slide_size": args.slide_size}
-    if view == "sequence":
-        kwargs["paginate"] = not args.no_paginate
-    n = exporter(data, out, **kwargs)
-    print(f"pptx: {out} (슬라이드 {n})")
+    out = Path(args.out) if args.out else paths[0].with_suffix(".pptx")
+    shared = None
+    if multi:
+        from pptx import Presentation      # exporter 와 동일한 지연 import (의존성 격리)
+        shared = Presentation()
+    total = 0
+    for path, data, view, exporter in jobs:
+        kwargs = {"slide_size": args.slide_size}
+        if view == "sequence":
+            kwargs["paginate"] = not args.no_paginate
+        if shared is not None:
+            kwargs["prs"] = shared
+        total += exporter(data, out, **kwargs)
+    if shared is not None:
+        shared.save(str(out))
+        print(f"pptx: {out} (슬라이드 {total} · 입력 {len(jobs)}개 병합)")
+    else:
+        print(f"pptx: {out} (슬라이드 {total})")
     return 0
 
 

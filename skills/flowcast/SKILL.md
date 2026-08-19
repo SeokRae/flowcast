@@ -152,7 +152,7 @@ python3 "$ROOT/scripts/validate_rendered_pairs.py" "{out_dir}/_workspace/units.j
 - **미결 단위**: router 출력에 한 단위가 `ambiguous:true` → 사용자 선택과 근거를 기록하고 `ambiguous:false`로 저장 → manifest 전체 검증 전 drawer 0개.
 - **PDF**: "PDF도 뽑아줘" → `pdf=true` → HTML/MD/PDF 생성, 요약에 PDF 경로 포함.
 - **PDF(Chrome 없음)**: `pdf=true`인데 Chrome 없음 → HTML/MD 유지, `pdf:null`, unit status는 `partial`.
-- **export**: "PPT로도 뽑아줘" → `export=true` → 각 drawer가 render 후 `pptx_export.py` → html/md/pptx 3종, 요약에 pptx 경로 포함.
+- **export**: "PPT로도 뽑아줘" → `export=true` → 각 drawer가 render 후 `pptx_export.py` → html/md/pptx 3종, 요약에 pptx 경로 포함. "하나로 합쳐줘"면 drawer 완료 후 오케스트레이터가 JSON을 나열해 한 번 더 호출한다 — `pptx_export.py {a.json} {b.json} … -o {덱}.pptx`(뷰 혼합 가능, 입력 순서=슬라이드 순서).
 - **export(의존성 없음)**: python-pptx 미설치 환경에서 `export=true` → html/md는 생성, pptx는 생략, unit status는 `partial`.
 - **plantuml**: "PlantUML/.puml로도 뽑아줘" → `plantuml=true` → 각 drawer가 render 후 `plantuml_export.py` → html/md/puml 3종, 요약에 puml 경로 포함(의존성 없음).
 - **편집(후속)**: 기존 out_dir에 3쌍 산출물이 있는 상태에서 "두 번째 다이어그램 라벨만 수정" → router 생략(⓪), 해당 JSON Edit → 재렌더 1건, 나머지 파일 불변.

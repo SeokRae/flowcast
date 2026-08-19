@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `scripts/validate_rendered_pairs.py` | dispatch **후** 실측 대조 — 페어 `rendered_numbers` vs 선언 `segment_numbers` · `source_ref`→렌더 `source` 전사 (자동 수정 없음, 오케스트레이터 ⑤ 훅, stdlib) |
 | `scripts/validate_plugin_manifest.py` | 플러그인 매니페스트 검증 (`plugin.json`·`marketplace.json` 필드·버전 3곳 일치·keywords 부분집합·스킬 경로 실존) — CI 게이트 |
 | `scripts/pptx_import.py` | `.pptx` → 슬라이드별 draft JSON (도형·라벨·좌표·커넥터, stdlib) — B-in 입력 변환 |
-| `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력 |
+| `scripts/pptx_export.py` | sequence·component·topology JSON → 편집가능 `.pptx` (python-pptx **선택적** 의존성, render.py 좌표·`layout_sequence` 재사용) — B-out 출력. 입력 여러 개를 주면 순서대로 이어붙여 **한 덱으로 병합**(뷰 혼합 가능) |
 | `scripts/plantuml_export.py` | sequence·component·topology JSON → PlantUML `.puml` 텍스트 (**stdlib만**, render.py 검증기 재사용·좌표 미사용) — B-out 출력 |
 | `scripts/scan-sensitive.sh` | 실 데이터 유입 차단 게이트 |
 | `scripts/regen-examples.sh` | `examples/*.json` → 예제 html·docs 게시본·puml 일괄 재생성 (골든 회귀 테스트가 누락을 잡는다) |
@@ -42,6 +42,7 @@ python3 scripts/validate_manifest.py {units.json}  # drawer dispatch 전 manifes
 python3 scripts/validate_rendered_pairs.py {units.json}  # dispatch 후 실측 대조 (페어 번호·source 전사)
 python3 scripts/validate_plugin_manifest.py        # 플러그인 매니페스트 검증 (CI 게이트)
 python3 scripts/pptx_export.py {json} -o out.pptx  # B-out → 편집가능 .pptx (python-pptx 필요)
+python3 scripts/pptx_export.py {a.json} {b.json} -o deck.pptx  # 다중 입력 → 한 덱으로 병합 (뷰 혼합 가능, --slide-size auto 불가)
 python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .puml (stdlib, [--no-style] [--smetana])
 ```
 

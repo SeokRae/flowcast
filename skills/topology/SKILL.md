@@ -99,6 +99,7 @@ python3 "$ROOT/scripts/plantuml_export.py" "{out_dir}/{name}.json" -o "{out_dir}
 ```
 
 - `pptx_export.py` — python-pptx는 **export 전용 선택적 의존성**이라 미설치 환경에선 exit 2 + 안내를 낸다. 이때 export만 건너뛰고 HTML/MD는 그대로 유효하다.
+- **여러 덱을 한 파일로**: 사용자가 "두 다이어그램 PPT 합쳐줘"라고 하면 JSON을 나열해 한 번에 넘긴다 — `pptx_export.py {a.json} {b.json} -o {합칠경로}.pptx`. 뷰가 달라도 되고(component+topology 등) 입력 순서가 슬라이드 순서다. `-o`는 필수이고 `--slide-size auto`는 덱마다 캔버스가 달라져 쓸 수 없다.
 - `plantuml_export.py` — stdlib 텍스트 출력이라 의존성 미설치 실패가 없다. topology `.puml`은 **dot(graphviz) 레이아웃**을 타므로, graphviz가 없는 환경이라고 사용자가 밝힌 경우에만 `smetana=true`로 `--smetana`를 덧붙인다 — 캔버스가 클리핑될 수 있는 폴백이라 요청 없이는 켜지 않는다.
 
 직접 호출이라 drawer의 status 프로토콜이 없을 때는, 만들지 못한 산출물과 원문 오류 메시지를 보고에 그대로 명시한다.
