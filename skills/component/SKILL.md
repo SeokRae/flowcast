@@ -26,7 +26,8 @@ JSON `source` 필드에 그 문서 경로를 계보로 남긴다 — 근거 문�
 ## 스키마 필드 (`view: component`)
 
 - **노드/존/엣지는 시나리오별로 선언**: `scenarios[].{zones?, nodes, edges}`
-- `nodes[]`: `{ id, name, port?, zone?, col/row 또는 x/y, kind? }` — `kind`: `comp`(기본, teal 내부) · `ext`(외부 액터, amber). `port` = 2단 라벨.
+- `nodes[]`: `{ id, name, port?, zone?, col/row 또는 x/y, kind? }` — `kind`: `comp`(기본, teal 내부) · `ext`(외부 액터, amber) · `db`(데이터베이스, 원통). `port` = 2단 라벨.
+  - **저장소는 `db`** — DB·캐시·큐처럼 데이터를 담는 노드는 관례상 원통으로 그린다. 소유가 외부라도 `ext`(사각형)가 아니라 `db`를 쓰고, 외부라는 사실은 이름이나 존 라벨로 밝힌다.
 - `edges[]`: `{ from, to, n?, label?, protocol?, bidir?, via?, lx?, ly?, lpos? }`
   - `bidir`: 양방향 화살촉 · `via`: `[x,y]` 경유점 · `lx`/`ly`: 라벨 위치 오버라이드(있으면 좌측 앵커)
   - 같은 노드쌍 다중 엣지는 자동 수직 오프셋. 전체 엣지 동시 표시(하이라이트 없음).
@@ -34,7 +35,7 @@ JSON `source` 필드에 그 문서 경로를 계보로 남긴다 — 근거 문�
 ## 매핑 결정 지점 (데이터 → JSON, 순서대로)
 
 1. **다이어그램(시나리오) 몇 개**, 각 제목?
-2. 각 다이어그램 **노드**: `name`, `port`(2단 라벨), `kind`(내부=comp / 외부 액터·시스템=ext)?
+2. 각 다이어그램 **노드**: `name`, `port`(2단 라벨), `kind`(내부=comp / 외부 액터·시스템=ext / DB·캐시·큐=db)?
 3. **배치** — 그리드(`col`/`row`) or 절대(`x`/`y`)? (원본 도형 좌표 있으면 **EMU×0.15 스케일** 권장)
 4. **존**(`< Internal >` 등) 있나? 소속 노드?
 5. **엣지**: `from`→`to`, `n`(번호 인라인 `(n)`), `label`, `protocol`?
