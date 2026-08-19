@@ -67,7 +67,12 @@ def _cli(*args):
 
 
 def test_multi_input_requires_out():
-    """다중 입력은 합칠 덱 경로가 있어야 한다 — 기본 경로 추론은 어느 입력 기준인지 모호하다."""
+    """다중 입력은 합칠 덱 경로가 있어야 한다 — 기본 경로 추론은 어느 입력 기준인지 모호하다.
+
+    의존성 검사(exit 2)가 인자 검증(exit 1)보다 먼저라(#71) python-pptx 없는 환경에선
+    이 가드에 도달하지 못한다 — 그 순서 자체는 test_missing_pptx_cli_exits_two 가 지킨다.
+    """
+    pytest.importorskip("pptx")
     r = _cli(EXAMPLES / "microservice-component.json", EXAMPLES / "three-tier-topology.json")
     assert r.returncode == 1
     assert "-o/--out" in r.stderr
@@ -76,6 +81,7 @@ def test_multi_input_requires_out():
 
 def test_multi_input_rejects_auto_slide_size(tmp_path):
     """auto 는 덱마다 캔버스가 달라 한 파일에 섞으면 슬라이드 크기가 제각각이 된다."""
+    pytest.importorskip("pptx")
     r = _cli(EXAMPLES / "microservice-component.json", EXAMPLES / "three-tier-topology.json",
              "--slide-size", "auto", "-o", tmp_path / "x.pptx")
     assert r.returncode == 1
