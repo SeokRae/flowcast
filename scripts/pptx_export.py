@@ -49,15 +49,17 @@ SEQ_PAGE_MIN_SCALE = 0.8   # 긴 sequence: 한 장 scale 이 이 값 미만이�
 SLIDE_PRESETS = {"wide": (1920, 1080)}   # 캔버스 프리셋 (px) — 기본 wide
 ACCENT = (0x1F, 0x6F, 0xD0)              # --accent (topology 번호 배지)
 
-FILL = {"comp": (0xE6, 0xF4, 0xF1), "ext": (0xFD, 0xF3, 0xE7)}
-LINE = {"comp": (0x2C, 0x7A, 0x7B), "ext": (0xB7, 0x79, 0x1F)}
+FILL = {"comp": (0xE6, 0xF4, 0xF1), "ext": (0xFD, 0xF3, 0xE7), "db": (0xFD, 0xF3, 0xE7)}
+LINE = {"comp": (0x2C, 0x7A, 0x7B), "ext": (0xB7, 0x79, 0x1F), "db": (0xB7, 0x79, 0x1F)}
+# db = 원통(데이터베이스). render.py 의 _cyl_paths 대응 — 도형 자체가 달라 팔레트만으로는 부족하다.
+DB_SHAPE_KINDS = {"db"}
 
-# topology kind: srv(기본) · ext(외부, 앰버) · gear(장비, 점선) · fw(방화벽, --warn 굵은 테두리)
+# topology kind: srv(기본) · ext(외부, 앰버) · gear(장비, 점선) · fw(방화벽, --warn 굵은 테두리) · db(원통)
 # · l4(VIP/LB, --accent 점선). 키 집합은 render.py TOPO_KINDS 와 일치해야 한다(기동 시 대조).
 TOPO_FILL = {"srv": (0xF8, 0xFA, 0xFC), "ext": (0xFD, 0xF3, 0xE7), "gear": (0xF8, 0xFA, 0xFC),
-             "fw": (0xF8, 0xFA, 0xFC), "l4": (0xF8, 0xFA, 0xFC)}
+             "fw": (0xF8, 0xFA, 0xFC), "l4": (0xF8, 0xFA, 0xFC), "db": (0xFD, 0xF3, 0xE7)}
 TOPO_LINE = {"srv": (0x64, 0x74, 0x8B), "ext": (0xB7, 0x79, 0x1F), "gear": (0x94, 0xA3, 0xB8),
-             "fw": (0x8A, 0x62, 0x10), "l4": (0x1F, 0x6F, 0xD0)}
+             "fw": (0x8A, 0x62, 0x10), "l4": (0x1F, 0x6F, 0xD0), "db": (0xB7, 0x79, 0x1F)}
 TOPO_DASH = {"gear", "l4"}        # HTML 의 stroke-dasharray 대응
 TOPO_LINE_W = {"fw": 1.6}         # 그 외 기본(1.0) — HTML .topo-fw{stroke-width:1.6}
 
@@ -348,7 +350,9 @@ def export_component(data, out_path, slide_size="wide"):
         for nid, (x, y, w, h) in rects.items():
             nd = node_by_id[nid]
             kind = nd.get("kind", "comp")
-            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+            _shape = (MSO_SHAPE.FLOWCHART_MAGNETIC_DISK if kind in DB_SHAPE_KINDS
+                      else MSO_SHAPE.ROUNDED_RECTANGLE)
+            box = shapes.add_shape(_shape,
                                    emu(x + ox), emu(y + oy), emu(w), emu(h))
             box.fill.solid()
             box.fill.fore_color.rgb = RGBColor(*FILL.get(kind, FILL["comp"]))
@@ -612,7 +616,9 @@ def export_topology(data, out_path, slide_size="wide"):
                     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
                     _fill_lines(tf, "\n".join(box_lines[bi]), s, size=9)
                 continue
-            box = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, emu(x + ox), emu(y + oy), emu(w), emu(h))
+            _shape = (MSO_SHAPE.FLOWCHART_MAGNETIC_DISK if kind in DB_SHAPE_KINDS
+                      else MSO_SHAPE.ROUNDED_RECTANGLE)
+            box = shapes.add_shape(_shape, emu(x + ox), emu(y + oy), emu(w), emu(h))
             box.fill.solid()
             box.fill.fore_color.rgb = fillc
             box.line.color.rgb = linec

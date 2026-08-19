@@ -29,8 +29,8 @@ package "App Tier" {
   rectangle "App Server" as app1
 }
 package "Data Tier" {
-  rectangle "Database" as db
-  rectangle "Cache" as cache
+  rectangle "Database" as db <<db>>
+  rectangle "Cache" as cache <<db>>
 }
 rectangle "Client" as client <<ext>>
 
@@ -74,8 +74,8 @@ package "App Tier" {
   rectangle "App Server" as app1
 }
 package "Data Tier" {
-  rectangle "Database" as db
-  rectangle "Cache" as cache
+  rectangle "Database" as db <<db>>
+  rectangle "Cache" as cache <<db>>
 }
 rectangle "Client" as client <<ext>>
 

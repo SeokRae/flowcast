@@ -1062,6 +1062,50 @@ def test_topology_l4_node_renders_fanout_icon():
     assert 'class="l4-ico-l"' in svg  # fan-out 분배 선
 
 
+def test_topology_db_kind_validates_ok():
+    data = _topo()
+    data["nodes"][1]["kind"] = "db"
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert warnings == []
+
+
+def test_topology_db_node_renders_cylinder_not_rect():
+    """DB 는 관례상 원통 — rect 대신 몸통 path + 앞쪽 윗면 호 두 개."""
+    data = _topo()
+    data["nodes"][1]["kind"] = "db"
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "topo-db" in svg                      # db 클래스 적용
+    assert 'class="topo-node topo-db cyl-rim"' in svg or "cyl-rim" in svg
+    # 원통 몸통은 좌우 호(A) 두 개로 닫힌 path
+    assert svg.count("cyl-rim") >= 1
+
+
+def test_component_db_kind_validates_ok():
+    data = _comp()
+    data["scenarios"][0]["nodes"][0]["kind"] = "db"
+    errors, warnings = validate_component(data)
+    assert errors == []
+    assert warnings == []
+
+
+def test_component_db_node_renders_cylinder_not_rect():
+    data = _comp()
+    data["scenarios"][0]["nodes"][0]["kind"] = "db"
+    svg, _, _ = render_svg_component(data, data["scenarios"][0])
+    assert "comp-db" in svg
+    assert "cyl-rim" in svg
+
+
+def test_component_db_and_ext_are_distinct():
+    data = _comp()
+    ns = data["scenarios"][0]["nodes"]
+    ns[0]["kind"] = "db"
+    ns[1]["kind"] = "ext"
+    svg, _, _ = render_svg_component(data, data["scenarios"][0])
+    assert "comp-db" in svg and "comp-ext" in svg
+
+
 def test_topology_l4_and_fw_are_distinct():
     data = _topo()
     data["nodes"][1]["kind"] = "l4"

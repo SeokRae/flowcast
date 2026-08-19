@@ -24,7 +24,7 @@ package "< Internal >" {
   rectangle "API Gateway\n:8080" as gw
   rectangle "Order Service\n:8081" as order
   rectangle "Payment Service\n:8082" as pay
-  rectangle "Order DB" as db
+  rectangle "Order DB" as db <<db>>
 }
 rectangle "Payment Gateway" as psp <<ext>>
 

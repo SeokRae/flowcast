@@ -18,14 +18,14 @@
 
     view      : "sequence"(기본) | "topology" | "component"
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
-                    kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽, 벽돌) | l4(L4/VIP 로드밸런서, fan-out)
+                    kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽, 벽돌) | l4(L4/VIP 로드밸런서, fan-out) | db(데이터베이스, 원통)
                     links[]: { from, to } — 번호·화살촉 없는 정적 배선(토폴로지 공통)
                     scenarios[].segments[]: { n?, from, to|self, label?, meta?, rail? } — 번호 구간 오버레이
                         label=업무 흐름(주), meta=기술 상세(프로토콜·포트·FW, 범례 흐린 부라인)
                     segments 없는 시나리오 = 순수 인프라 구성도
     [component 전용] 노드/존/엣지를 시나리오별로 선언(각 다이어그램 독립)
                     scenarios[].nodes[]: { id, name, port?, zone?, col/row 또는 x/y, kind? }
-                        kind: comp(기본, 내부 컴포넌트) | ext(외부 액터·시스템)
+                        kind: comp(기본, 내부 컴포넌트) | ext(외부 액터·시스템) | db(데이터베이스, 원통)
                     scenarios[].edges[]: { from, to, n?, label?, protocol?, bidir?, via?, lx?, ly?, lpos? }
                         bidir=양방향 화살촉, via=[x,y] 경유점, lx/ly=라벨 위치 오버라이드
 
@@ -70,8 +70,10 @@ T_CELL_W = 196        # 그리드 열 간격
 T_CELL_H = 88         # 그리드 행 간격
 T_BOX_W, T_BOX_H = 154, 50
 T_L4_W = 120          # l4(VIP/로드밸런서) 좁은 박스 폭 — 경량 통과 장비 표현
+# component node kind 의 단일 진실 — 검증기와 export(pptx 도형·팔레트)가 함께 참조한다.
+COMP_KINDS = {"comp", "ext", "db"}
 # topology node kind 의 단일 진실 — 검증기와 export(pptx 팔레트)가 함께 참조한다.
-TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4"}
+TOPO_KINDS = {"srv", "ext", "gear", "fw", "l4", "db"}
 T_ZONE_PAD = 14       # 존 박스 여백
 T_ZONE_LBL = 18       # 존 라벨 높이
 T_LEG_LH = 19         # 흐름 설명 줄 높이
@@ -388,8 +390,8 @@ def validate_component(data):
             if not (has_grid or has_abs):
                 errors.append(f"scenario[{si}] node '{n.get('id')}'에 위치 없음 (col/row 또는 x/y 필요)")
             kind = n.get("kind", "comp")
-            if not isinstance(kind, str) or kind not in {"comp", "ext"}:
-                errors.append(f"{where}: 잘못된 kind '{kind}' (허용: ['comp', 'ext'])")
+            if not isinstance(kind, str) or kind not in COMP_KINDS:
+                errors.append(f"{where}: 잘못된 kind '{kind}' (허용: {sorted(COMP_KINDS)})")
         idset = set(ids)
         seen_n = {}
         edges = _list_field(sc, "edges", errors, f"scenario[{si}]")
@@ -700,6 +702,21 @@ def _split_step_label(lb):
     return "", lb.strip()
 
 
+def _cyl_ry(h):
+    """원통 윗/아랫면 타원의 반높이. 라벨 오프셋 계산도 이 값을 쓴다."""
+    return min(12.0, h / 4)
+
+
+def _cyl_paths(x, y, w, h, cls):
+    """DB(데이터베이스) 원통 — 몸통 path + 앞쪽 윗면 호. rect 대신 쓰는 도형."""
+    ry = _cyl_ry(h)
+    body = (f'M{x},{y + ry} A{w / 2},{ry} 0 0,1 {x + w},{y + ry} '
+            f'L{x + w},{y + h - ry} A{w / 2},{ry} 0 0,1 {x},{y + h - ry} Z')
+    rim = f'M{x},{y + ry} A{w / 2},{ry} 0 0,0 {x + w},{y + ry}'
+    return (f'<path class="{cls}" d="{body}"/>',
+            f'<path class="{cls} cyl-rim" d="{rim}"/>')
+
+
 def _topo_legend_tables(labelled, leg_x, leg_y, diagram_right):
     """흐름 설명 표 모델 — SVG(셀 rect)/pptx(네이티브 add_table) 공용.
 
@@ -952,6 +969,8 @@ def render_svg_topology(data, scenario):
             cls += " topo-fw"
         elif kind == "l4":
             cls += " topo-l4"
+        elif kind == "db":
+            cls += " topo-db"
         cls += state
         node_body.append(f'<g class="iff-node" data-id="{esc(nd["id"])}" data-cx="{x + w / 2}" data-cy="{y + h / 2}" data-w="{w}" data-h="{h}">')
         lines = str(nd["name"]).split("\n")
@@ -968,14 +987,18 @@ def render_svg_topology(data, scenario):
                     ty = by0 + bh / 2 + 3.5 - (len(blines) - 1) * 5.5 + i * 11
                     node_body.append(f'<text class="{txcls}" x="{x + w / 2}" y="{ty}" text-anchor="middle">{esc(ln)}</text>')
         else:
-            node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
+            if kind == "db":
+                node_body.extend(_cyl_paths(x, y, w, h, cls))
+            else:
+                node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
             if kind == "l4":
                 # L4/VIP = 로드밸런서 fan-out 아이콘(1→N 분배), 좌상단
                 ix, iy = x + 12, y + 13
                 node_body.append(f'<circle class="l4-ico" cx="{ix}" cy="{iy}" r="1.8"/>')
                 node_body.append(f'<path class="l4-ico-l" d="M{ix},{iy} L{ix + 11},{iy - 5} M{ix},{iy} L{ix + 11},{iy} M{ix},{iy} L{ix + 11},{iy + 5}"/>')
+            dy = _cyl_ry(h) / 2 if kind == "db" else 0   # 원통 윗면 호를 피해 몸통 중앙으로
             for i, ln in enumerate(lines):
-                ty = y + h / 2 + 4 - (len(lines) - 1) * 6 + i * 12
+                ty = y + h / 2 + 4 + dy - (len(lines) - 1) * 6 + i * 12
                 node_body.append(f'<text class="{txcls}" x="{x + w / 2}" y="{ty}" text-anchor="middle">{esc(ln)}</text>')
         node_body.append('</g>')
 
@@ -1175,11 +1198,14 @@ def render_svg_component(data, scenario):
         kind = nd.get("kind", "comp")
         cls = "comp-node" + ("" if kind == "comp" else f" comp-{kind}")
         node_body.append(f'<g class="iff-node" data-id="{esc(nd["id"])}" data-cx="{x + w / 2}" data-cy="{y + h / 2}" data-w="{w}" data-h="{h}">')
-        node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
+        if kind == "db":
+            node_body.extend(_cyl_paths(x, y, w, h, cls))
+        else:
+            node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
         name_lines = str(nd["name"]).split("\n")
         port = nd.get("port")
         total = len(name_lines) + (1 if port else 0)
-        cy0 = y + h / 2 - (total - 1) * 7 + 4
+        cy0 = y + h / 2 - (total - 1) * 7 + 4 + (_cyl_ry(h) / 2 if kind == "db" else 0)
         for j, ln in enumerate(name_lines):
             node_body.append(f'<text class="comp-name" x="{x + w / 2}" y="{cy0 + j * 14}" text-anchor="middle">{esc(ln)}</text>')
         if port:
@@ -1288,6 +1314,7 @@ CSS = """
     .topo-node.dim{opacity:0.5;}
     .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
     .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-db{fill:var(--note-bg);stroke:var(--note-bd);}
     .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
     .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
     .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
@@ -1317,6 +1344,8 @@ CSS = """
     .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
     .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
     .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .cyl-rim{fill:none;}
     .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
     .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
     .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
