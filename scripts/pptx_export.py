@@ -76,6 +76,7 @@ SEQ_TEXT = (0x1B, 0x26, 0x35)         # --text
 SEQ_MUTED = (0x54, 0x66, 0x7E)        # --muted
 SEQ_WARN = (0x8A, 0x62, 0x10)         # --warn
 SEQ_LIFELINE = (0x9C, 0xA3, 0xAF)     # 회색 점선
+SEQ_FRAME_LINE = (0x93, 0xA1, 0xB3)   # --line-soft (조건 블록 프레임, #102)
 
 
 def _load_render():
@@ -696,6 +697,8 @@ def _paginate_sequences(R, data, scenarios, size):
       - 트리거: 시나리오 전체를 한 장에 넣을 때 s < SEQ_PAGE_MIN_SCALE (짧으면 그대로 1장).
       - 예산: avail_h / MIN_SCALE 높이까지 스텝을 그리디로 채우고 **스텝 경계에서만** 넘김
         (note·self 중간 절단 방지). 액터/존/라이프라인은 export 가 슬라이드마다 재렌더 → 연장선.
+      - 조건 블록(alt/opt … end, #102)은 한 단위로 다룬다. 들어갈 자리가 없으면 통째로 다음 장에
+        넘기고, 블록 하나가 한 장을 넘을 때만 페이지 끝에서 닫고 다음 장에서 "(이어서)"로 다시 연다.
       - step.n 은 원본 유지(번호 연속). 제목에 (i/N)·이어서 suffix.
     고정 캔버스(size!=None)에서만 동작 — auto(content-fit)는 캔버스가 늘어나므로 분할 불필요.
     """
@@ -713,12 +716,28 @@ def _paginate_sequences(R, data, scenarios, size):
         if s >= SEQ_PAGE_MIN_SCALE or len(steps) <= 1:
             out.append(sc)
             continue
+
+        def fits(page):
+            return R.layout_sequence(data, {**sc, "steps": page})["height"] <= budget
+
         chunks, cur = [], []
-        for st in steps:
-            cur.append(st)
-            if R.layout_sequence(data, {**sc, "steps": cur})["height"] > budget and len(cur) > 1:
-                chunks.append(cur[:-1])
-                cur = [st]
+        for unit in _seq_units(steps):
+            if fits(cur + unit):
+                cur += unit
+                continue
+            if len(unit) == 1 or fits(unit):
+                if cur:             # 지금 장을 닫고 다음 장에 통째로 둔다
+                    chunks.append(cur)
+                cur = list(unit)    # 단일 스텝은 넘쳐도 그대로 둔다(기존 동작)
+                continue
+            # 블록 하나가 한 장을 넘는다. 어차피 나눠야 하니 지금 장의 남은 자리부터 채운다.
+            if cur and not fits(cur + unit[:2] + [{"kind": "end"}]):
+                chunks.append(cur)
+                cur = []
+            parts = _split_block(unit, fits, head=cur)
+            parts[0] = cur + parts[0]
+            chunks += parts[:-1]
+            cur = parts[-1]
         if cur:
             chunks.append(cur)
         base = {k: v for k, v in sc.items() if k != "steps"}
@@ -727,6 +746,63 @@ def _paginate_sequences(R, data, scenarios, size):
             suffix = f" ({i}/{n_pages})" + (" · 이어서" if i > 1 else "") if n_pages > 1 else ""
             out.append({**base, "title": base.get("title", "") + suffix, "steps": ch})
     return out
+
+
+_FRAME_KINDS = {"alt", "opt", "else", "end"}     # render.FRAME_KINDS 와 같은 집합(테스트가 대조)
+
+
+def _has_msg(page):
+    return any(st.get("kind") not in _FRAME_KINDS for st in page)
+
+
+def _seq_units(steps):
+    """스텝 목록을 분할 단위로 묶는다. 블록 밖 스텝은 1개씩, alt/opt … end 는 통째로 하나."""
+    units, block = [], None
+    for st in steps:
+        kind = st.get("kind")
+        if block is not None:
+            block.append(st)
+            if kind == "end":
+                units.append(block)
+                block = None
+        elif kind in ("alt", "opt"):
+            block = [st]
+        else:
+            units.append([st])
+    if block is not None:
+        units.append(block)
+    return units
+
+
+def _split_block(block, fits, head=()):
+    """한 장을 넘는 블록을 페이지별 조각으로 나눈다. 조각마다 여는 마커로 시작해 end 로 닫힌다.
+
+    head 는 첫 조각 앞에 이미 놓인 스텝(같은 장)이다. 첫 조각의 높이만 head 와 합쳐 잰다.
+    이어지는 조각의 여는 마커 label 은 그 시점 가지의 조건 + " (이어서)"다. else 자리에서
+    끊기면 다음 조각을 그 else 의 조건으로 열어, 앞 조각 끝에 빈 가지가 남지 않게 한다.
+    """
+    opener, end = block[0], {"kind": "end"}
+    body = block[1:-1] if block[-1].get("kind") == "end" else block[1:]
+    guard = opener.get("label", "")
+    head = list(head)
+    parts, cur = [], [opener]
+    for st in body:
+        is_else = st.get("kind") == "else"
+        if _has_msg(cur) and not fits(head + cur + [st, end]):
+            if cur[-1].get("kind") == "else":
+                cur.pop()           # 방금 연 가지가 비어 있으면 다음 조각으로 넘긴다
+            parts.append(cur + [end])
+            head = []
+            if is_else:
+                guard = st.get("label", "")
+            cur = [{"kind": opener["kind"], "label": f"{guard} (이어서)".strip()}]
+            if is_else:
+                continue            # else 자리는 새 조각의 여는 마커가 대신한다
+        elif is_else:
+            guard = st.get("label", "")
+        cur.append(st)
+    parts.append(cur + [end])
+    return parts
 
 
 def export_sequence(data, out_path, slide_size="wide", paginate=True, prs=None):
@@ -850,6 +926,39 @@ def export_sequence(data, out_path, slide_size="wide", paginate=True, prs=None):
                 r.text = a["attrs"]
                 r.font.size = Pt(_fpt(8, s))
                 r.font.color.rgb = RGBColor(*SEQ_MUTED)
+
+        # 조건 블록 프레임(#102). 화살표 아래에 깔리도록 메시지보다 먼저 그린다(HTML 과 같은 순서).
+        for f in L["frames"]:
+            x1, x2, y1, y2, tw = f["x1"], f["x2"], f["y1"], f["y2"], f["tag_w"]
+            fr = shapes.add_shape(MSO_SHAPE.RECTANGLE, X(x1), Y(y1), emu(x2 - x1), emu(y2 - y1))
+            fr.fill.background()
+            fr.line.color.rgb = RGBColor(*SEQ_FRAME_LINE)
+            fr.shadow.inherit = False
+            tag = shapes.add_shape(MSO_SHAPE.RECTANGLE, X(x1), Y(y1), emu(tw), emu(R.FRAME_TAG_H))
+            tag.fill.solid()
+            tag.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            tag.line.color.rgb = RGBColor(*SEQ_FRAME_LINE)
+            tag.shadow.inherit = False
+            tf = tag.text_frame
+            tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+            tf.word_wrap = False
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            tp = tf.paragraphs[0]
+            tp.alignment = PP_ALIGN.CENTER
+            tr = tp.add_run()
+            tr.text = f["kind"]
+            tr.font.size = Pt(_fpt(8, s))
+            tr.font.bold = True
+            tr.font.color.rgb = RGBColor(*SEQ_TEXT)
+            _labels(shapes, x1 + tw + 2, y1 - 2, max(x2 - x1 - tw - 4, 40), R.FRAME_TAG_H + 4,
+                    [(f"[{f['label']}]", 9, SEQ_ACTOR_LINE, True)], PP_ALIGN.LEFT, MSO_ANCHOR.MIDDLE)
+            for e in f["elses"]:
+                ln = shapes.add_connector(MSO_CONNECTOR.STRAIGHT, X(x1), Y(e["y"]), X(x2), Y(e["y"]))
+                ln.line.color.rgb = RGBColor(*SEQ_FRAME_LINE)
+                ln.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+                if e["label"]:
+                    _labels(shapes, x1 + 2, e["y"] + 1, max(x2 - x1 - 4, 40), 17,
+                            [(f"[{e['label']}]", 9, SEQ_ACTOR_LINE, True)], PP_ALIGN.LEFT, MSO_ANCHOR.TOP)
 
         # 메시지 / 노트
         for st in L["steps"]:

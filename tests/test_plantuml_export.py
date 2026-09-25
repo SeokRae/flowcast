@@ -85,6 +85,38 @@ def test_sequence_kinds_note_self_relay(tmp_path):
     assert "note over a, b" in text and "주의사항" in text and "end note" in text
 
 
+def test_sequence_alt_else_opt_end_blocks(tmp_path):
+    # 조건 블록 마커(#102) → PlantUML 같은 이름의 문법. 블록 안 스텝은 들여쓴다.
+    data = {
+        "system": "T", "actors": [{"id": "a", "name": "A"}, {"id": "b", "name": "B"}],
+        "scenarios": [{"title": "S", "steps": [
+            {"kind": "alt", "label": "코드 있음"},
+            {"n": 1, "from": "a", "to": "b", "label": "조회", "kind": "req"},
+            {"kind": "else", "label": "코드\n없음"},
+            {"n": 1, "from": "a", "to": "b", "label": "기본값", "kind": "req"},
+            {"kind": "end"},
+            {"kind": "opt", "label": "첫 요청"},
+            {"from": "a", "to": "a", "label": "적립", "kind": "self"},
+            {"kind": "end"},
+        ]}]}
+    out = tmp_path / "alt.puml"
+    export_sequence(data, out)
+    lines = out.read_text(encoding="utf-8").splitlines()
+    body = lines[lines.index("alt 코드 있음"):]
+    assert body[:8] == ["alt 코드 있음", "  a -> b : 1. 조회", "else 코드 없음",
+                        "  a -> b : 1. 기본값", "end", "opt 첫 요청", "  a -> a : 적립", "end"]
+
+
+def test_sequence_frame_kinds_match_render():
+    assert _mod._SEQ_FRAME == _mod._load_render().FRAME_KINDS
+
+
+def test_example_sequence_alt_block_exported(tmp_path):
+    _, text, _ = _emit(export_sequence, SEQ, tmp_path)
+    assert "alt 카드 결제" in text and "else 계좌 이체" in text
+    assert "  bank --> pay : 5. 승인 응답" in text
+
+
 # ── TOPOLOGY ──────────────────────────────────────────────────
 def test_topology_rectangles_zones_links_segments(tmp_path):
     _, text, _ = _emit(export_topology, TOPO, tmp_path)

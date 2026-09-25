@@ -185,11 +185,12 @@ def test_sequence_message_labels_and_numbers(tmp_path):
 
 
 def test_sequence_connector_count(tmp_path):
-    # 라이프라인(actor 수) + 메시지 커넥터(note 제외), 슬라이드별 합산
+    # 라이프라인(actor 수) + 메시지 커넥터(note, 블록 마커 제외) + else 구분선, 슬라이드별 합산
     data, out, _ = _export_seq(tmp_path)
     prs = Presentation(str(out))
     n_actors = len(data["actors"])
-    expected = sum(n_actors + sum(1 for st in sc["steps"] if st["kind"] != "note")
+    markers = {"note", "alt", "opt", "end"}
+    expected = sum(n_actors + sum(1 for st in sc["steps"] if st["kind"] not in markers)
                    for sc in data["scenarios"])
     conns = sum(1 for s in prs.slides for sh in s.shapes
                 if sh.shape_type == MSO_SHAPE_TYPE.LINE)
@@ -559,6 +560,85 @@ def test_paginated_title_has_page_index(tmp_path):
     n = export_sequence(_long_seq(30), out)
     text = _all_text(Presentation(str(out)))
     assert f"(1/{n})" in text and "이어서" in text
+
+
+# ── #102: 조건 블록 alt/opt ────────────────────────────────────
+
+def test_sequence_frame_rendered(tmp_path):
+    _, out, _ = _export_seq(tmp_path)
+    text = _all_text(Presentation(str(out)))
+    assert "alt" in text and "[카드 결제]" in text and "[계좌 이체]" in text
+
+
+def test_frame_kinds_match_render():
+    assert _mod._FRAME_KINDS == _R.FRAME_KINDS
+
+
+def _block_seq(n_before, n_block, n_after=2):
+    """블록 앞 n_before 스텝, 두 가지로 나뉜 n_block 스텝의 alt 블록, 블록 뒤 n_after 스텝."""
+    def req(i):
+        return {"n": i, "from": ("a" if i % 2 else "b"), "to": ("b" if i % 2 else "c"),
+                "label": f"step {i}", "kind": "req", "protocol": "HTTPS"}
+    half = n_block // 2
+    steps = [req(i) for i in range(1, n_before + 1)]
+    steps += [{"kind": "alt", "label": "가지 1"}]
+    steps += [req(i) for i in range(n_before + 1, n_before + 1 + half)]
+    steps += [{"kind": "else", "label": "가지 2"}]
+    steps += [req(i) for i in range(n_before + 1 + half, n_before + 1 + n_block)]
+    steps += [{"kind": "end"}]
+    steps += [req(i) for i in range(n_before + 1 + n_block, n_before + 1 + n_block + n_after)]
+    return {"system": "S",
+            "actors": [{"id": "a", "name": "Alpha"}, {"id": "b", "name": "Beta"},
+                       {"id": "c", "name": "Gamma"}],
+            "scenarios": [{"title": "Block", "steps": steps}]}
+
+
+def _pages(data):
+    return _mod._paginate_sequences(_R, data, data["scenarios"], _mod._parse_slide_size("wide"))
+
+
+def _assert_balanced(page):
+    """한 페이지 안에서 블록이 열리면 닫히고, 빈 가지가 없다(검증기 기준 error 없음)."""
+    errors, warnings = _R.validate({"system": "S", "actors": [{"id": x, "name": x} for x in "abc"],
+                                    "scenarios": [{"title": "p", "steps": page["steps"]}]})
+    assert errors == []
+    assert not any("가지가 비어 있음" in w for w in warnings)
+
+
+def test_pagination_moves_whole_block_to_next_page():
+    # 블록이 페이지 경계에 걸리면 쪼개지 않고 통째로 다음 장에 둔다.
+    pages = _pages(_block_seq(14, 6))
+    assert len(pages) > 1
+    for pg in pages:
+        _assert_balanced(pg)
+    holding = [pg for pg in pages if any(st["kind"] == "alt" for st in pg["steps"])]
+    assert len(holding) == 1
+    assert sum(1 for st in holding[0]["steps"] if st["kind"] == "req") >= 6
+
+
+def test_pagination_splits_oversized_block_with_continuation():
+    # 블록 하나가 한 장을 넘으면 페이지 끝에서 닫고 다음 장에서 "(이어서)"로 다시 연다.
+    pages = _pages(_block_seq(1, 40))
+    openers = [st for pg in pages for st in pg["steps"] if st["kind"] == "alt"]
+    assert len(openers) > 1
+    assert openers[0]["label"] == "가지 1"
+    assert all(o["label"].endswith("(이어서)") for o in openers[1:])
+    for pg in pages:
+        _assert_balanced(pg)
+    nums = [st["n"] for pg in pages for st in pg["steps"] if st.get("n") is not None]
+    assert nums == list(range(1, 1 + 1 + 40 + 2))      # 번호 누락, 중복 없이 이어짐
+
+
+def test_pagination_block_split_at_else_opens_with_else_guard():
+    # else 자리에서 끊기면 다음 조각은 그 else 의 조건으로 연다(앞 조각 끝에 빈 가지를 남기지 않음).
+    blk = [{"kind": "alt", "label": "g1"}, {"n": 1, "from": "a", "to": "b", "label": "x", "kind": "req"},
+           {"kind": "else", "label": "g2"}, {"n": 2, "from": "a", "to": "b", "label": "y", "kind": "req"},
+           {"kind": "end"}]
+    fits = lambda page: sum(1 for st in page if st["kind"] == "req") <= 1
+    parts = _mod._split_block(blk, fits)
+    assert [st["kind"] for st in parts[0]] == ["alt", "req", "end"]
+    assert parts[1][0] == {"kind": "alt", "label": "g2 (이어서)"}
+    assert [st["kind"] for st in parts[1]] == ["alt", "req", "end"]
 
 
 # ── CLI 검증 게이트 (#71) ──────────────────────────────────────

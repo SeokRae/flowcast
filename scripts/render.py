@@ -11,7 +11,10 @@
     actors[]  : { id, name, zone?, port?, line?, tone? } — 배열 순서 = 좌→우 레인 순서
     scenarios[]: { title, steps[] }
     steps[]   : { n?, from, to, label, kind, sub?, protocol?, tone? }
-                kind: req(실선) | res(점선 응답) | relay(중계) | self(자기호출) | note(설명 박스)
+                kind: req(실선) | res(점선 응답) | relay(중계) | self(자기호출) | note(구간 구분선)
+                조건 블록 마커(from/to 없음): alt(label=조건) … else(label=조건) … end,
+                    opt(label=조건) … end. 중첩 금지, opt 안 else 금지, 블록 안 note 금지.
+                    같은 alt 의 다른 가지끼리는 n 이 겹쳐도 warning 없음(한쪽만 실행).
                 tone: 선의 의미(형태와 직교) — danger(취소·차단) | warn(환불·되돌림) | info(선택 단계)
                 label 개행(\\n) = 다단 라벨. n 중복은 warning(원문 보존 허용).
     bars      : false 면 액티베이션 바를 그리지 않는다 (기본 true, 스텝 단위로 끊어 그림)
@@ -47,7 +50,9 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 from _cli import load_json  # noqa: E402
 
-KINDS = {"req", "res", "relay", "self", "note"}
+# 조건 블록 마커(#102). 화살표가 아니라 steps[] 사이에 끼워 넣는 경계라 from/to 가 없다.
+FRAME_KINDS = {"alt", "opt", "else", "end"}
+KINDS = {"req", "res", "relay", "self", "note"} | FRAME_KINDS
 # 선의 "형태"는 kind, "의미"는 tone 으로 나눈다. 한 축에 섞으면 점선인 환불 응답 같은
 # 조합을 표현할 수 없고 kind 가 조합마다 늘어난다.
 TONES = {"danger", "warn", "info"}
@@ -63,6 +68,10 @@ ROW = 22              # 스텝 간 세로 간격
 LBL_LH = 13           # 라벨 줄 높이
 EXTRA_LH = 13         # sub/protocol 줄 높이
 ACT_W = 12            # 액티베이션바 폭
+FRAME_PAD_X = 72      # 조건 블록 프레임이 레인 중심에서 벌어지는 폭. 액터 박스 반폭(66)보다 조금 넓게
+FRAME_TAG_H = 18      # 프레임 좌상단 태그(alt/opt) 높이
+FRAME_HDR_H = 26      # 프레임 윗변에서 첫 스텝 행까지
+FRAME_ELSE_H = 22     # else 구분선과 조건 글자가 차지하는 높이
 
 # ── 토폴로지(구성도) 뷰 상수 ──────────────────────────────────
 T_MARGIN = 26         # 캔버스 여백
@@ -247,6 +256,8 @@ def validate(data):
             errors.append(f"scenario[{si}]에 title 누락")
         steps = _list_field(sc, "steps", errors, f"scenario[{si}]", required=True)
         seen_n = {}
+        block = None       # 열린 alt/opt 블록: {kind, where, id, branch, msgs}
+        n_blocks = 0
         for ti, st in enumerate(steps):
             where = f"scenario[{si}].steps[{ti}]"
             if not isinstance(st, dict):
@@ -256,6 +267,15 @@ def validate(data):
             kind = st.get("kind")
             if not isinstance(kind, str) or kind not in KINDS:
                 errors.append(f"{where}: 잘못된 kind '{kind}' (허용: {sorted(KINDS)})")
+            if kind in FRAME_KINDS:
+                block, n_blocks = _check_frame_marker(st, kind, where, block, n_blocks,
+                                                      errors, warnings)
+                continue
+            if kind == "note" and block is not None:
+                errors.append(f"{where}: {block['kind']} 블록 안에는 note를 쓸 수 없음 "
+                              f"(조건은 블록 label에 적는다)")
+            if block is not None:
+                block["msgs"] += 1
             for key in ("from", "to"):
                 if not _valid_id(st.get(key)) or st.get(key) not in idset:
                     errors.append(f"{where}: 미정의 actor 참조 {key}='{st.get(key)}'")
@@ -266,10 +286,60 @@ def validate(data):
                 errors.append(f"{where}: 잘못된 tone '{tone}' (허용: {sorted(TONES)})")
             n = st.get("n")
             if n is not None:
-                _append_duplicate_warning(
-                    seen_n, n,
-                    f"{where}: 스텝 번호 {n} 중복 (원문 보존으로 허용)", warnings)
+                scope = (block["id"], block["branch"]) if block is not None else None
+                _append_step_n(seen_n, n, scope,
+                               f"{where}: 스텝 번호 {n} 중복 (원문 보존으로 허용)", warnings)
+        if block is not None:
+            errors.append(f"{block['where']}: {block['kind']} 블록이 end 없이 끝남")
     return errors, warnings
+
+
+def _check_frame_marker(st, kind, where, block, n_blocks, errors, warnings):
+    """alt/opt/else/end 마커 1개를 검사하고 갱신된 (block, n_blocks)를 돌려준다.
+
+    중첩은 금지한다(#102). 프레임 들여쓰기와 짝 검증 범위를 줄이려는 결정이다.
+    """
+    if st.get("n") is not None:
+        warnings.append(f"{where}: {kind} 마커의 n은 쓰이지 않음")
+    if kind in ("alt", "opt"):
+        if not st.get("label"):
+            errors.append(f"{where}: {kind}에 label(조건) 필수")
+        if block is not None:
+            errors.append(f"{where}: 블록 중첩 금지 ({block['where']}의 {block['kind']}이 아직 열려 있음)")
+            return block, n_blocks
+        return {"kind": kind, "where": where, "id": n_blocks, "branch": 0, "msgs": 0}, n_blocks + 1
+    if kind == "else":
+        if block is None:
+            errors.append(f"{where}: else 앞에 여는 alt가 없음")
+        elif block["kind"] == "opt":
+            errors.append(f"{where}: opt 블록에는 else를 쓸 수 없음 (가지가 둘 이상이면 alt)")
+        else:
+            if block["msgs"] == 0:
+                warnings.append(f"{where}: else 앞 가지가 비어 있음")
+            block["branch"] += 1
+            block["msgs"] = 0
+        return block, n_blocks
+    # end
+    if block is None:
+        errors.append(f"{where}: end 앞에 여는 블록(alt/opt)이 없음")
+        return None, n_blocks
+    if block["msgs"] == 0:
+        warnings.append(f"{where}: end 앞 가지가 비어 있음")
+    return None, n_blocks
+
+
+def _append_step_n(seen, n, scope, message, warnings):
+    """스텝 번호 중복 경고. 같은 alt의 서로 다른 가지끼리는 한쪽만 실행되므로 겹쳐도 된다."""
+    try:
+        prev = seen.setdefault(n, [])
+    except TypeError:
+        return      # 해시 불가 값은 중복 판정에서 뺀다(_append_duplicate_warning과 같은 처리)
+    def sibling(p):
+        return p is not None and scope is not None and p[0] == scope[0] and p[1] != scope[1]
+
+    if any(not sibling(p) for p in prev):
+        warnings.append(message)
+    prev.append(scope)
 
 
 def validate_topology(data):
@@ -434,6 +504,8 @@ def layout_sequence(data, scenario):
         note : {type:"note", x1, x2, y, h, lines}
         msg  : {type:"msg", kind, self, y, x1, x2, self_x, mid, lines, extras:[(cls,val)]}
       bars   : [{x, y, h}]                    (액티베이션바; w=ACT_W)
+      frames : [{kind, label, x1, x2, y1, y2, tag_w, elses:[{y, label}]}]
+               (alt/opt 조건 블록. steps 와 따로 둬서 steps 를 도는 소비자의 type 분기를 건드리지 않는다)
     """
     actors = data["actors"]
     zones = data.get("zones") or []
@@ -452,10 +524,28 @@ def layout_sequence(data, scenario):
 
     cur = y0
     msgs = []          # (y, from, to) — 액티베이션 구간 계산용
+    frames, frame = [], None
     for st in scenario["steps"]:
         kind = st["kind"]
         label = st.get("label", "")
         lines = label.split("\n") if label else []
+        if kind in ("alt", "opt"):
+            # 조건 블록(#102). 태그와 조건이 얹히는 머리 행만큼 내려서 첫 스텝을 놓는다.
+            frame = {"kind": kind, "y1": cur + 2, "label": " ".join(lines),
+                     "elses": [], "lefts": [], "rights": []}
+            cur = frame["y1"] + FRAME_HDR_H
+            continue
+        if kind == "else":
+            if frame is not None:
+                frame["elses"].append({"y": cur + 2, "label": " ".join(lines)})
+                cur += FRAME_ELSE_H
+            continue
+        if kind == "end":
+            if frame is not None:
+                frames.append(_close_frame(frame, cur - 6, width))
+                cur = frames[-1]["y2"] + 14
+                frame = None
+            continue
         if kind == "note":
             # 구간 안내는 캔버스 전체 폭을 가로지르는 구분선으로 그린다. 참여자 두 개 사이만
             # 덮으면 "여기서부터 조건부"라는 뜻이 그 두 레인에만 걸린 것처럼 읽힌다.
@@ -489,7 +579,24 @@ def layout_sequence(data, scenario):
             if val:
                 rec["extras"].append((cls, val))
         steps.append(rec)
+        if frame is not None:
+            # 프레임은 블록 안 스텝이 닿는 레인과 라벨을 모두 덮는다.
+            text_w = max([_text_width(ln) for ln in lines]
+                         + [_text_width(f"( {v} )" if c == "proto" else v, 10) for c, v in rec["extras"]]
+                         + [0])
+            if kind == "self":
+                frame["lefts"].append(xa - FRAME_PAD_X)
+                frame["rights"].append(max(xa + FRAME_PAD_X, rec["self_x"] + 52 + text_w + 10))
+            else:
+                frame["lefts"] += [min(xa, xb) - FRAME_PAD_X, mid - text_w / 2 - 10]
+                frame["rights"] += [max(xa, xb) + FRAME_PAD_X, mid + text_w / 2 + 10]
         cur = y + EXTRA_LH * len(rec["extras"]) + ROW
+
+    if frame is not None:
+        # end 없이 끝난 블록. 검증기가 error 로 막지만, pptx 페이지 분할이 잘린 스텝 목록의
+        # 높이를 잴 때도 여기를 지나므로 예외 없이 닫는다.
+        frames.append(_close_frame(frame, cur - 6, width))
+        cur = frames[-1]["y2"] + 14
 
     bottom = cur + 8
     height = bottom + 16
@@ -510,7 +617,22 @@ def layout_sequence(data, scenario):
 
     return {"width": width, "height": height, "zone_y": zone_y, "box_y": box_y,
             "bottom": bottom, "actors": actor_recs, "zones": zone_bands,
-            "steps": steps, "bars": bars}
+            "steps": steps, "bars": bars, "frames": frames}
+
+
+def _close_frame(fr, y2, width):
+    """열린 블록을 프레임 레코드로 닫는다. 좌우는 블록 안 스텝 범위, 최소 폭은 머리 행 글자."""
+    tag_w = _text_width(fr["kind"], 10) + 18
+    guards = [fr["label"]] + [e["label"] for e in fr["elses"]]
+    need_w = max(_text_width(f"[{g}]") for g in guards) + tag_w + 20
+    x1 = min(fr["lefts"]) if fr["lefts"] else ML
+    x2 = max(fr["rights"]) if fr["rights"] else width - MR
+    if x2 - x1 < need_w:
+        x2 = x1 + need_w
+    x1, x2 = max(x1, 4), min(x2, width - 4)
+    y2 = max(y2, fr["y1"] + FRAME_TAG_H + 8)
+    return {"kind": fr["kind"], "label": fr["label"], "x1": x1, "x2": x2, "y1": fr["y1"],
+            "y2": y2, "tag_w": tag_w, "elses": fr["elses"]}
 
 
 def _activation_bars(msgs, cx):
@@ -541,6 +663,13 @@ def _activation_bars(msgs, cx):
 
 
 # ── SVG 생성 ──────────────────────────────────────────────────
+def _frag_guard(x, y, label):
+    """조건 글자 [label]. 라이프라인과 액티베이션 바가 글자를 가로지르지 않게 배경을 깐다."""
+    text = f"[{label}]"
+    return [f'<rect class="frag-guard-bg" x="{x - 3}" y="{y - 11}" width="{_text_width(text) + 6}" height="15" rx="2"/>',
+            f'<text class="frag-guard" x="{x}" y="{y}">{esc(text)}</text>']
+
+
 def render_svg(data, scenario):
     L = layout_sequence(data, scenario)
     width, height, box_y, bottom = L["width"], L["height"], L["box_y"], L["bottom"]
@@ -601,6 +730,18 @@ def render_svg(data, scenario):
             head.append(f'<text class="actor-sub{atone}" x="{x}" y="{box_y + BOX_H / 2 + 15}" text-anchor="middle">{esc(attrs)}</text>')
     for b in L["bars"]:
         head.append(f'<rect class="act-bar" x="{b["x"]}" y="{b["y"]}" width="{ACT_W}" height="{b["h"]}" rx="2"/>')
+    # 조건 블록 프레임. 화살표 아래에 깔리도록 body 보다 먼저 그린다.
+    for f in L["frames"]:
+        x1, x2, y1, y2, tw = f["x1"], f["x2"], f["y1"], f["y2"], f["tag_w"]
+        head.append(f'<rect class="frag" x="{x1}" y="{y1}" width="{x2 - x1}" height="{y2 - y1}" rx="3"/>')
+        head.append(f'<path class="frag-tag" d="M{x1},{y1} H{x1 + tw} V{y1 + FRAME_TAG_H - 6} '
+                    f'L{x1 + tw - 6},{y1 + FRAME_TAG_H} H{x1} Z"/>')
+        head.append(f'<text class="frag-kind" x="{x1 + 8}" y="{y1 + 13}">{esc(f["kind"])}</text>')
+        head += _frag_guard(x1 + tw + 8, y1 + 13, f["label"])
+        for e in f["elses"]:
+            head.append(f'<line class="frag-else" x1="{x1}" y1="{e["y"]}" x2="{x2}" y2="{e["y"]}"/>')
+            if e["label"]:
+                head += _frag_guard(x1 + 8, e["y"] + 14, e["label"])
 
     markers = "".join(
         f'<marker id="mk-{k}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'
@@ -1294,6 +1435,12 @@ CSS = """
     .note-rule{stroke:var(--zone-bd);stroke-width:1;stroke-dasharray:4,4;}
     .note{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1;}
     .note-tx{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag{fill:none;stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-tag{fill:var(--surface);stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-kind{fill:var(--text);font-family:var(--mono);font-size:10px;font-weight:700;}
+    .frag-guard{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag-guard-bg{fill:var(--surface);}
+    .frag-else{stroke:var(--line-soft);stroke-width:1.2;stroke-dasharray:6,4;}
     .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
     .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
     .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}
