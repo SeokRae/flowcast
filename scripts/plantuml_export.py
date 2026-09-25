@@ -8,14 +8,14 @@ validate_component)와 의미/텍스트 헬퍼(_split_dual_ip)만 render.py 에�
 → 순수 stdlib. python-pptx 같은 선택적 의존성 없음(의존성 격리 원칙 부합).
 
 시나리오 1개 = `@startuml`…`@enduml` 블록 1개. 한 .puml 파일에 N개 블록을 이어붙인다.
-좌표류(col/row/x/y/w/h/rail/via/lx/ly/lpos)는 전부 버린다. 분기·예외는 별개 시나리오
-= 별개 블록(alt/opt 합성 안 함 — 스키마에 분기 블록이 없음).
+좌표류(col/row/x/y/w/h/rail/via/lx/ly/lpos)는 전부 버린다. 별개 시나리오는 별개 블록이다.
+한 시나리오 안의 조건 블록 마커(alt/else/opt/end, #102)는 PlantUML 같은 이름의 문법으로 1:1 옮긴다.
 
 사용법:
     python3 scripts/plantuml_export.py {view.json} [-o {out.puml}] [--no-style] [--smetana]
 
 지원: sequence · component · topology 3뷰 (view 필드로 디스패치, 미지정=sequence).
-- sequence: participant(+box=zone) + 메시지 화살표(kind별) + note over
+- sequence: participant(+box=zone) + 메시지 화살표(kind별) + note over + alt/else/opt/end
 - topology: rectangle(+package=zone) + 정적 링크(--) + 번호 세그먼트(-->, 번호만) + legend 표
            (설명은 legend 로 — 한 pair 에 엣지가 몰리면 라벨이 겹쳐 뭉개진다)
 - component: 시나리오-로컬 rectangle(+package=zone) + 방향 엣지(-->/<-->)
@@ -193,6 +193,7 @@ def _arrow_label(rec, n_key="n"):
 
 # ── SEQUENCE ──────────────────────────────────────────────────
 _SEQ_OP = {"req": "->", "res": "-->", "relay": "->>", "self": "->"}
+_SEQ_FRAME = {"alt", "else", "opt", "end"}     # render.FRAME_KINDS 와 같은 집합(테스트가 대조)
 
 
 def _seq_block(data, sc, style):
@@ -216,21 +217,31 @@ def _seq_block(data, sc, style):
     if box_open:
         out.append("end box")
     out.append("")
+    ind = ""        # 조건 블록 안 스텝 들여쓰기
     for st in sc.get("steps", []):
         kind = st.get("kind")
         frm, to = st.get("from"), st.get("to")
+        if kind in _SEQ_FRAME:
+            guard = " ".join((st.get("label") or "").split("\n")).strip()
+            if kind == "end":
+                ind = ""
+                out.append("end")
+            else:
+                out.append(f"{kind} {guard}".rstrip() if kind == "else" else f"{kind} {guard}")
+                ind = "  "
+            continue
         if kind == "note":
             targets = _al(amap, frm) if frm == to else f"{_al(amap, frm)}, {_al(amap, to)}"
-            out.append(f"note over {targets}")
+            out.append(f"{ind}note over {targets}")
             n = st.get("n")
             body = (f"{n}. " if n is not None else "") + (st.get("label") or "")
             for ln in body.split("\n"):
                 out.append(ln.rstrip())
-            out.append("end note")
+            out.append(f"{ind}end note")
         else:
             op = _SEQ_OP.get(kind, "->")
             lbl = _arrow_label(st)
-            out.append(f"{_al(amap, frm)} {op} {_al(amap, to)}" + (f" : {lbl}" if lbl else ""))
+            out.append(f"{ind}{_al(amap, frm)} {op} {_al(amap, to)}" + (f" : {lbl}" if lbl else ""))
     out.append("@enduml")
     return "\n".join(out)
 

@@ -76,6 +76,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **메시지 화살표는 라이프라인까지 긋는다** — 액티베이션 바 가장자리(`ACT_W/2`)에서 끊으면 선이 짧아 보이고 흐름이 덜 읽힌다. `off = 1`로 두고 막대를 관통시키되, `head`(막대) → `body`(화살표) 순서라 화살표가 위에 남는다 (#128).
 - **레인 폭은 액터 박스 여백을 결정한다** — `LANE_W(220) - BOX_W(150) = 70`이 박스 사이 간격이다. 170이던 시절에는 20px이라 박스가 붙어 보였다 (#128).
 - **`kind`(형태)와 `tone`(의미)은 직교한다** — 한 축에 섞으면 "점선인 환불 응답" 같은 조합을 표현할 수 없고 조합마다 `kind`가 늘어난다. `tone`은 HTML 렌더 전용이고 pptx·plantuml export는 무시한다 — 세 출력의 색 체계를 맞추는 것은 별도 과제다 (#128).
+- **sequence 조건 블록은 `steps`가 아니라 `frames`로**: `layout_sequence`는 alt/opt 마커를 `steps` 레코드로 만들지 않고 `frames`에 따로 담는다. `render_svg`와 `pptx_export`가 `steps`를 돌며 `type`을 note/msg 둘로 하드코딩하고 있어서, 새 레코드를 `steps`에 넣으면 msg 분기로 떨어져 오작동한다. 중첩은 검증기에서 막는다(프레임 들여쓰기와 페이지 분할이 한 층만 가정한다) (#102).
 - **PlantUML SVG 재생성은 `-nometadata` 필수** — 없으면 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다 (#73).
 
 ## 라이선스

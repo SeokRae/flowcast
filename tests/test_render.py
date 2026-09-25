@@ -230,6 +230,148 @@ def test_validate_actor_undefined_zone():
 
 # ── validate_topology (구성도 뷰) ─────────────────────────────
 
+# ── 조건 블록 alt/opt (#102) ─────────────────────────────────
+
+def _alt(*, marker_steps=None):
+    """a→b 요청 뒤, b→c 조회가 두 가지로 갈리는 alt 블록. 가지끼리 번호 2, 3을 공유한다."""
+    steps = marker_steps or [
+        {"n": 1, "from": "a", "to": "b", "label": "요청", "kind": "req"},
+        {"kind": "alt", "label": "코드 있음"},
+        {"n": 2, "from": "b", "to": "c", "label": "코드 조회", "kind": "req"},
+        {"n": 3, "from": "c", "to": "b", "label": "값", "kind": "res"},
+        {"kind": "else", "label": "코드 없음"},
+        {"n": 2, "from": "b", "to": "c", "label": "기본값 조회", "kind": "req"},
+        {"n": 3, "from": "c", "to": "b", "label": "값", "kind": "res"},
+        {"kind": "end"},
+        {"n": 4, "from": "b", "to": "a", "label": "응답", "kind": "res"},
+    ]
+    return _base(scenarios=[{"title": "분기", "steps": steps}])
+
+
+def _errors(steps):
+    return validate(_alt(marker_steps=steps))[0]
+
+
+def _req(n, label="x"):
+    return {"n": n, "from": "a", "to": "b", "label": label, "kind": "req"}
+
+
+def test_validate_alt_block_ok_without_from_to():
+    errors, warnings = validate(_alt())
+    assert errors == []
+    assert warnings == []           # 서로 다른 가지의 번호 2, 3 공유는 경고하지 않는다
+
+
+def test_validate_opt_block_ok():
+    errors, warnings = validate(_alt(marker_steps=[
+        _req(1), {"kind": "opt", "label": "첫 주문"}, _req(2), {"kind": "end"}]))
+    assert errors == [] and warnings == []
+
+
+@pytest.mark.parametrize("kind", ["alt", "opt"])
+def test_validate_block_requires_label(kind):
+    errors = _errors([{"kind": kind}, _req(1), {"kind": "end"}])
+    assert any(f"{kind}에 label(조건) 필수" in e for e in errors)
+
+
+def test_validate_nested_block_is_error():
+    errors = _errors([{"kind": "alt", "label": "바깥"}, {"kind": "opt", "label": "안"},
+                      _req(1), {"kind": "end"}, {"kind": "end"}])
+    assert any("블록 중첩 금지" in e for e in errors)
+
+
+def test_validate_unclosed_block_is_error():
+    errors = _errors([{"kind": "alt", "label": "열림"}, _req(1)])
+    assert any("end 없이 끝남" in e for e in errors)
+
+
+@pytest.mark.parametrize("kind,msg", [("else", "else 앞에 여는 alt가 없음"),
+                                      ("end", "end 앞에 여는 블록")])
+def test_validate_stray_marker_is_error(kind, msg):
+    errors = _errors([_req(1), {"kind": kind, "label": "x"}])
+    assert any(msg in e for e in errors)
+
+
+def test_validate_else_inside_opt_is_error():
+    errors = _errors([{"kind": "opt", "label": "o"}, _req(1), {"kind": "else", "label": "e"},
+                      _req(2), {"kind": "end"}])
+    assert any("opt 블록에는 else를 쓸 수 없음" in e for e in errors)
+
+
+def test_validate_note_inside_block_is_error():
+    errors = _errors([{"kind": "alt", "label": "a"},
+                      {"from": "a", "to": "b", "kind": "note", "label": "메모"},
+                      _req(1), {"kind": "end"}])
+    assert any("블록 안에는 note를 쓸 수 없음" in e for e in errors)
+
+
+def test_validate_empty_branch_warns():
+    errors, warnings = validate(_alt(marker_steps=[
+        {"kind": "alt", "label": "a"}, {"kind": "else", "label": "b"}, _req(1), {"kind": "end"}]))
+    assert errors == []
+    assert any("가지가 비어 있음" in w for w in warnings)
+
+
+def test_validate_duplicate_n_outside_sibling_branches_still_warns():
+    # 가지 안 번호를 블록 밖에서 다시 쓰면 공유가 아니라 중복이다.
+    steps = _alt()["scenarios"][0]["steps"]
+    steps[-1]["n"] = 2
+    errors, warnings = validate(_alt(marker_steps=steps))
+    assert errors == []
+    assert any("스텝 번호 2 중복" in w for w in warnings)
+
+
+def test_layout_frame_wraps_block_steps():
+    data = _alt()
+    L = layout_sequence(data, data["scenarios"][0])
+    assert len(L["frames"]) == 1
+    f = L["frames"][0]
+    msgs = [st for st in L["steps"] if st["type"] == "msg"]
+    inside = msgs[1:5]
+    assert all(f["y1"] < st["y"] < f["y2"] for st in inside)
+    assert not (f["y1"] < msgs[0]["y"] < f["y2"]) and not (f["y1"] < msgs[-1]["y"] < f["y2"])
+    # else 구분선은 두 가지 사이
+    (e,) = f["elses"]
+    assert inside[1]["y"] < e["y"] < inside[2]["y"] and e["label"] == "코드 없음"
+    # 좌우는 블록 안 스텝이 닿는 레인(b, c)을 덮고, 닿지 않는 레인(a)은 밖에 둔다
+    x = {a["id"]: a["x"] for a in L["actors"]}
+    assert f["x1"] < x["b"] and f["x2"] > x["c"] and f["x1"] > x["a"]
+
+
+def test_layout_steps_keep_only_msg_and_note_records():
+    # 마커는 steps 레코드가 되지 않는다. steps 를 도는 소비자(pptx)의 type 분기를 건드리지 않기 위함.
+    data = _alt()
+    L = layout_sequence(data, data["scenarios"][0])
+    assert {st["type"] for st in L["steps"]} == {"msg"}
+    assert len(L["steps"]) == 6
+
+
+def test_layout_frame_is_wide_enough_for_guard():
+    long_guard = "아주 긴 조건 문구가 들어가서 레인 두 개 폭을 넘는 경우"
+    data = _alt(marker_steps=[{"kind": "opt", "label": long_guard}, _req(1), {"kind": "end"}])
+    L = layout_sequence(data, data["scenarios"][0])
+    f = L["frames"][0]
+    assert f["x2"] - f["x1"] >= f["tag_w"] + _mod._text_width(f"[{long_guard}]")
+
+
+def test_render_svg_draws_frame_tag_guard_and_else():
+    data = _alt()
+    svg, _, _ = render_svg(data, data["scenarios"][0])
+    assert 'class="frag"' in svg and 'class="frag-tag"' in svg
+    assert '>alt</text>' in svg
+    assert '>[코드 있음]</text>' in svg and '>[코드 없음]</text>' in svg
+    assert 'class="frag-else"' in svg
+    # 프레임은 화살표보다 먼저(아래에) 그린다
+    assert svg.index('class="frag"') < svg.index('class="ar-req')
+
+
+def test_example_sequence_shows_alt_block():
+    data = json.loads((EX / "order-service-sequence.json").read_text(encoding="utf-8"))
+    kinds = [st["kind"] for sc in data["scenarios"] for st in sc["steps"]]
+    assert "alt" in kinds and "else" in kinds and "end" in kinds
+    assert validate(data)[0] == []
+
+
 def _topo(**over):
     data = {
         "system": "테스트망",

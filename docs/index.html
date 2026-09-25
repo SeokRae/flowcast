@@ -188,7 +188,7 @@
       <div class="card-body">
         <span class="badge badge-sequence">sequence</span>
         <h3>Order Service · 주문 결제 FLOW</h3>
-        <p>구매자 → 웹스토어 → 주문 API → 결제 게이트웨이 → 은행. 5개 행위자 8단계 시간순 요청/응답을 스윔레인으로 표현.</p>
+        <p>구매자 → 웹스토어 → 주문 API → 결제 게이트웨이 → 은행. 5개 행위자 8단계 시간순 요청/응답을 스윔레인으로 표현하고, 카드 결제와 계좌 이체 중 한쪽만 실행되는 구간은 <code>alt</code> 블록으로 감쌌다.</p>
         <div class="card-links">
           <a href="examples/order-service-sequence.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
           <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/order-service-sequence.json" target="_blank" rel="noopener">JSON 소스</a>
