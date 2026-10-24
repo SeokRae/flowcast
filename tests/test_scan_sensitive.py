@@ -97,6 +97,23 @@ def test_plantuml_link_ids_are_not_false_positives(tmp_path, word):
     assert r.returncode == 0, f"{word!r} 를 오탐했다 (#64 재발)"
 
 
+@pytest.mark.parametrize("word", ["p" + "lot" + "te" + "r", "p" + "lot" + "te" + "d"],
+                         ids=["plotter", "plotted"])
+def test_english_words_containing_partner_token_are_not_false_positives(tmp_path, word):
+    """#135 회귀: vendor 한 anatomy 문서의 영어 일반어(plotter) 안 부분 문자열에 오탐하면
+    push 가 막힌다. 양쪽 모두 단어 안쪽이면 통과해야 한다."""
+    r = _run(tmp_path, {"docs/x.md": f"A gantry {word} visits 16 wells."})
+    assert r.returncode == 0, f"{word!r} 를 오탐했다 (#135 재발)"
+
+
+@pytest.mark.parametrize("word", ["lot" + "te" + "card", "pay_" + "lot" + "te"],
+                         ids=["prefix", "suffix"])
+def test_partner_token_compounds_are_still_blocked(tmp_path, word):
+    """경계 완화가 합성어 탐지까지 풀지 않았는지: 한쪽만 경계여도 잡아야 한다."""
+    r = _run(tmp_path, {"examples/x.json": '{"id": "%s"}' % word})
+    assert r.returncode == 1, f"{word!r} 가 통과했다 — 게이트 무력화"
+
+
 def test_lowercase_generic_word_is_not_blocked(tmp_path):
     """회사명은 대문자 단어경계로만 잡는다 — 영어 일반어까지 막으면 안 된다."""
     r = _run(tmp_path, {"a.md": "That looks " + "ni" + "ce" + " to me."})

@@ -72,14 +72,10 @@ flowcast:network-nat   {IP/VIP/NAT/방화벽 구성을 아는 만큼만 — 문�
 
 ```
 flowcast:state-loop     {알고리즘/프로토콜/상태 전이 — STATE→STEP→RENDER→LOOP로 무한 루프 애니메이션 생성}
-flowcast:mechanism      {OS, 런타임 메커니즘 하나 — 진실 모델을 고정한 뒤 외부 anatomy 스킬로 기계 일러스트 렌더}
+flowcast:mechanism      {OS, 런타임 메커니즘 하나: 진실 모델을 고정한 뒤 아이소메트릭 기계 일러스트로 빌드}
 ```
 
-`flowcast:mechanism`은 렌더를 외부 Agent Skill [anatomy](https://github.com/wheresryan22/anatomy)(MIT)에 맡깁니다. 스킬이 대신 설치하지 않으니 먼저 직접 설치해 주세요. Node 20.10 이상이 필요하고, 검증 단계에서 Chrome을 씁니다.
-
-```bash
-git clone --depth 1 --branch v1.1.0 https://github.com/wheresryan22/anatomy.git ~/.claude/skills/anatomy
-```
+`flowcast:mechanism`의 렌더 kit와 검증 스크립트는 [anatomy](https://github.com/wheresryan22/anatomy)(MIT) v1.1.0에서 2D 범위만 `skills/mechanism/vendor/anatomy/`로 이관한 것이라 따로 설치할 것이 없습니다. Node 20.10 이상이 필요하고, 검증 단계에서 Chrome을 씁니다. 출처와 포함, 제외 목록은 `skills/mechanism/vendor/anatomy/VENDOR.md`에 있어요.
 
 아래 `python3 scripts/…` 명령은 **레포를 체크아웃한 기준**이다. 플러그인으로 설치해 쓰는 경우 스크립트는 설치 캐시 안에 있다 — 경로는 `~/.claude/plugins/installed_plugins.json`의 `installPath`로 확인한다(설치 경로는 마켓플레이스마다 다르므로 고정 경로를 가정하지 않는다). 스킬·에이전트는 이 해석을 자동으로 한다.
 
