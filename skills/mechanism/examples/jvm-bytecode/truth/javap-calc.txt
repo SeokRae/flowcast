@@ -1,0 +1,11 @@
+  static int calc(int, int);
+    descriptor: (II)I
+    flags: (0x0008) ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=2
+         0: iload_0
+         1: iload_1
+         2: iadd
+         3: iconst_2
+         4: imul
+         5: ireturn

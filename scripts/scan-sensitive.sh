@@ -14,7 +14,10 @@ cd "$ROOT"
 # 대소문자 무시 라틴 고유 토큰 + 식별자 패턴 (파트너명·계정·거래/정산 ID)
 # k7 은 단어경계(\b)로 고정한다 — 없으면 PlantUML 자동 생성 링크 id(lnk7 등)의
 # 부분 문자열 'k7'에 오탐한다 (#64). 독립 토큰 k7 은 그대로 탐지된다.
-PAT_I='nastec|vpg|lotte|nicepay|\bk7\b|acct_[0-9A-Za-z]+|settreport_|payauthz_|refauthz_|payonly|bid_[0-9]|clientId|partnerTransactionId'
+# lotte 는 한쪽 이상이 단어경계일 때만 잡는다. 영어 일반어 plotter, plotted 안의
+# 부분 문자열에 오탐하기 때문이다(#135, vendor 한 anatomy 문서). lottecard 처럼 앞이
+# 경계인 합성어와 pay_lotte 처럼 뒤가 경계인 식별자는 그대로 탐지된다.
+PAT_I='nastec|vpg|\blotte|lotte\b|nicepay|\bk7\b|acct_[0-9A-Za-z]+|settreport_|payauthz_|refauthz_|payonly|bid_[0-9]|clientId|partnerTransactionId'
 # 한글 파트너/내부 표현
 PAT_KO='나스텍|롯데|입금정산'
 # 회사명 NICE (영어 일반어 nice 와 구분: 대문자 단어경계)
