@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `skills/dataflow/` | 데이터 파이프라인(ELT+Medallion) 도메인 프리셋 — 질의 대본으로 흐름 문서를 먼저 만들고 `flowcast:component`에 위임(신규 뷰 아님, 사용자 직접 호출 전용) |
 | `skills/network-nat/` | 네트워크/NAT 인프라 도메인 프리셋 — 장비 IP·공인 IP·VIP·SNAT·DNAT·서버별 포트 방화벽 허용을 질의 대본으로 확정해 흐름 문서를 먼저 만들고 `flowcast:topology`에 위임(신규 뷰 아님, 사용자 직접 호출 전용) |
 | `skills/state-loop/` | 무한 루프 상태 시각화 독립 스킬 — 알고리즘·프로토콜·상태 전이를 STATE→STEP→RENDER→LOOP 네 조각으로 분리한 self-contained HTML+JS로 만든다. `render.py` 파이프라인을 쓰지 않는다(정적 스냅샷 전제라 계속 바뀌는 상태를 표현 못함) — 신규 뷰도 도메인 프리셋도 아닌 별도 렌더링 모델, 사용자 직접 호출 전용 |
+| `skills/mechanism/` | 메커니즘 일러스트 독립 스킬. OS, 런타임 메커니즘 하나를 "움직이는 부품 하나 = 개념 하나"인 기계 그림으로 만든다. 적합성 판정, 대상 버전 고정, 진실 모델(`model.mjs`, `check.mjs`), 브리프, 사후 검증은 flowcast가 맡고, 기계 설계와 렌더는 사용자가 설치한 외부 anatomy 스킬에 위임한다(코드 벤더링 없음). `render.py` 파이프라인 밖, 사용자 직접 호출 전용 |
 | `agents/diagram-router.md` | 데이터 → 다이어그램 단위 분할 + 뷰 판별 (그리지 않음) |
 | `agents/diagram-drawer.md` | 단위 1건 → 뷰 스킬 로드 → JSON → render → 파일링 |
 | `scripts/render.py` | JSON → self-contained HTML/PDF 렌더러 (스키마 단일 진실 = 상단 docstring) |
@@ -50,12 +51,12 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 
 - **실 데이터 절대 금지** (public repo): 파트너·내부 식별자를 커밋하지 않는다. 예제는 전량 합성. 커밋·push 전 `scripts/scan-sensitive.sh`가 0건인지 확인 (CI도 매 push 검사).
 - **원문 보존**: 실제 다이어그램을 옮길 때 라벨·포트·프로토콜을 원문 그대로 — 단, 그 산출물은 이 public repo가 아니라 사용자 로컬 `out_dir`에 파일링한다.
-- **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. PlantUML export(`plantuml_export.py`)는 텍스트 출력이라 **stdlib만**(추가 의존성 없음). 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다.
+- **의존성 격리**: 코어(render/import/생성)는 **stdlib만**. python-pptx는 **PPT export 전용 선택적** 의존성 — `pptx_export.py`에서만 lazy import, 미설치 시 안내 후 종료. PlantUML export(`plantuml_export.py`)는 텍스트 출력이라 **stdlib만**(추가 의존성 없음). 새 기능에 의존성을 더할 땐 이 격리 원칙을 지킨다. `skills/mechanism/`이 쓰는 anatomy 스킬, Node 20.10+, Chrome은 이 저장소 밖의 **선택적 외부 의존성**이다. 스킬이 설치하지 않고, 없으면 안내 후 `blocked`(anatomy, Node)나 `partial`(Chrome)로 보고한다. anatomy 코드는 복사해 오지 않는다(MIT 고지와 업스트림 추적 부담을 저장소에 들이지 않기 위해서다).
 - **manifest 게이트**: router 출력의 미결 단위를 모두 해소해 선택·근거를 기록한 뒤 schema 1.0 manifest (`out_dir`·`units`·선택 `notes`)를 저장하고 `validate_manifest.py`를 실행한다. manifest 전체가 exit 0이 되기 전에는 drawer를 하나도 dispatch하지 않는다.
 - **선택 출력 상태**: `pdf=false`, `export=false`, `plantuml=false`가 기본이다. 요청한 PDF에 Chrome이 없거나 PPT export에 python-pptx가 없으면 HTML/MD를 유지하고 `partial`로 보고한다. `plantuml`은 stdlib라 의존성-없음 partial 케이스가 없다. (옵션 전체는 `skills/flowcast/SKILL.md` 옵션표가 단일 진실)
 - **새 뷰 추가**: ① `scripts/render.py`에 `render_svg_{view}`·`validate_{view}` + 디스패치, ② `skills/{view}/SKILL.md` 질의 대본, ③ router 라우팅 표 한 행, ④ 합성 예제 + 테스트, ⑤ 아래 **예제 산출물 재생성**.
 - **도메인 프리셋 스킬**: 기존 뷰(sequence/topology/component) 위에 특정 도메인 질의 대본·관례를 얹는 스킬(예: `skills/dataflow/`·`skills/network-nat/`)은 새 뷰가 아니다 — `render.py`·router·drawer를 건드리지 않고 렌더는 해당 뷰 스킬에 `Skill` 도구로 위임한다. `agents/diagram-drawer.md`의 디스패치 목록(`sequence`/`topology`/`component` 셋으로 고정)에는 넣지 않는다 — 팬아웃 대상이 아니라 사용자 직접 호출 전용이다.
-- **독립형 스킬(비-`render.py`)**: `skills/state-loop/`처럼 정적 스냅샷이 아니라 계속 바뀌는 상태를 그리는 스킬은 `render.py`를 확장하지 않고 자체 self-contained HTML+JS를 직접 만든다 — 도메인 프리셋과 달리 기존 뷰 스킬에 위임할 정적 뷰가 없기 때문이다. PDF·PPT export·PlantUML 옵션이 없고, `agents/diagram-drawer.md` 디스패치 목록에도 넣지 않는다(사용자 직접 호출 전용). 페어드 MD·원본 대조 검증도 만들지 않는다 — 대조할 정적 원본이 없다.
+- **독립형 스킬(비-`render.py`)**: `skills/state-loop/`처럼 정적 스냅샷이 아니라 계속 바뀌는 상태를 그리는 스킬은 `render.py`를 확장하지 않고 자체 self-contained HTML+JS를 직접 만든다 — 도메인 프리셋과 달리 기존 뷰 스킬에 위임할 정적 뷰가 없기 때문이다. PDF·PPT export·PlantUML 옵션이 없고, `agents/diagram-drawer.md` 디스패치 목록에도 넣지 않는다(사용자 직접 호출 전용). 페어드 MD·원본 대조 검증도 만들지 않는다 — 대조할 정적 원본이 없다. `skills/mechanism/`도 같은 자리의 독립형 스킬이지만 렌더를 자체 HTML이 아니라 외부 anatomy 스킬에 위임한다는 점이 다르다. 페어드 MD 대신 `brief.md`(대상 버전, 진실 출처, 매핑, 생략 범위)가 근거 기록을 맡고, 원본 대조 대신 `check.mjs`(모델 대 1차 출처)와 리드아웃 대조(페이지 대 모델)를 돌린다. 예제의 빌드 결과 HTML은 anatomy kit 소스를 인라인하므로 MIT 고지 주석을 달고 커밋한다.
 - **예제 산출물 재생성**: 렌더러·exporter를 고치거나 예제를 추가하면 `bash scripts/regen-examples.sh`를 돌려 `examples/*.html`·`docs/examples/*.html`·`docs/examples/puml/*.puml`을 함께 커밋한다. 빠뜨리면 골든 회귀 테스트가 CI를 세운다. `.svg` 스냅샷은 `plantuml`이 설치돼 있을 때만 갱신된다(없으면 건너뛴다) — **`-nometadata` 필수**: 없으면 PlantUML이 SVG에 심는 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다. 새 예제는 게시 카드도 수동 등록해야 한다 — `docs/index.html` 카드 한 벌 + `docs/plantuml.html`의 `EXAMPLES` 배열(137행) 한 행.
 
 ## 릴리즈
