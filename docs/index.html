@@ -9,7 +9,7 @@
   :root {
     --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
     --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
-    --teal:#4ecdbe;
+    --teal:#4ecdbe; --violet:#b9a3ff;
     --shadow:0 24px 72px rgba(0,0,0,0.34);
     --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
     --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
@@ -17,7 +17,7 @@
   :root[data-theme="light"] {
     --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
     --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
-    --teal:#148278;
+    --teal:#148278; --violet:#6b4fc8;
     --shadow:0 10px 32px rgba(23,48,88,0.10);
   }
   * { box-sizing:border-box; }
@@ -90,6 +90,7 @@
   .badge-sequence { color:var(--accent); border-color:var(--accent); }
   .badge-topology { color:var(--warn); border-color:var(--warn); }
   .badge-component { color:var(--teal); border-color:var(--teal); }
+  .badge-mechanism { color:var(--violet); border-color:var(--violet); }
   .card-body h3 { margin:0; font-size:17px; letter-spacing:-0.01em; }
   .card-body p { margin:0; color:var(--muted); font-size:14px; flex:1; }
   .card-links { display:flex; gap:16px; font-size:13.5px; margin-top:4px; }
@@ -176,7 +177,7 @@
 
   <section class="section">
     <h2 class="sec-title">라이브 예제</h2>
-    <p class="sec-lede">세 관점을 자체완결 HTML로 렌더한 합성 예제(실 데이터 없음). 카드를 누르면 전체화면으로 열린다.</p>
+    <p class="sec-lede">세 관점과 메커니즘 일러스트를 자체완결 HTML로 렌더한 합성 예제(실 데이터 없음). 카드를 누르면 전체화면으로 열린다.</p>
   </section>
 
   <section class="grid">
@@ -275,6 +276,21 @@
         </div>
       </div>
     </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/jvm-bytecode.html" data-dark="examples/jvm-bytecode.html" data-light="examples/jvm-bytecode-light.html" loading="lazy" title="JVM 바이트코드 테이프 리더 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-bytecode.html" data-dark="examples/jvm-bytecode.html" data-light="examples/jvm-bytecode-light.html" target="_blank" rel="noopener" aria-label="JVM 바이트코드 테이프 리더 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>JVM | 바이트코드 테이프 리더</h3>
+        <p>javac 21.0.1이 만든 <code>calc(3, 4)</code>의 바이트코드 6개를 천공 테이프 리더가 한 칸씩 실행. 서랍 2칸은 <code>locals=2</code>, 스택 튜브 2칸은 <code>stack=2</code> 그대로이고, 리드아웃과 디스크 값은 javap 실출력으로 검증한 모델에서 나옴. 클릭이나 → 키로 한 칸씩 진행.</p>
+        <div class="card-links">
+          <a href="examples/jvm-bytecode.html" data-dark="examples/jvm-bytecode.html" data-light="examples/jvm-bytecode-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-bytecode" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
   </section>
 </main>
 
@@ -295,12 +311,22 @@
   var root = document.documentElement;
   var saved = localStorage.getItem(KEY);
   if (saved) root.setAttribute('data-theme', saved);
+  // 메커니즘 예제는 테마별 파일이 따로 있다. data-dark, data-light 를 가진 iframe 과 링크는 주소를 바꾼다
+  function applyThemed(theme) {
+    document.querySelectorAll('[data-dark][data-light]').forEach(function (el) {
+      var url = el.getAttribute(theme === 'light' ? 'data-light' : 'data-dark');
+      var attr = el.tagName === 'IFRAME' ? 'src' : 'href';
+      if (el.getAttribute(attr) !== url) el.setAttribute(attr, url);
+    });
+  }
+  applyThemed(root.getAttribute('data-theme'));
   document.getElementById('themeToggle').addEventListener('click', function () {
     var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
     localStorage.setItem(KEY, next);
+    applyThemed(next);
     // 이미 로드된 프리뷰 iframe도 새 테마로 다시 로드
-    document.querySelectorAll('.card-preview iframe').forEach(function (f) {
+    document.querySelectorAll('.card-preview iframe:not([data-dark])').forEach(function (f) {
       f.contentWindow.location.reload();
     });
   });

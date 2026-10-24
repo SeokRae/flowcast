@@ -5,6 +5,7 @@
 #   examples/{name}.html            render.py 출력
 #   docs/examples/{name}.html       Pages 게시본 (examples 와 byte-identical)
 #   docs/examples/puml/{name}.puml  B-out PlantUML 소스
+#   docs/examples/{그림}.html       skills/mechanism/examples/*/ 빌드 결과 복사본 (재빌드 안 함)
 #
 # .svg 스냅샷(Pages showcase)은 plantuml 바이너리가 있을 때만 갱신한다 — 없으면 건너뛴다.
 # 렌더러를 고친 PR 은 이 스크립트를 돌리고 결과를 함께 커밋한다 —
@@ -24,6 +25,14 @@ for json in examples/*.json; do
   cp "examples/$name.html" "docs/examples/$name.html"
   python3 scripts/plantuml_export.py "$json" -o "docs/examples/puml/$name.puml" >/dev/null
   echo "✓ $name — html · docs 게시본 · puml"
+done
+
+# 메커니즘 예제(skills/mechanism/examples/*)는 node 로 빌드한 HTML 을 그대로 게시본으로 복사한다.
+# 여기서 다시 빌드하지는 않는다. 그림을 고칠 때 그 폴더의 build.mjs 로 따로 만든다.
+for html in skills/mechanism/examples/*/*.html; do
+  [ -e "$html" ] || continue
+  cp "$html" "docs/examples/$(basename "$html")"
+  echo "✓ $(basename "$html" .html): mechanism 게시본"
 done
 
 if command -v plantuml >/dev/null 2>&1; then

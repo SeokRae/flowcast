@@ -1331,3 +1331,21 @@ def test_docs_example_matches_source(name):
         f"docs/examples/{name}.html (Pages 게시본) 이 examples/{name}.html 과 다르다 "
         f"— bash scripts/regen-examples.sh 후 재생성분을 함께 커밋"
     )
+
+
+# 메커니즘 예제는 render.py 가 아니라 skills/mechanism/examples/*/build.mjs(node)가 만든다.
+# Pages 게시본은 그 결과를 그대로 복사한 것이어야 한다(scripts/regen-examples.sh 가 복사, #137).
+MECH_EX = Path(__file__).parent.parent / "skills" / "mechanism" / "examples"
+MECH_HTML = sorted(MECH_EX.glob("*/*.html"))
+
+
+def test_mechanism_examples_present():
+    assert MECH_HTML, "skills/mechanism/examples/*/*.html 이 없어 게시본 대조가 무력화된다"
+
+
+@pytest.mark.parametrize("src", MECH_HTML, ids=[p.name for p in MECH_HTML])
+def test_docs_mechanism_example_matches_source(src):
+    assert (DOCS_EX / src.name).read_text(encoding="utf-8") == src.read_text(encoding="utf-8"), (
+        f"docs/examples/{src.name} (Pages 게시본) 이 {src.relative_to(MECH_EX.parent.parent.parent)} 과 다르다. "
+        f"bash scripts/regen-examples.sh 후 함께 커밋"
+    )
