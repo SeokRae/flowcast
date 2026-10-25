@@ -390,6 +390,119 @@
       </div>
     </article>
   </section>
+
+  <section class="section">
+    <h2 class="sec-title">리눅스 동작 구조</h2>
+    <p class="sec-lede">사용자 프로세스가 커널을 거쳐 일하는 과정을 지도 한 장, 시퀀스 한 장, 메커니즘 다섯 장으로 나눴습니다. 수치는 모두 Docker Desktop VM의 Linux 7.0.14(arm64)에서 잰 실행 출력과 upstream 커널 소스에서 가져왔어요. 지도에서 위치를 잡고 번호 순서대로 따라가면 됩니다.</p>
+  </section>
+
+  <section class="grid">
+    <article class="card" data-view="component">
+      <div class="card-preview">
+        <iframe src="examples/linux-kernel-component.html" loading="lazy" title="커널 구조 지도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-kernel-component.html" target="_blank" rel="noopener" aria-label="커널 구조 지도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-component">component</span>
+        <h3>리눅스 1 | 커널 구조 지도</h3>
+        <p>사용자 프로세스가 glibc와 시스템 콜 진입을 지나 VFS, 페이지 캐시, 블록 계층으로 내려가는 길과, fork가 메모리 관리와 스케줄러를 거치는 길을 한 장에 담았습니다. MMU는 커널 밖 하드웨어로 따로 두었어요. 뒤의 카드는 이 지도의 화살표를 하나씩 확대합니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-kernel-component.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/linux-kernel-component.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="sequence">
+      <div class="card-preview">
+        <iframe src="examples/linux-read-sequence.html" loading="lazy" title="read() 한 번 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-read-sequence.html" target="_blank" rel="noopener" aria-label="read() 한 번 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-sequence">sequence</span>
+        <h3>리눅스 2 | read() 한 번</h3>
+        <p><code>read(3, buf, 4096)</code>이 glibc, <code>svc #0</code>, <code>el0_svc</code>, <code>vfs_read</code>, <code>filemap_read</code>를 거쳐 돌아오기까지입니다. 페이지 캐시에 없을 때의 미리 읽기 요청, D 상태 잠듦, 완료 인터럽트, 깨어남은 ftrace 1회 기록 그대로예요. 잘못된 fd로 <code>-9</code>가 돌아오는 예외 흐름도 한 장 더 있습니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-read-sequence.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/linux-read-sequence.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/linux-syscall.html" data-dark="examples/linux-syscall.html" data-light="examples/linux-syscall-light.html" loading="lazy" title="시스템 콜 창구 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-syscall.html" data-dark="examples/linux-syscall.html" data-light="examples/linux-syscall-light.html" target="_blank" rel="noopener" aria-label="시스템 콜 창구 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>리눅스 3 | 시스템 콜 창구</h3>
+        <p>x8에 번호를 싣고 <code>svc #0</code>으로 들어가면 커널이 472칸 표에서 핸들러를 골라 x0로 결과를 돌려줍니다. 입구는 번호와 상관없이 하나예요. 표 안 빈 칸, 표 밖 번호, 설정에서 빠진 번호가 모두 <code>-38</code>을 돌려주지만 서로 다른 길로 간다는 것을 ftrace 스택으로 확인했습니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-syscall.html" data-dark="examples/linux-syscall.html" data-light="examples/linux-syscall-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/linux-syscall" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/linux-page-walk.html" data-dark="examples/linux-page-walk.html" data-light="examples/linux-page-walk-light.html" loading="lazy" title="4단 선반장과 카드 인덱스 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-page-walk.html" data-dark="examples/linux-page-walk.html" data-light="examples/linux-page-walk-light.html" target="_blank" rel="noopener" aria-label="4단 선반장과 카드 인덱스 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>리눅스 4 | 4단 선반장과 카드 인덱스</h3>
+        <p>48비트 주소를 9+9+9+9+12로 나눠 MMU가 4단 테이블을 걷고, 빈 칸이면 커널이 채운 뒤 다시 걷습니다. 빈 영역의 첫 fault는 L2에서 멈추고, 읽기만 하면 공용 zero page가 걸려요. TLB 적중은 VM에 PMU가 없어 재지 못했고, 그림의 카드 인덱스는 아키텍처 규칙만 따른 단순화입니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-page-walk.html" data-dark="examples/linux-page-walk.html" data-light="examples/linux-page-walk-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/linux-page-walk" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/linux-eevdf.html" data-dark="examples/linux-eevdf.html" data-light="examples/linux-eevdf-light.html" loading="lazy" title="EEVDF 레인 선택기 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-eevdf.html" data-dark="examples/linux-eevdf.html" data-light="examples/linux-eevdf-light.html" target="_blank" rel="noopener" aria-label="EEVDF 레인 선택기 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>리눅스 5 | EEVDF 레인 선택기</h3>
+        <p>자격(lag ≥ 0)이 있는 태스크 가운데 가상 마감이 가장 이른 것을 고르는 과정입니다. nice 0, 1, 5 세 태스크의 슬라이스는 모두 약 3 ms로 같았고, 가중치는 얼마나 자주 뽑히느냐로만 나타났어요(점유율 46.9, 37.7, 15.5 %).</p>
+        <div class="card-links">
+          <a href="examples/linux-eevdf.html" data-dark="examples/linux-eevdf.html" data-light="examples/linux-eevdf-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/linux-eevdf" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/linux-fork-cow.html" data-dark="examples/linux-fork-cow.html" data-light="examples/linux-fork-cow-light.html" loading="lazy" title="판을 나눠 쓰는 두 인쇄대 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-fork-cow.html" data-dark="examples/linux-fork-cow.html" data-light="examples/linux-fork-cow-light.html" target="_blank" rel="noopener" aria-label="판을 나눠 쓰는 두 인쇄대 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>리눅스 6 | 판을 나눠 쓰는 두 인쇄대</h3>
+        <p>fork 뒤 부모와 자식이 같은 페이지를 쓰기 금지로 함께 쓰다가, 먼저 쓴 쪽이 복사본을 받고 남은 쪽은 복사 없이 재사용합니다. 재사용 판정은 혼자 매핑했는지가 아니라 참조 수가 1인지를 봐요. 그래서 첫 쓰기만 다른 CPU에서 한 실행에서는 쓰기가 모두 복사였습니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-fork-cow.html" data-dark="examples/linux-fork-cow.html" data-light="examples/linux-fork-cow-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/linux-fork-cow" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/linux-epoll.html" data-dark="examples/linux-epoll.html" data-light="examples/linux-epoll-light.html" loading="lazy" title="파이프 교환대 미리보기"></iframe>
+        <a class="preview-cover" href="examples/linux-epoll.html" data-dark="examples/linux-epoll.html" data-light="examples/linux-epoll-light.html" target="_blank" rel="noopener" aria-label="파이프 교환대 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>리눅스 7 | 파이프 교환대</h3>
+        <p>파이프 8개 중 2개에 데이터가 있을 때 <code>poll()</code>은 커널의 <code>pipe_poll</code>을 8번 부르고, <code>epoll_wait</code>는 ready 목록에 오른 2개만 다시 묻습니다. 1024개로 늘려도 epoll은 2번이에요. 등록 때 거는 콜백, ready 레인, LT 재삽입을 ftrace 횟수로 맞췄습니다.</p>
+        <div class="card-links">
+          <a href="examples/linux-epoll.html" data-dark="examples/linux-epoll.html" data-light="examples/linux-epoll-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/linux-epoll" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+  </section>
 </main>
 
 <footer>

@@ -1,0 +1,15 @@
+__pollwait
+anon_pipe_read
+anon_pipe_write
+do_epoll_ctl
+do_epoll_wait
+do_sys_poll
+ep_autoremove_wake_function
+ep_done_scan
+ep_item_poll.isra.0
+ep_poll_callback
+ep_ptable_queue_proc
+ep_send_events
+ep_start_scan
+pipe_poll
+pollwake

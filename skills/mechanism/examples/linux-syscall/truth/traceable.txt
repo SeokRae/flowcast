@@ -1,0 +1,8 @@
+__arm64_sys_getpid
+__arm64_sys_ni_syscall
+__arm64_sys_read
+__arm64_sys_rseq_slice_yield
+do_el0_svc
+invoke_syscall.constprop.0
+ksys_read
+sys_ni_syscall

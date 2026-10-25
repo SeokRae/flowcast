@@ -1,0 +1,19 @@
+T vectors
+t el0t_64_sync
+T el0t_64_sync_handler
+t el0_svc
+T do_el0_svc
+absent el0_svc_common
+absent invoke_syscall
+t invoke_syscall.constprop.0
+absent __invoke_syscall
+absent do_ni_syscall
+absent sys_call_table
+T __arm64_sys_getpid
+T __arm64_sys_read
+T ksys_read
+T __arm64_sys_ni_syscall
+T sys_ni_syscall
+W __arm64_sys_rseq_slice_yield
+t ret_to_user
+weak __arm64_sys_ stubs: 61

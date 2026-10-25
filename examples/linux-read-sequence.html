@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>리눅스 read() 한 번 IF 흐름도</title>
+<style>
+    :root {
+      --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+      --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --tone-danger:#f87171; --tone-warn:#fbbf24; --tone-info:#38bdf8;
+      --atone-slate:#64748b; --atone-violet:#7c74ff; --atone-deep:#2a2170; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.72);
+      --line:#c3cedd; --line-soft:#76839a;
+      --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
+      --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
+      --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
+      --comp-bg:rgba(78,205,190,0.14); --comp-bd:rgba(78,205,190,0.44);
+      --shadow:0 24px 72px rgba(0,0,0,0.34);
+      --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+    }
+    :root[data-theme="light"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .page{width:min(1504px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;display:grid;gap:18px;}
+    .sheet{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);border-radius:20px;padding:20px 24px;}
+    .hero{margin-bottom:14px;}
+    .eyebrow{display:inline-flex;padding:6px 12px;border-radius:999px;border:1px solid var(--zone-bd);background:var(--zone-bg);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.07em;}
+    h1{margin:10px 0 4px;font-size:clamp(1.3rem,2.2vw,1.7rem);letter-spacing:-0.02em;}
+    p.sub{margin:0;color:var(--muted);font-size:12.5px;}
+    .diagram-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+    .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
+    /* ── SVG ── */
+    .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:11px;font-weight:700;}
+    .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:11.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:9px;}
+    .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
+    .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
+    .ar{fill:none;}
+    .ar-req{stroke:var(--line);stroke-width:1.8;}
+    .ar-res{stroke:var(--line-soft);stroke-width:1.5;stroke-dasharray:6,4;}
+    .ar-relay{stroke:var(--line-soft);stroke-width:1.4;}
+    .ar-self{stroke:var(--line);stroke-width:1.6;}
+    .mk-req,.mk-self{fill:var(--line);}
+    .mk-res,.mk-relay{fill:var(--line-soft);}
+    text{font-family:var(--font);}
+    .lb-req,.lb-self{fill:var(--text);font-size:10.5px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:10.5px;}
+    .lb-relay{fill:var(--muted);font-size:10.5px;font-style:italic;}
+    .lb-sub{fill:var(--muted);font-size:10px;font-weight:400;font-family:var(--mono);}
+    .lb-proto{fill:var(--muted);font-size:9.5px;font-family:var(--mono);}
+    .note-rule{stroke:var(--zone-bd);stroke-width:1;stroke-dasharray:4,4;}
+    .note{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1;}
+    .note-tx{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag{fill:none;stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-tag{fill:var(--surface);stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-kind{fill:var(--text);font-family:var(--mono);font-size:10px;font-weight:700;}
+    .frag-guard{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag-guard-bg{fill:var(--surface);}
+    .frag-else{stroke:var(--line-soft);stroke-width:1.2;stroke-dasharray:6,4;}
+    .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
+    .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
+    .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}
+    .mk-tone-danger{fill:var(--tone-danger);}
+    .mk-tone-warn{fill:var(--tone-warn);}
+    .mk-tone-info{fill:var(--tone-info);}
+    .actor.atone-slate{fill:var(--atone-slate);stroke:var(--atone-slate);}
+    .actor.atone-violet{fill:var(--atone-violet);stroke:var(--atone-violet);}
+    .actor.atone-deep{fill:var(--atone-deep);stroke:var(--atone-deep);}
+    .actor-tx.atone-slate,.actor-tx.atone-violet,.actor-tx.atone-deep{fill:var(--atone-tx);}
+    .actor-sub.atone-slate,.actor-sub.atone-violet,.actor-sub.atone-deep{fill:var(--atone-sub);}
+    /* ── 토폴로지(구성도) 뷰 ── */
+    .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
+    .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
+    .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-dualgrp{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.2;stroke-dasharray:4,3;}
+    .topo-dual{opacity:0.6;}
+    .topo-node.dim{opacity:0.5;}
+    .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
+    .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
+    .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
+    .fw-brick-bg{fill:var(--surface);}
+    .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
+    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:4,3;}
+    .l4-ico{fill:var(--accent);}
+    .l4-ico-l{stroke:var(--accent);stroke-width:1.2;fill:none;}
+    .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
+    .topo-tx.on{fill:var(--accent);}
+    .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
+    .topo-seg{fill:none;stroke:var(--line);stroke-width:2;}
+    .mk-topo{fill:var(--line);}
+    .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
+    .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legtbl{fill:none;stroke:var(--border);stroke-width:1;}
+    .topo-legtbl-hdr{fill:var(--zone-bg);stroke:none;}
+    .topo-legnum{fill:var(--accent);font-size:11px;font-weight:700;}
+    .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-hdr{fill:var(--muted);font-size:10.5px;font-weight:700;}
+    .topo-leggrid{stroke:var(--border);stroke-width:0.7;}
+    .topo-legend-step{fill:var(--text);font-size:11.5px;font-weight:700;}
+    .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    .topo-legend-meta{fill:var(--muted);font-size:10px;}
+    /* ── 컴포넌트 뷰 ── */
+    .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
+    .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
+    .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
+    .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .cyl-rim{fill:none;}
+    .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
+    .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
+    .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
+    .comp-lb{fill:var(--text);font-size:11px;font-weight:600;}
+    .comp-proto{fill:var(--muted);font-size:10px;font-family:var(--mono);}
+    .mk-comp{fill:var(--line);}
+    @media print {
+      :root, :root[data-theme="dark"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+      .theme-toggle{display:none;}
+      body{background:#fff;}
+      .page{width:1504px;padding:0;gap:0;}
+      .sheet{border:none;box-shadow:none;border-radius:0;page-break-after:always;page-break-inside:avoid;}
+      .diagram-wrap{overflow:visible;border:none;}
+      .hero{height:96px;overflow:hidden;}
+    }
+
+    @page { size: 1504px 1565px; margin: 0; }
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button">🌓 테마</button>
+<main class="page">
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">리눅스 read() 한 번 · IF 흐름도</span>
+      <h1>read(): 페이지 캐시 적중과 디스크 읽기</h1>
+      <p class="sub">flowcast 합성 예제 (sequence). Linux 7.0.14 (Docker Desktop linuxkit, arm64), glibc 2.41에서 ext4 파일을 read()한 ftrace 기록(function tracer, func_stack_trace, sched와 block 이벤트)과 glibc read 역어셈블, upstream stable v7.0.14 소스 arch/arm64/kernel/syscall.c, fs/read_write.c, mm/filemap.c 기준</p>
+    </header>
+    
+    <div class="diagram-wrap"><svg viewBox="0 0 1456 1391" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="read(): 페이지 캐시 적중과 디스크 읽기"><defs><marker id="mk-req" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-req" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-res" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-res" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-relay" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-relay" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-self" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-self" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-danger" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-danger" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-info" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-info" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-warn" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-warn" d="M0,0 L0,8 L8,4z"/></marker></defs><rect class="zone" x="36" y="14" width="384" height="30" rx="8"/><text class="zone-tx" x="228.0" y="33.0" text-anchor="middle">사용자 공간 (EL0)</text><rect class="zone" x="436" y="14" width="784" height="30" rx="8"/><text class="zone-tx" x="828.0" y="33.0" text-anchor="middle">커널 (EL1)</text><line class="lifeline" x1="128.0" y1="96" x2="128.0" y2="1375"/><line class="lifeline" x1="328.0" y1="96" x2="328.0" y2="1375"/><line class="lifeline" x1="528.0" y1="96" x2="528.0" y2="1375"/><line class="lifeline" x1="728.0" y1="96" x2="728.0" y2="1375"/><line class="lifeline" x1="928.0" y1="96" x2="928.0" y2="1375"/><line class="lifeline" x1="1128.0" y1="96" x2="1128.0" y2="1375"/><line class="lifeline" x1="1328.0" y1="96" x2="1328.0" y2="1375"/><rect class="actor atone-slate" x="62.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-slate" x="128.0" y="71.0" text-anchor="middle">앱</text><text class="actor-sub atone-slate" x="128.0" y="89.0" text-anchor="middle">readprobe</text><rect class="actor atone-violet" x="262.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="328.0" y="71.0" text-anchor="middle">glibc 2.41</text><text class="actor-sub atone-violet" x="328.0" y="89.0" text-anchor="middle">read 래퍼</text><rect class="actor atone-violet" x="462.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="528.0" y="71.0" text-anchor="middle">arm64 진입</text><text class="actor-sub atone-violet" x="528.0" y="89.0" text-anchor="middle">el0_svc</text><rect class="actor atone-violet" x="662.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="728.0" y="71.0" text-anchor="middle">VFS</text><text class="actor-sub atone-violet" x="728.0" y="89.0" text-anchor="middle">vfs_read</text><rect class="actor atone-violet" x="862.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="928.0" y="71.0" text-anchor="middle">ext4, 페이지 캐시</text><text class="actor-sub atone-violet" x="928.0" y="89.0" text-anchor="middle">filemap_read</text><rect class="actor atone-violet" x="1062.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="1128.0" y="71.0" text-anchor="middle">블록 계층</text><text class="actor-sub atone-violet" x="1128.0" y="89.0" text-anchor="middle">virtio-blk</text><rect class="actor atone-slate" x="1262.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-slate" x="1328.0" y="71.0" text-anchor="middle">가상 디스크</text><text class="actor-sub atone-slate" x="1328.0" y="89.0" text-anchor="middle">Docker VM</text><rect class="act-bar" x="322.0" y="139" width="12" height="115" rx="2"/><rect class="act-bar" x="322.0" y="1253" width="12" height="102" rx="2"/><rect class="act-bar" x="122.0" y="139" width="12" height="20" rx="2"/><rect class="act-bar" x="122.0" y="1335" width="12" height="40" rx="2"/><rect class="act-bar" x="522.0" y="234" width="12" height="169" rx="2"/><rect class="act-bar" x="522.0" y="1158" width="12" height="115" rx="2"/><rect class="act-bar" x="722.0" y="383" width="12" height="128" rx="2"/><rect class="act-bar" x="722.0" y="1117" width="12" height="61" rx="2"/><rect class="act-bar" x="922.0" y="491" width="12" height="273" rx="2"/><rect class="act-bar" x="922.0" y="852" width="12" height="285" rx="2"/><rect class="act-bar" x="1122.0" y="744" width="12" height="74" rx="2"/><rect class="act-bar" x="1122.0" y="906" width="12" height="74" rx="2"/><rect class="act-bar" x="1322.0" y="798" width="12" height="128" rx="2"/><rect class="frag" x="856.0" y="579" width="544.0" height="461" rx="3"/><path class="frag-tag" d="M856.0,579 H890.5 V591 L884.5,597 H856.0 Z"/><text class="frag-kind" x="864.0" y="592">alt</text><rect class="frag-guard-bg" x="895.5" y="581" width="75.82499999999999" height="15" rx="2"/><text class="frag-guard" x="898.5" y="592">[캐시에 있음]</text><line class="frag-else" x1="856.0" y1="648" x2="1400.0" y2="648"/><rect class="frag-guard-bg" x="861.0" y="651" width="75.82499999999999" height="15" rx="2"/><text class="frag-guard" x="864.0" y="662">[캐시에 없음]</text><line class="ar-req ar" x1="129.0" y1="149" x2="326.0" y2="149" marker-end="url(#mk-req)"/><text class="lb-req" x="228.0" y="143" text-anchor="middle">1. read(3, buf, 4096)</text><path class="ar-self ar" d="M334.0,189 C378.0,189 378.0,203 334.0,203" marker-end="url(#mk-self)"/><text class="lb-self" x="386.0" y="172">2. x0, x1, x2 = 3, buf, 4096</text><text class="lb-self" x="386.0" y="185">취소 처리 함수에서 x8 = 63</text><line class="ar-req ar" x1="329.0" y1="244" x2="526.0" y2="244" marker-end="url(#mk-req)"/><text class="lb-req" x="428.0" y="238" text-anchor="middle">3. svc #0 (EL0에서 EL1로 예외)</text><path class="ar-self ar" d="M534.0,284 C578.0,284 578.0,298 534.0,298" marker-end="url(#mk-self)"/><text class="lb-self" x="586.0" y="267">4. el0t_64_sync → el0t_64_sync_handler</text><text class="lb-self" x="586.0" y="280">→ el0_svc → do_el0_svc</text><path class="ar-self ar" d="M534.0,338 C578.0,338 578.0,352 534.0,352" marker-end="url(#mk-self)"/><text class="lb-self" x="586.0" y="321">5. invoke_syscall: sys_call_table[63]</text><text class="lb-self" x="586.0" y="334">= __arm64_sys_read → ksys_read</text><line class="ar-req ar" x1="529.0" y1="393" x2="726.0" y2="393" marker-end="url(#mk-req)"/><text class="lb-req" x="628.0" y="387" text-anchor="middle">6. fdget_pos(3) 뒤 vfs_read</text><path class="ar-self ar" d="M734.0,433 C778.0,433 778.0,447 734.0,447" marker-end="url(#mk-self)"/><text class="lb-self" x="786.0" y="416">7. rw_verify_area</text><text class="lb-self" x="786.0" y="429">(FMODE_READ, 범위 확인)</text><line class="ar-req ar" x1="729.0" y1="501" x2="926.0" y2="501" marker-end="url(#mk-req)"/><text class="lb-req" x="828.0" y="482" text-anchor="middle">8. new_sync_read → f_op-&gt;read_iter</text><text class="lb-req" x="828.0" y="495" text-anchor="middle">= ext4_file_read_iter</text><path class="ar-self ar" d="M934.0,541 C978.0,541 978.0,555 934.0,555" marker-end="url(#mk-self)"/><text class="lb-self" x="986.0" y="524">9. generic_file_read_iter → filemap_read</text><text class="lb-self" x="986.0" y="537">→ filemap_get_pages (페이지 캐시 조회)</text><path class="ar-self ar" d="M934.0,610 C978.0,610 978.0,624 934.0,624" marker-end="url(#mk-self)"/><text class="lb-self" x="986.0" y="606">10. folio를 찾음, 디스크 I/O 없음</text><path class="ar-self ar" d="M934.0,699 C978.0,699 978.0,713 934.0,713" marker-end="url(#mk-self)"/><text class="lb-self" x="986.0" y="669">10. posix_fadvise DONTNEED로 비운 뒤</text><text class="lb-self" x="986.0" y="682">page_cache_sync_ra → read_pages</text><text class="lb-self" x="986.0" y="695">→ ext4_readahead (3페이지 미리 읽기)</text><line class="ar-req ar" x1="929.0" y1="754" x2="1126.0" y2="754" marker-end="url(#mk-req)"/><text class="lb-req" x="1028.0" y="748" text-anchor="middle">11. submit_bio → blk_mq_submit_bio</text><line class="ar-req ar" x1="1129.0" y1="808" x2="1326.0" y2="808" marker-end="url(#mk-req)"/><text class="lb-req" x="1228.0" y="789" text-anchor="middle">12. virtio_queue_rq: 24섹터(12288바이트)</text><text class="lb-req" x="1228.0" y="802" text-anchor="middle">읽기 요청 (block_rq_issue)</text><path class="ar-self ar tone-info" d="M934.0,848 C978.0,848 978.0,862 934.0,862" marker-end="url(#mk-tone-info)"/><text class="lb-self tone-info" x="986.0" y="831">13. folio 잠금 대기: io_schedule</text><text class="lb-self tone-info" x="986.0" y="844">D 상태로 잠들고 CPU 3은 idle</text><line class="ar-res ar" x1="1327.0" y1="916" x2="1130.0" y2="916" marker-end="url(#mk-res)"/><text class="lb-res" x="1228.0" y="897" text-anchor="middle">14. 완료 인터럽트 (CPU 0)</text><text class="lb-res" x="1228.0" y="910" text-anchor="middle">vring_interrupt → virtblk_done</text><line class="ar-res ar" x1="1127.0" y1="970" x2="930.0" y2="970" marker-end="url(#mk-res)"/><text class="lb-res" x="1028.0" y="951" text-anchor="middle">15. blk_mq_complete_request → softirq</text><text class="lb-res" x="1028.0" y="964" text-anchor="middle">folio_end_read 3회 (잠금 해제)</text><path class="ar-self ar tone-info" d="M934.0,1010 C978.0,1010 978.0,1024 934.0,1024" marker-end="url(#mk-tone-info)"/><text class="lb-self tone-info" x="986.0" y="993">16. sched_wakeup: CPU 3에서 다시 실행</text><text class="lb-self tone-info" x="986.0" y="1006">(이번 실행에서 약 88µs 잠듦)</text><path class="ar-self ar" d="M934.0,1072 C978.0,1072 978.0,1086 934.0,1086" marker-end="url(#mk-self)"/><text class="lb-self" x="986.0" y="1055">17. copy_folio_to_iter: 4096바이트를</text><text class="lb-self" x="986.0" y="1068">사용자 버퍼로 복사, file_accessed</text><line class="ar-res ar" x1="927.0" y1="1127" x2="730.0" y2="1127" marker-end="url(#mk-res)"/><text class="lb-res" x="828.0" y="1121" text-anchor="middle">18. 4096</text><line class="ar-res ar" x1="727.0" y1="1168" x2="530.0" y2="1168" marker-end="url(#mk-res)"/><text class="lb-res" x="628.0" y="1162" text-anchor="middle">19. 4096 (ksys_read가 f_pos 갱신)</text><path class="ar-self ar" d="M534.0,1208 C578.0,1208 578.0,1222 534.0,1222" marker-end="url(#mk-self)"/><text class="lb-self" x="586.0" y="1191">20. syscall_set_return_value: x0 = 4096</text><text class="lb-self" x="586.0" y="1204">exit_to_user_mode → ret_to_user</text><line class="ar-res ar" x1="527.0" y1="1263" x2="330.0" y2="1263" marker-end="url(#mk-res)"/><text class="lb-res" x="428.0" y="1257" text-anchor="middle">21. eret (EL1에서 EL0로), x0 = 4096</text><path class="ar-self ar" d="M334.0,1290 C378.0,1290 378.0,1304 334.0,1304" marker-end="url(#mk-self)"/><text class="lb-self" x="386.0" y="1286">22. x0가 -4095~-1이 아니므로 그대로</text><line class="ar-res ar" x1="327.0" y1="1345" x2="130.0" y2="1345" marker-end="url(#mk-res)"/><text class="lb-res" x="228.0" y="1339" text-anchor="middle">23. 4096</text></svg></div>
+  </section>
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">리눅스 read() 한 번 · IF 흐름도</span>
+      <h1>예외: 잘못된 fd (EBADF)</h1>
+      <p class="sub">flowcast 합성 예제 (sequence). Linux 7.0.14 (Docker Desktop linuxkit, arm64), glibc 2.41에서 ext4 파일을 read()한 ftrace 기록(function tracer, func_stack_trace, sched와 block 이벤트)과 glibc read 역어셈블, upstream stable v7.0.14 소스 arch/arm64/kernel/syscall.c, fs/read_write.c, mm/filemap.c 기준</p>
+    </header>
+    
+    <div class="diagram-wrap"><svg viewBox="0 0 1456 534" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="예외: 잘못된 fd (EBADF)"><defs><marker id="mk-req" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-req" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-res" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-res" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-relay" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-relay" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-self" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-self" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-danger" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-danger" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-info" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-info" d="M0,0 L0,8 L8,4z"/></marker><marker id="mk-tone-warn" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk mk-tone-warn" d="M0,0 L0,8 L8,4z"/></marker></defs><rect class="zone" x="36" y="14" width="384" height="30" rx="8"/><text class="zone-tx" x="228.0" y="33.0" text-anchor="middle">사용자 공간 (EL0)</text><rect class="zone" x="436" y="14" width="784" height="30" rx="8"/><text class="zone-tx" x="828.0" y="33.0" text-anchor="middle">커널 (EL1)</text><line class="lifeline" x1="128.0" y1="96" x2="128.0" y2="518"/><line class="lifeline" x1="328.0" y1="96" x2="328.0" y2="518"/><line class="lifeline" x1="528.0" y1="96" x2="528.0" y2="518"/><line class="lifeline" x1="728.0" y1="96" x2="728.0" y2="518"/><line class="lifeline" x1="928.0" y1="96" x2="928.0" y2="518"/><line class="lifeline" x1="1128.0" y1="96" x2="1128.0" y2="518"/><line class="lifeline" x1="1328.0" y1="96" x2="1328.0" y2="518"/><rect class="actor atone-slate" x="62.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-slate" x="128.0" y="71.0" text-anchor="middle">앱</text><text class="actor-sub atone-slate" x="128.0" y="89.0" text-anchor="middle">readprobe</text><rect class="actor atone-violet" x="262.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="328.0" y="71.0" text-anchor="middle">glibc 2.41</text><text class="actor-sub atone-violet" x="328.0" y="89.0" text-anchor="middle">read 래퍼</text><rect class="actor atone-violet" x="462.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="528.0" y="71.0" text-anchor="middle">arm64 진입</text><text class="actor-sub atone-violet" x="528.0" y="89.0" text-anchor="middle">el0_svc</text><rect class="actor atone-violet" x="662.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="728.0" y="71.0" text-anchor="middle">VFS</text><text class="actor-sub atone-violet" x="728.0" y="89.0" text-anchor="middle">vfs_read</text><rect class="actor atone-violet" x="862.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="928.0" y="71.0" text-anchor="middle">ext4, 페이지 캐시</text><text class="actor-sub atone-violet" x="928.0" y="89.0" text-anchor="middle">filemap_read</text><rect class="actor atone-violet" x="1062.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-violet" x="1128.0" y="71.0" text-anchor="middle">블록 계층</text><text class="actor-sub atone-violet" x="1128.0" y="89.0" text-anchor="middle">virtio-blk</text><rect class="actor atone-slate" x="1262.0" y="52" width="132" height="44" rx="9"/><text class="actor-tx atone-slate" x="1328.0" y="71.0" text-anchor="middle">가상 디스크</text><text class="actor-sub atone-slate" x="1328.0" y="89.0" text-anchor="middle">Docker VM</text><rect class="act-bar" x="322.0" y="139" width="12" height="61" rx="2"/><rect class="act-bar" x="322.0" y="383" width="12" height="115" rx="2"/><rect class="act-bar" x="122.0" y="139" width="12" height="20" rx="2"/><rect class="act-bar" x="122.0" y="478" width="12" height="40" rx="2"/><rect class="act-bar" x="522.0" y="180" width="12" height="223" rx="2"/><line class="ar-req ar" x1="129.0" y1="149" x2="326.0" y2="149" marker-end="url(#mk-req)"/><text class="lb-req" x="228.0" y="143" text-anchor="middle">1. read(99, buf, 16)</text><line class="ar-req ar" x1="329.0" y1="190" x2="526.0" y2="190" marker-end="url(#mk-req)"/><text class="lb-req" x="428.0" y="184" text-anchor="middle">2. x8 = 63, svc #0</text><path class="ar-self ar" d="M534.0,230 C578.0,230 578.0,244 534.0,244" marker-end="url(#mk-self)"/><text class="lb-self" x="586.0" y="213">3. invoke_syscall → __arm64_sys_read</text><text class="lb-self" x="586.0" y="226">→ ksys_read</text><path class="ar-self ar tone-danger" d="M534.0,284 C578.0,284 578.0,298 534.0,298" marker-end="url(#mk-tone-danger)"/><text class="lb-self tone-danger" x="586.0" y="267">4. fdget_pos(99): 열린 파일 없음</text><text class="lb-self tone-danger" x="586.0" y="280">vfs_read는 호출되지 않음</text><path class="ar-self ar tone-danger" d="M534.0,338 C578.0,338 578.0,352 534.0,352" marker-end="url(#mk-tone-danger)"/><text class="lb-self tone-danger" x="586.0" y="321">5. x0 = -9 (-EBADF)</text><text class="lb-self tone-danger" x="586.0" y="334">raw_syscalls sys_exit: NR 63 = -9</text><line class="ar-res ar tone-danger" x1="527.0" y1="393" x2="330.0" y2="393" marker-end="url(#mk-tone-danger)"/><text class="lb-res tone-danger" x="428.0" y="387" text-anchor="middle">6. eret, x0 = -9</text><path class="ar-self ar tone-danger" d="M334.0,433 C378.0,433 378.0,447 334.0,447" marker-end="url(#mk-tone-danger)"/><text class="lb-self tone-danger" x="386.0" y="416">7. x0가 -4095~-1이므로</text><text class="lb-self tone-danger" x="386.0" y="429">errno = 9, x0 = -1</text><line class="ar-res ar tone-danger" x1="327.0" y1="488" x2="130.0" y2="488" marker-end="url(#mk-tone-danger)"/><text class="lb-res tone-danger" x="228.0" y="482" text-anchor="middle">8. -1 (errno 9, Bad file descriptor)</text></svg></div>
+  </section>
+</main>
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+  });
+})();
+</script>
+<script></script>
+</body>
+</html>

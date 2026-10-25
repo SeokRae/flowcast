@@ -1,0 +1,33 @@
+pid 73771, 8 pipes, readable: 2 5
+== poll-ready
+poll(nfds=8, timeout=-1) = 2 revents: [2]=POLLIN [5]=POLLIN
+== poll-drain
+== poll-block
+poll(nfds=8, timeout=-1) = 1 revents: [5]=POLLIN
+== epoll-ctl
+epoll_ctl(ADD) x8, events=EPOLLIN
+== write
+== epoll-wait-1
+epoll_wait(maxevents=16, timeout=-1) = 2 events: [2]=EPOLLIN [5]=EPOLLIN
+== epoll-wait-2
+epoll_wait(maxevents=16, timeout=0) = 2 events: [2]=EPOLLIN [5]=EPOLLIN
+== drain
+== epoll-wait-3
+epoll_wait(maxevents=16, timeout=0) = 0 events:
+== epoll-wait-4
+epoll_wait(maxevents=16, timeout=0) = 0 events:
+== epoll-block
+epoll_wait(maxevents=16, timeout=-1) = 1 events: [5]=EPOLLIN
+== epoll-wait-5
+epoll_wait(maxevents=16, timeout=0) = 0 events:
+== et-ctl
+epoll_ctl(ADD) x8, events=EPOLLIN|EPOLLET
+== et-write-1
+== et-wait-1
+epoll_wait(maxevents=16, timeout=0) = 1 events: [2]=EPOLLIN
+== et-wait-2
+epoll_wait(maxevents=16, timeout=0) = 0 events:
+== et-write-2
+== et-wait-3
+epoll_wait(maxevents=16, timeout=0) = 1 events: [2]=EPOLLIN
+== end

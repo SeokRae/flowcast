@@ -1,0 +1,222 @@
+== sample 1
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 145.249071
+  .left_vruntime                 : 137.284640
+  .zero_vruntime                 : 139.420377
+  .avg_vruntime                  : 139.422159
+  .right_vruntime                : 137.284640
+  .spread                        : 0.000000
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2176
+  .runnable_avg                  : 3063
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 4234
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159926251.042286
+  .se->vruntime                  : 1021488.154279
+  .se->sum_exec_runtime          : 277.471332
+  .se->load.weight               : 312308
+  .se->avg.load_avg              : 303
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3063
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+>R              n0 77167       138.251572   E         141.050447           2.800000       120.965790        42     120         0.000000         0.000000         0.000000        /docker/<container>
+ R              n1 77168       141.757221   N         145.249071           2.800000        99.729167        35     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       137.284640   E         145.841664           2.800000        39.778500        17     125         0.000000         0.000000         0.000000        /docker/<container>
+== sample 2
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 261.385489
+  .left_vruntime                 : 257.889424
+  .zero_vruntime                 : 259.255116
+  .avg_vruntime                  : 259.724899
+  .right_vruntime                : 265.668614
+  .spread                        : 7.779190
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2180
+  .runnable_avg                  : 3073
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 7304
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159926507.038118
+  .se->vruntime                  : 1021791.815835
+  .se->sum_exec_runtime          : 533.467164
+  .se->load.weight               : 312708
+  .se->avg.load_avg              : 305
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3073
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+>R              n0 77167       259.250238   E         261.051614           2.800000       241.964456        82     120         0.000000         0.000000         0.000000        /docker/<container>
+ R              n1 77168       257.889424   E         261.385489           2.800000       192.725708        66     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       265.668614   N         274.223343           2.800000        81.779125        31     125         0.000000         0.000000         0.000000        /docker/<container>
+== sample 3
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 381.258623
+  .left_vruntime                 : 377.762402
+  .zero_vruntime                 : 379.089816
+  .avg_vruntime                  : 380.029462
+  .right_vruntime                : 384.914020
+  .spread                        : 7.151618
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2180
+  .runnable_avg                  : 3073
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 7305
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159926763.037825
+  .se->vruntime                  : 1022075.973901
+  .se->sum_exec_runtime          : 789.466871
+  .se->load.weight               : 312665
+  .se->avg.load_avg              : 304
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3073
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+>R              n0 77167       380.246906   N         381.048906           2.800000       362.961124       122     120         0.000000         0.000000         0.000000        /docker/<container>
+ R              n1 77168       377.762402   E         381.258623           2.800000       288.717791        98     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       384.914020   N         393.467349           2.800000       120.790081        44     125         0.000000         0.000000         0.000000        /docker/<container>
+== sample 4
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 504.033241
+  .left_vruntime                 : 501.235616
+  .zero_vruntime                 : 500.330714
+  .avg_vruntime                  : 500.330714
+  .right_vruntime                : 504.141606
+  .spread                        : 2.905990
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2180
+  .runnable_avg                  : 3073
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 5260
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159927019.040449
+  .se->vruntime                  : 1022376.225490
+  .se->sum_exec_runtime          : 1045.459537
+  .se->load.weight               : 363417
+  .se->avg.load_avg              : 353
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3073
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ R              n0 77167       501.235616   N         504.033241           2.800000       483.949834       163     120         0.000000         0.000000         0.000000        /docker/<container>
+>R              n1 77168       497.643803   E         501.139971           2.800000       384.716621       130     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       504.141606   N         512.695956           2.800000       159.795207        57     125         0.000000         0.000000         0.000000        /docker/<container>
+== sample 5
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 623.981365
+  .left_vruntime                 : 621.182324
+  .zero_vruntime                 : 620.153588
+  .avg_vruntime                  : 620.623489
+  .right_vruntime                : 623.364211
+  .spread                        : 2.181887
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2180
+  .runnable_avg                  : 3073
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 6285
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159927275.037907
+  .se->vruntime                  : 1022683.410933
+  .se->sum_exec_runtime          : 1301.434162
+  .se->load.weight               : 363359
+  .se->avg.load_avg              : 354
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3073
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ R              n0 77167       621.182324   N         623.981365           2.800000       603.896542       203     120         0.000000         0.000000         0.000000        /docker/<container>
+>R              n1 77168       618.805943   E         621.036525           2.800000       481.741040       162     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       623.364211   N         631.921746           2.800000       198.798705        70     125         0.000000         0.000000         0.000000        /docker/<container>
+== sample 6
+cfs_rq[10]:/docker/<container>
+  .left_deadline                 : 744.686332
+  .left_vruntime                 : 741.191464
+  .zero_vruntime                 : 739.988698
+  .avg_vruntime                  : 740.928207
+  .right_vruntime                : 742.577780
+  .spread                        : 1.386316
+  .nr_queued                     : 3
+  .h_nr_runnable                 : 3
+  .h_nr_queued                   : 3
+  .h_nr_idle                     : 0
+  .load                          : 2231296
+  .load_avg                      : 2180
+  .runnable_avg                  : 3073
+  .util_avg                      : 1024
+  .util_est                      : 0
+  .removed.load_avg              : 0
+  .removed.util_avg              : 0
+  .removed.runnable_avg          : 0
+  .tg_load_avg_contrib           : 2174
+  .tg_load_avg                   : 6280
+  .throttled                     : 0
+  .throttle_count                : 0
+  .se->exec_start                : 159927531.037948
+  .se->vruntime                  : 1023007.912654
+  .se->sum_exec_runtime          : 1557.434203
+  .se->load.weight               : 363648
+  .se->avg.load_avg              : 355
+  .se->avg.util_avg              : 1024
+  .se->avg.runnable_avg          : 3073
+runnable tasks:
+ S            task   PID       vruntime   eligible    deadline             slice          sum-exec      switches  prio         wait-time        sum-sleep       sum-block  group-path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+>R              n0 77167       740.177741   E         740.979615           2.800000       722.891959       242     120         0.000000         0.000000         0.000000        /docker/<container>
+ R              n1 77168       741.191464   N         744.686332           2.800000       579.745122       195     121         0.000000         0.000000         0.000000        /docker/<container>
+ R              n5 77169       742.577780   N         751.135697           2.800000       237.799247        83     125         0.000000         0.000000         0.000000        /docker/<container>

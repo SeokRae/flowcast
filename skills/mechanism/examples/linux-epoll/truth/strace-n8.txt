@@ -1,0 +1,79 @@
+73787 read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\200$\2\0\0\0\0\0"..., 832) = 832
+73787 pipe2([3, 4], O_NONBLOCK)         = 0
+73787 pipe2([5, 6], O_NONBLOCK)         = 0
+73787 pipe2([7, 8], O_NONBLOCK)         = 0
+73787 pipe2([9, 10], O_NONBLOCK)        = 0
+73787 pipe2([11, 12], O_NONBLOCK)       = 0
+73787 pipe2([13, 14], O_NONBLOCK)       = 0
+73787 pipe2([15, 16], O_NONBLOCK)       = 0
+73787 pipe2([17, 18], O_NONBLOCK)       = 0
+73787 write(1, "pid 73787, 8 pipes, readable: 2 "..., 48) = 48
+73787 write(8, "x", 1)                  = 1
+73787 write(14, "x", 1)                 = 1
+73787 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}, {fd=7, events=POLLIN}, {fd=9, events=POLLIN}, {fd=11, events=POLLIN}, {fd=13, events=POLLIN}, {fd=15, events=POLLIN}, {fd=17, events=POLLIN}], 8, NULL, NULL, 0) = 2 ([{fd=7, revents=POLLIN}, {fd=13, revents=POLLIN}])
+73787 write(1, "poll(nfds=8, timeout=-1) = 2 rev"..., 74) = 74
+73787 read(7, "x", 64)                  = 1
+73787 read(13, "x", 64)                 = 1
+73787 write(1, "== poll-block\n", 14)   = 14
+73787 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0xffff98cb70f0) = 73788
+73787 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}, {fd=7, events=POLLIN}, {fd=9, events=POLLIN}, {fd=11, events=POLLIN}, {fd=13, events=POLLIN}, {fd=15, events=POLLIN}, {fd=17, events=POLLIN}], 8, NULL, NULL, 0 <unfinished ...>
+73788 write(14, "x", 1)                 = 1
+73787 <... ppoll resumed>)              = 1 ([{fd=13, revents=POLLIN}])
+73787 wait4(73788, NULL, 0, NULL)       = 73788
+73787 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=73788, si_uid=0, si_status=0, si_utime=0, si_stime=0} ---
+73787 read(13, "x", 64)                 = 1
+73787 write(1, "poll(nfds=8, timeout=-1) = 1 rev"..., 62) = 62
+73787 epoll_create1(0)                  = 19
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 3, {events=EPOLLIN, data=0}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 5, {events=EPOLLIN, data=0x1}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 7, {events=EPOLLIN, data=0x2}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 9, {events=EPOLLIN, data=0x3}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 11, {events=EPOLLIN, data=0x4}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 13, {events=EPOLLIN, data=0x5}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 15, {events=EPOLLIN, data=0x6}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 17, {events=EPOLLIN, data=0x7}) = 0
+73787 write(1, "epoll_ctl(ADD) x8, events=EPOLLI"..., 43) = 43
+73787 write(8, "x", 1)                  = 1
+73787 write(14, "x", 1)                 = 1
+73787 write(1, "== epoll-wait-1\n", 16) = 16
+73787 epoll_pwait(19, [{events=EPOLLIN, data=0x2}, {events=EPOLLIN, data=0x5}], 16, -1, NULL, 8) = 2
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 89) = 89
+73787 epoll_pwait(19, [{events=EPOLLIN, data=0x2}, {events=EPOLLIN, data=0x5}], 16, 0, NULL, 8) = 2
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 81) = 81
+73787 read(7, "x", 64)                  = 1
+73787 read(13, "x", 64)                 = 1
+73787 write(1, "== epoll-wait-3\n", 16) = 16
+73787 epoll_pwait(19, [], 16, 0, NULL, 8) = 0
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 64) = 64
+73787 epoll_pwait(19, [], 16, 0, NULL, 8) = 0
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 63) = 63
+73787 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0xffff98cb70f0) = 73789
+73787 epoll_pwait(19,  <unfinished ...>
+73789 write(14, "x", 1)                 = 1
+73787 <... epoll_pwait resumed>[{events=EPOLLIN, data=0x5}], 16, -1, NULL, 8) = 1
+73787 wait4(73789, NULL, 0, NULL)       = 73789
+73787 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=73789, si_uid=0, si_status=0, si_utime=0, si_stime=0} ---
+73787 read(13, "x", 64)                 = 1
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 77) = 77
+73787 epoll_pwait(19, [], 16, 0, NULL, 8) = 0
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 58) = 58
+73787 epoll_create1(0)                  = 19
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 3, {events=EPOLLIN|EPOLLET, data=0}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLET, data=0x1}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 7, {events=EPOLLIN|EPOLLET, data=0x2}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 9, {events=EPOLLIN|EPOLLET, data=0x3}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 11, {events=EPOLLIN|EPOLLET, data=0x4}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 13, {events=EPOLLIN|EPOLLET, data=0x5}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 15, {events=EPOLLIN|EPOLLET, data=0x6}) = 0
+73787 epoll_ctl(19, EPOLL_CTL_ADD, 17, {events=EPOLLIN|EPOLLET, data=0x7}) = 0
+73787 write(1, "epoll_ctl(ADD) x8, events=EPOLLI"..., 56) = 56
+73787 write(8, "x", 1)                  = 1
+73787 write(1, "== et-wait-1\n", 13)    = 13
+73787 epoll_pwait(19, [{events=EPOLLIN, data=0x2}], 16, 0, NULL, 8) = 1
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 73) = 73
+73787 epoll_pwait(19, [], 16, 0, NULL, 8) = 0
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 62) = 62
+73787 write(8, "x", 1)                  = 1
+73787 write(1, "== et-wait-3\n", 13)    = 13
+73787 epoll_pwait(19, [{events=EPOLLIN, data=0x2}], 16, 0, NULL, 8) = 1
+73787 write(1, "epoll_wait(maxevents=16, timeout"..., 67) = 67

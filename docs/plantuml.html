@@ -150,7 +150,11 @@ plantuml -tsvg out.puml                                     # .puml → SVG (gra
     { view:'component', system:'JVM 런타임 구조', file:'jvm-runtime-component',
       scenarios:['클래스 파일이 JVM에 올라가 실행되기까지'] },
     { view:'sequence',  system:'JVM 시작', file:'jvm-startup-sequence',
-      scenarios:['java -cp . Main 에서 main 실행까지', '예외: 메인 클래스를 찾지 못함'] }
+      scenarios:['java -cp . Main 에서 main 실행까지', '예외: 메인 클래스를 찾지 못함'] },
+    { view:'component', system:'리눅스 커널 구조', file:'linux-kernel-component',
+      scenarios:['사용자 프로세스가 커널 서브시스템을 거치는 길'] },
+    { view:'sequence',  system:'리눅스 read() 한 번', file:'linux-read-sequence',
+      scenarios:['read(): 페이지 캐시 적중과 디스크 읽기', '예외: 잘못된 fd (EBADF)'] }
   ];
 
   function svgName(file, i) {

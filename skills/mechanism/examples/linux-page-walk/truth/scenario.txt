@@ -1,0 +1,9 @@
+pagesize 4096
+maps fffff7800000-fffff7901000 rw-p 00000000 00:00 0 
+maps fffff7901000-fffff7c00000 ---p 00000000 00:00 0 
+split p0 va 0xfffff78000a8 l0 511 l1 511 l2 444 l3 0 offset 0x0a8
+split p1 va 0xfffff79000a8 l0 511 l1 511 l2 444 l3 256 offset 0x0a8
+access 1 read p0 va 0xfffff78000a8 | before present 0 pfn 0x0 | after present 1 pfn 0x72553 kpageflags 0x101000000 zero_page 1 anon 0 | minor-faults perf 1 rusage 1 stat 1
+access 2 write p0 va 0xfffff78000a8 | before present 1 pfn 0x72553 | after present 1 pfn 0xbe291 kpageflags 0x400005848 zero_page 0 anon 1 | minor-faults perf 1 rusage 1 stat 1
+access 3 write p1 va 0xfffff79000a8 | before present 0 pfn 0x0 | after present 1 pfn 0xbe292 kpageflags 0x400005848 zero_page 0 anon 1 | minor-faults perf 1 rusage 1 stat 1
+access 4 read p1 va 0xfffff79000a8 | before present 1 pfn 0xbe292 | after present 1 pfn 0xbe292 kpageflags 0x400005848 zero_page 0 anon 1 | minor-faults perf 0 rusage 0 stat 0

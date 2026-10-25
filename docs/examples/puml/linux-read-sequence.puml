@@ -1,0 +1,100 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title 리눅스 read() 한 번 — read(): 페이지 캐시 적중과 디스크 읽기
+' flowcast source: flowcast 합성 예제 (sequence). Linux 7.0.14 (Docker Desktop linuxkit, arm64), glibc 2.41에서 ext4 파일을 read()한 ftrace 기록(function tracer, func_stack_trace, sched와 block 이벤트)과 glibc read 역어셈블, upstream stable v7.0.14 소스 arch/arm64/kernel/syscall.c, fs/read_write.c, mm/filemap.c 기준
+box "사용자 공간 (EL0)"
+  participant "앱\nreadprobe" as app
+  participant "glibc 2.41\nread 래퍼" as libc
+end box
+box "커널 (EL1)"
+  participant "arm64 진입\nel0_svc" as entry
+  participant "VFS\nvfs_read" as vfs
+  participant "ext4, 페이지 캐시\nfilemap_read" as fs
+  participant "블록 계층\nvirtio-blk" as blk
+end box
+participant "가상 디스크\nDocker VM" as dev
+
+app -> libc : 1. read(3, buf, 4096)
+libc -> libc : 2. x0, x1, x2 = 3, buf, 4096\n취소 처리 함수에서 x8 = 63
+libc -> entry : 3. svc #0 (EL0에서 EL1로 예외)
+entry -> entry : 4. el0t_64_sync → el0t_64_sync_handler\n→ el0_svc → do_el0_svc
+entry -> entry : 5. invoke_syscall: sys_call_table[63]\n= __arm64_sys_read → ksys_read
+entry -> vfs : 6. fdget_pos(3) 뒤 vfs_read
+vfs -> vfs : 7. rw_verify_area\n(FMODE_READ, 범위 확인)
+vfs -> fs : 8. new_sync_read → f_op->read_iter\n= ext4_file_read_iter
+fs -> fs : 9. generic_file_read_iter → filemap_read\n→ filemap_get_pages (페이지 캐시 조회)
+alt 캐시에 있음
+  fs -> fs : 10. folio를 찾음, 디스크 I/O 없음
+else 캐시에 없음
+  fs -> fs : 10. posix_fadvise DONTNEED로 비운 뒤\npage_cache_sync_ra → read_pages\n→ ext4_readahead (3페이지 미리 읽기)
+  fs -> blk : 11. submit_bio → blk_mq_submit_bio
+  blk -> dev : 12. virtio_queue_rq: 24섹터(12288바이트)\n읽기 요청 (block_rq_issue)
+  fs -> fs : 13. folio 잠금 대기: io_schedule\nD 상태로 잠들고 CPU 3은 idle
+  dev --> blk : 14. 완료 인터럽트 (CPU 0)\nvring_interrupt → virtblk_done
+  blk --> fs : 15. blk_mq_complete_request → softirq\nfolio_end_read 3회 (잠금 해제)
+  fs -> fs : 16. sched_wakeup: CPU 3에서 다시 실행\n(이번 실행에서 약 88µs 잠듦)
+end
+fs -> fs : 17. copy_folio_to_iter: 4096바이트를\n사용자 버퍼로 복사, file_accessed
+fs --> vfs : 18. 4096
+vfs --> entry : 19. 4096 (ksys_read가 f_pos 갱신)
+entry -> entry : 20. syscall_set_return_value: x0 = 4096\nexit_to_user_mode → ret_to_user
+entry --> libc : 21. eret (EL1에서 EL0로), x0 = 4096
+libc -> libc : 22. x0가 -4095~-1이 아니므로 그대로
+libc --> app : 23. 4096
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title 리눅스 read() 한 번 — 예외: 잘못된 fd (EBADF)
+' flowcast source: flowcast 합성 예제 (sequence). Linux 7.0.14 (Docker Desktop linuxkit, arm64), glibc 2.41에서 ext4 파일을 read()한 ftrace 기록(function tracer, func_stack_trace, sched와 block 이벤트)과 glibc read 역어셈블, upstream stable v7.0.14 소스 arch/arm64/kernel/syscall.c, fs/read_write.c, mm/filemap.c 기준
+box "사용자 공간 (EL0)"
+  participant "앱\nreadprobe" as app
+  participant "glibc 2.41\nread 래퍼" as libc
+end box
+box "커널 (EL1)"
+  participant "arm64 진입\nel0_svc" as entry
+  participant "VFS\nvfs_read" as vfs
+  participant "ext4, 페이지 캐시\nfilemap_read" as fs
+  participant "블록 계층\nvirtio-blk" as blk
+end box
+participant "가상 디스크\nDocker VM" as dev
+
+app -> libc : 1. read(99, buf, 16)
+libc -> entry : 2. x8 = 63, svc #0
+entry -> entry : 3. invoke_syscall → __arm64_sys_read\n→ ksys_read
+entry -> entry : 4. fdget_pos(99): 열린 파일 없음\nvfs_read는 호출되지 않음
+entry -> entry : 5. x0 = -9 (-EBADF)\nraw_syscalls sys_exit: NR 63 = -9
+entry --> libc : 6. eret, x0 = -9
+libc -> libc : 7. x0가 -4095~-1이므로\nerrno = 9, x0 = -1
+libc --> app : 8. -1 (errno 9, Bad file descriptor)
+@enduml

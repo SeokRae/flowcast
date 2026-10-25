@@ -1,0 +1,4 @@
+control write-only nohugepage 1 pages 512 | read faults 0 | write faults 512 | pfn contiguous 0 | zero_page 0 | thp 0 | vmstat thp_fault_alloc +0 thp_fault_fallback +0
+control read-then-write nohugepage 1 pages 512 | read faults 512 | write faults 512 | pfn contiguous 0 | zero_page 0 | thp 0 | vmstat thp_fault_alloc +0 thp_fault_fallback +0
+control read-only nohugepage 1 pages 512 | read faults 512 | same pfn 0x72553 on 512 pages | zero_page 512
+control thp-default nohugepage 0 pages 512 | read faults 0 | write faults 512 | pfn contiguous 0 | zero_page 0 | thp 0 | vmstat thp_fault_alloc +0 thp_fault_fallback +1

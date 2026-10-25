@@ -1,0 +1,10 @@
+vectors+0x400: b	vectors+0x40c
+vectors+0x404: mrs	x30, tpidrro_el0
+vectors+0x408: msr	tpidrro_el0, xzr
+vectors+0x40c: sub	sp, sp, #0x140
+vectors+0x410: add	sp, sp, x0
+vectors+0x414: sub	x0, sp, x0
+vectors+0x418: tbnz	w0, #14, vectors+0x428
+vectors+0x41c: sub	x0, sp, x0
+vectors+0x420: sub	sp, sp, x0
+vectors+0x424: b	el0t_64_sync
