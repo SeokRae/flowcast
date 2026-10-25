@@ -1376,3 +1376,12 @@ def test_state_loop_example_self_contained(src):
     urls = [u for u in re.findall(r"https?://[^\s\"')<>]+", text) if "www.w3.org" not in u]
     assert not urls, f"{src.name} 에 외부 URL 이 있다: {urls[:3]}"
     assert not re.search(r"<script[^>]+src=|<link[^>]+stylesheet", text), f"{src.name} 이 외부 스크립트나 스타일을 불러온다"
+
+
+# scrollIntoView 는 목록뿐 아니라 페이지와 iframe 바깥 문서까지 스크롤한다. 갤러리 미리보기가 무대 대신
+# 아래 패널을 보여 줬다(#147). 목록 안 항목은 컨테이너 scrollTop 만 바꿔 맞춘다.
+@pytest.mark.parametrize("src", LOOP_HTML, ids=[p.name for p in LOOP_HTML])
+def test_state_loop_example_no_scroll_into_view(src):
+    assert "scrollIntoView(" not in src.read_text(encoding="utf-8"), (
+        f"{src.name} 이 scrollIntoView 를 부른다. 목록 컨테이너의 scrollTop 만 바꾼다 (skills/state-loop/SKILL.md 렌더 규칙)"
+    )
