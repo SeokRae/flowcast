@@ -76,6 +76,7 @@ function tick() {
 - 이동은 **CSS transition**, 틱 구동은 **setTimeout 체인**. 꼭짓점 여러 개를 지나는 경로를 따라 움직여야 하면 `element.animate()`(Web Animations)로 꼭짓점마다 키프레임을 두고, 지속 시간은 틱 간격보다 짧게 잡아 다음 틱 전에 끝나게 한다. 이 경우에도 틱 구동은 setTimeout 체인이다.
 - `@media (prefers-reduced-motion: reduce)`에서 transition을 끈다. Web Animations는 `matchMedia`로 같은 조건을 읽어 애니메이션 없이 최종 위치로 바로 옮긴다.
 - **Play/Pause·속도·"지금 재시작" 컨트롤을 노출한다** — 무한 루프를 사용자가 통제할 수 있어야 한다.
+- 스텝 목록이나 패널 안에서 현재 항목을 보이게 맞출 때 `scrollIntoView`를 쓰지 않는다. 목록만이 아니라 페이지와 iframe 바깥 문서까지 스크롤해서, 갤러리나 노트에 임베드하면 보던 자리가 튄다(#147). 항목의 `offsetTop`과 높이로 목록 컨테이너의 `scrollTop`만 바꾼다(컨테이너에 `position: relative`를 둬야 `offsetTop`이 컨테이너 기준이 된다). `jvm-startup-loop.html`의 `keepInList`가 그 예다.
 - 상태가 바뀔 때마다(예: 매 비교) `aria-live`를 쓰지 않는다 — 페이즈 전환처럼 드문 경계에만 쓴다.
 - **Claude 아티팩트로 게시해 확인할 경우**: 이 스킬을 만드는 과정에서 자동화 브라우저 세션 안 아티팩트 iframe에서 루프가 몇 틱 뒤 멈추는 현상이 관찰됐다(동일 코드를 평범한 페이지로 열면 계속 돈다 — 로컬 재현으로 확인함). 원인은 프리뷰 iframe 쪽으로 좁혀졌고 코드 쪽 버그는 아니었다. 아티팩트 프리뷰만 보고 "루프가 멈춘다"고 판단하지 말고, 실제 사용자 브라우저에서 한 번 더 확인한다.
 
