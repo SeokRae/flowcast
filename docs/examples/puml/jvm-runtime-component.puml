@@ -1,0 +1,46 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title JVM 런타임 구조 — 클래스 파일이 JVM에 올라가 실행되기까지
+' flowcast source: flowcast 합성 예제 (component). JVMS 21 2.5 런타임 데이터 영역, HotSpot 구현은 Amazon Corretto 21.0.1 기준
+package "< JVM 프로세스 (HotSpot 21) >" {
+  rectangle "클래스 로더\nBoot, Platform, App" as loader
+  rectangle "메서드 영역\nMetaspace" as meta <<db>>
+  rectangle "스레드별 영역\n스택 프레임, pc" as stack <<db>>
+  rectangle "인터프리터" as interp
+  rectangle "JIT 컴파일러\nC1, C2" as jit
+  rectangle "가비지 컬렉터\nG1" as gc
+  rectangle "힙\n객체, 배열" as heap <<db>>
+  rectangle "코드 캐시\n컴파일된 기계어" as code <<db>>
+}
+rectangle "javac" as javac <<ext>>
+rectangle "클래스 파일\n클래스 경로, jrt" as cls <<db>>
+
+javac --> cls : 1. 컴파일
+cls --> loader : 2. 읽기
+loader --> meta : 3. 적재
+meta --> interp : 4. 바이트코드
+interp <--> stack : 5. 프레임
+interp --> heap : 6. 객체 할당
+interp --> jit : 7. 호출 카운터
+jit --> code : 8. 기계어 설치
+gc --> heap : 9. 회수, 승격
+gc --> stack : 10. 루트 스캔 (세이프포인트)
+@enduml

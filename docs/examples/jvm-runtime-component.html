@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JVM 런타임 구조 IF 흐름도</title>
+<style>
+    :root {
+      --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+      --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --tone-danger:#f87171; --tone-warn:#fbbf24; --tone-info:#38bdf8;
+      --atone-slate:#64748b; --atone-violet:#7c74ff; --atone-deep:#2a2170; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.72);
+      --line:#c3cedd; --line-soft:#76839a;
+      --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
+      --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
+      --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
+      --comp-bg:rgba(78,205,190,0.14); --comp-bd:rgba(78,205,190,0.44);
+      --shadow:0 24px 72px rgba(0,0,0,0.34);
+      --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+    }
+    :root[data-theme="light"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .page{width:min(1106px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;display:grid;gap:18px;}
+    .sheet{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);border-radius:20px;padding:20px 24px;}
+    .hero{margin-bottom:14px;}
+    .eyebrow{display:inline-flex;padding:6px 12px;border-radius:999px;border:1px solid var(--zone-bd);background:var(--zone-bg);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.07em;}
+    h1{margin:10px 0 4px;font-size:clamp(1.3rem,2.2vw,1.7rem);letter-spacing:-0.02em;}
+    p.sub{margin:0;color:var(--muted);font-size:12.5px;}
+    .diagram-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+    .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
+    /* ── SVG ── */
+    .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:11px;font-weight:700;}
+    .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:11.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:9px;}
+    .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
+    .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
+    .ar{fill:none;}
+    .ar-req{stroke:var(--line);stroke-width:1.8;}
+    .ar-res{stroke:var(--line-soft);stroke-width:1.5;stroke-dasharray:6,4;}
+    .ar-relay{stroke:var(--line-soft);stroke-width:1.4;}
+    .ar-self{stroke:var(--line);stroke-width:1.6;}
+    .mk-req,.mk-self{fill:var(--line);}
+    .mk-res,.mk-relay{fill:var(--line-soft);}
+    text{font-family:var(--font);}
+    .lb-req,.lb-self{fill:var(--text);font-size:10.5px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:10.5px;}
+    .lb-relay{fill:var(--muted);font-size:10.5px;font-style:italic;}
+    .lb-sub{fill:var(--muted);font-size:10px;font-weight:400;font-family:var(--mono);}
+    .lb-proto{fill:var(--muted);font-size:9.5px;font-family:var(--mono);}
+    .note-rule{stroke:var(--zone-bd);stroke-width:1;stroke-dasharray:4,4;}
+    .note{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1;}
+    .note-tx{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag{fill:none;stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-tag{fill:var(--surface);stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-kind{fill:var(--text);font-family:var(--mono);font-size:10px;font-weight:700;}
+    .frag-guard{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag-guard-bg{fill:var(--surface);}
+    .frag-else{stroke:var(--line-soft);stroke-width:1.2;stroke-dasharray:6,4;}
+    .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
+    .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
+    .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}
+    .mk-tone-danger{fill:var(--tone-danger);}
+    .mk-tone-warn{fill:var(--tone-warn);}
+    .mk-tone-info{fill:var(--tone-info);}
+    .actor.atone-slate{fill:var(--atone-slate);stroke:var(--atone-slate);}
+    .actor.atone-violet{fill:var(--atone-violet);stroke:var(--atone-violet);}
+    .actor.atone-deep{fill:var(--atone-deep);stroke:var(--atone-deep);}
+    .actor-tx.atone-slate,.actor-tx.atone-violet,.actor-tx.atone-deep{fill:var(--atone-tx);}
+    .actor-sub.atone-slate,.actor-sub.atone-violet,.actor-sub.atone-deep{fill:var(--atone-sub);}
+    /* ── 토폴로지(구성도) 뷰 ── */
+    .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
+    .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
+    .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-dualgrp{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.2;stroke-dasharray:4,3;}
+    .topo-dual{opacity:0.6;}
+    .topo-node.dim{opacity:0.5;}
+    .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
+    .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
+    .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
+    .fw-brick-bg{fill:var(--surface);}
+    .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
+    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:4,3;}
+    .l4-ico{fill:var(--accent);}
+    .l4-ico-l{stroke:var(--accent);stroke-width:1.2;fill:none;}
+    .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
+    .topo-tx.on{fill:var(--accent);}
+    .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
+    .topo-seg{fill:none;stroke:var(--line);stroke-width:2;}
+    .mk-topo{fill:var(--line);}
+    .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
+    .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legtbl{fill:none;stroke:var(--border);stroke-width:1;}
+    .topo-legtbl-hdr{fill:var(--zone-bg);stroke:none;}
+    .topo-legnum{fill:var(--accent);font-size:11px;font-weight:700;}
+    .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-hdr{fill:var(--muted);font-size:10.5px;font-weight:700;}
+    .topo-leggrid{stroke:var(--border);stroke-width:0.7;}
+    .topo-legend-step{fill:var(--text);font-size:11.5px;font-weight:700;}
+    .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    .topo-legend-meta{fill:var(--muted);font-size:10px;}
+    /* ── 컴포넌트 뷰 ── */
+    .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
+    .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
+    .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
+    .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .cyl-rim{fill:none;}
+    .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
+    .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
+    .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
+    .comp-lb{fill:var(--text);font-size:11px;font-weight:600;}
+    .comp-proto{fill:var(--muted);font-size:10px;font-family:var(--mono);}
+    .mk-comp{fill:var(--line);}
+    @media print {
+      :root, :root[data-theme="dark"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+      .theme-toggle{display:none;}
+      body{background:#fff;}
+      .page{width:1106px;padding:0;gap:0;}
+      .sheet{border:none;box-shadow:none;border-radius:0;page-break-after:always;page-break-inside:avoid;}
+      .diagram-wrap{overflow:visible;border:none;}
+      .hero{height:96px;overflow:hidden;}
+    }
+
+    @page { size: 1106px 560px; margin: 0; }
+
+    .iff-node{cursor:grab;}
+    .iff-node:active{cursor:grabbing;}
+    .iff-zone{cursor:grab;}
+    .iff-zone:active{cursor:grabbing;}
+    .iff-export{margin:0 0 10px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;}
+    @media print{ .iff-export{display:none;} }
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button">🌓 테마</button>
+<main class="page">
+  <section class="sheet">
+    <header class="hero">
+      <span class="eyebrow">JVM 런타임 구조 · IF 흐름도</span>
+      <h1>클래스 파일이 JVM에 올라가 실행되기까지</h1>
+      <p class="sub">flowcast 합성 예제 (component). JVMS 21 2.5 런타임 데이터 영역, HotSpot 구현은 Amazon Corretto 21.0.1 기준</p>
+    </header>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="14 -24 1058 386" style="width:100%;max-width:1058px;display:block;margin:0 auto;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="클래스 파일이 JVM에 올라가 실행되기까지"><defs><marker id="mk-comp" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-comp" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-comp-s" markerWidth="9" markerHeight="9" refX="0.5" refY="3" orient="auto"><path class="mk-comp" d="M8,0 L0,3 L8,6z"/></marker></defs><g class="iff-zone" data-zone="jvm" data-members="loader,meta,stack,interp,jit,gc,heap,code" data-pad="18" data-lbl="20" data-lblpos="tr"><rect class="comp-zone" x="440" y="-8" width="616" height="354" rx="12"/><text class="comp-zone-tx" x="1044" y="7" text-anchor="end">&lt; JVM 프로세스 (HotSpot 21) &gt;</text></g><path class="comp-edge" data-from="javac" data-to="cls" d="M182.0,59.0 L244.0,59.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="cls" data-to="loader" d="M396.0,59.0 L458.0,59.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="loader" data-to="meta" d="M610.0,59.0 L672.0,59.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="meta" data-to="interp" d="M748.0,88.0 L748.0,150.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="interp" data-to="stack" d="M672.0,179.0 L610.0,179.0" marker-end="url(#mk-comp)" marker-start="url(#mk-comp-s)"/><path class="comp-edge" data-from="interp" data-to="heap" d="M748.0,208.0 L748.0,270.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="interp" data-to="jit" d="M824.0,179.0 L886.0,179.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="jit" data-to="code" d="M962.0,208.0 L962.0,270.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="gc" data-to="heap" d="M610.0,299.0 L672.0,299.0" marker-end="url(#mk-comp)"/><path class="comp-edge" data-from="gc" data-to="stack" d="M534.0,270.0 L534.0,208.0" marker-end="url(#mk-comp)"/><g class="iff-node" data-id="javac" data-cx="106.0" data-cy="59.0" data-w="152" data-h="58"><rect class="comp-node comp-ext" x="30" y="30" width="152" height="58" rx="9"/><text class="comp-name" x="106.0" y="63.0" text-anchor="middle">javac</text></g><g class="iff-node" data-id="cls" data-cx="320.0" data-cy="59.0" data-w="152" data-h="58"><path class="comp-node comp-db" d="M244,42.0 A76.0,12.0 0 0,1 396,42.0 L396,76.0 A76.0,12.0 0 0,1 244,76.0 Z"/><path class="comp-node comp-db cyl-rim" d="M244,42.0 A76.0,12.0 0 0,0 396,42.0"/><text class="comp-name" x="320.0" y="62.0" text-anchor="middle">클래스 파일</text><text class="comp-name" x="320.0" y="76.0" text-anchor="middle">클래스 경로, jrt</text></g><g class="iff-node" data-id="loader" data-cx="534.0" data-cy="59.0" data-w="152" data-h="58"><rect class="comp-node" x="458" y="30" width="152" height="58" rx="9"/><text class="comp-name" x="534.0" y="56.0" text-anchor="middle">클래스 로더</text><text class="comp-name" x="534.0" y="70.0" text-anchor="middle">Boot, Platform, App</text></g><g class="iff-node" data-id="meta" data-cx="748.0" data-cy="59.0" data-w="152" data-h="58"><path class="comp-node comp-db" d="M672,42.0 A76.0,12.0 0 0,1 824,42.0 L824,76.0 A76.0,12.0 0 0,1 672,76.0 Z"/><path class="comp-node comp-db cyl-rim" d="M672,42.0 A76.0,12.0 0 0,0 824,42.0"/><text class="comp-name" x="748.0" y="62.0" text-anchor="middle">메서드 영역</text><text class="comp-name" x="748.0" y="76.0" text-anchor="middle">Metaspace</text></g><g class="iff-node" data-id="stack" data-cx="534.0" data-cy="179.0" data-w="152" data-h="58"><path class="comp-node comp-db" d="M458,162.0 A76.0,12.0 0 0,1 610,162.0 L610,196.0 A76.0,12.0 0 0,1 458,196.0 Z"/><path class="comp-node comp-db cyl-rim" d="M458,162.0 A76.0,12.0 0 0,0 610,162.0"/><text class="comp-name" x="534.0" y="182.0" text-anchor="middle">스레드별 영역</text><text class="comp-name" x="534.0" y="196.0" text-anchor="middle">스택 프레임, pc</text></g><g class="iff-node" data-id="interp" data-cx="748.0" data-cy="179.0" data-w="152" data-h="58"><rect class="comp-node" x="672" y="150" width="152" height="58" rx="9"/><text class="comp-name" x="748.0" y="183.0" text-anchor="middle">인터프리터</text></g><g class="iff-node" data-id="jit" data-cx="962.0" data-cy="179.0" data-w="152" data-h="58"><rect class="comp-node" x="886" y="150" width="152" height="58" rx="9"/><text class="comp-name" x="962.0" y="176.0" text-anchor="middle">JIT 컴파일러</text><text class="comp-name" x="962.0" y="190.0" text-anchor="middle">C1, C2</text></g><g class="iff-node" data-id="gc" data-cx="534.0" data-cy="299.0" data-w="152" data-h="58"><rect class="comp-node" x="458" y="270" width="152" height="58" rx="9"/><text class="comp-name" x="534.0" y="296.0" text-anchor="middle">가비지 컬렉터</text><text class="comp-name" x="534.0" y="310.0" text-anchor="middle">G1</text></g><g class="iff-node" data-id="heap" data-cx="748.0" data-cy="299.0" data-w="152" data-h="58"><path class="comp-node comp-db" d="M672,282.0 A76.0,12.0 0 0,1 824,282.0 L824,316.0 A76.0,12.0 0 0,1 672,316.0 Z"/><path class="comp-node comp-db cyl-rim" d="M672,282.0 A76.0,12.0 0 0,0 824,282.0"/><text class="comp-name" x="748.0" y="302.0" text-anchor="middle">힙</text><text class="comp-name" x="748.0" y="316.0" text-anchor="middle">객체, 배열</text></g><g class="iff-node" data-id="code" data-cx="962.0" data-cy="299.0" data-w="152" data-h="58"><path class="comp-node comp-db" d="M886,282.0 A76.0,12.0 0 0,1 1038,282.0 L1038,316.0 A76.0,12.0 0 0,1 886,316.0 Z"/><path class="comp-node comp-db cyl-rim" d="M886,282.0 A76.0,12.0 0 0,0 1038,282.0"/><text class="comp-name" x="962.0" y="302.0" text-anchor="middle">코드 캐시</text><text class="comp-name" x="962.0" y="316.0" text-anchor="middle">컴파일된 기계어</text></g><text class="comp-lb" data-from="javac" data-to="cls" x="213.0" y="53.0" text-anchor="middle">(1) 컴파일</text><text class="comp-lb" data-from="cls" data-to="loader" x="427.0" y="53.0" text-anchor="middle">(2) 읽기</text><text class="comp-lb" data-from="loader" data-to="meta" x="641.0" y="53.0" text-anchor="middle">(3) 적재</text><text class="comp-lb" data-from="meta" data-to="interp" x="748.0" y="113.0" text-anchor="middle">(4) 바이트코드</text><text class="comp-lb" data-from="interp" data-to="stack" x="641.0" y="173.0" text-anchor="middle">(5) 프레임</text><text class="comp-lb" data-from="interp" data-to="heap" x="748.0" y="233.0" text-anchor="middle">(6) 객체 할당</text><text class="comp-lb" data-from="interp" data-to="jit" x="855.0" y="173.0" text-anchor="middle">(7) 호출 카운터</text><text class="comp-lb" data-from="jit" data-to="code" x="962.0" y="233.0" text-anchor="middle">(8) 기계어 설치</text><text class="comp-lb" data-from="gc" data-to="heap" x="641.0" y="293.0" text-anchor="middle">(9) 회수, 승격</text><text class="comp-lb" data-from="gc" data-to="stack" x="534.0" y="233.0" text-anchor="middle">(10) 루트 스캔 (세이프포인트)</text></svg></div>
+  </section>
+</main>
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+  });
+})();
+</script>
+<script>
+(function () {
+  function edgePt(n, tx, ty) {
+    var cx = n.cx + n.tx, cy = n.cy + n.ty, dx = tx - cx, dy = ty - cy;
+    if (!dx && !dy) return [cx, cy];
+    var sx = dx ? (n.w / 2) / Math.abs(dx) : 1e9, sy = dy ? (n.h / 2) / Math.abs(dy) : 1e9;
+    var s = Math.min(sx, sy);
+    return [cx + dx * s, cy + dy * s];
+  }
+  function initSvg(svg) {
+    var nodes = {};
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      nodes[g.getAttribute('data-id')] = {
+        g: g, cx: +g.getAttribute('data-cx'), cy: +g.getAttribute('data-cy'),
+        w: +g.getAttribute('data-w'), h: +g.getAttribute('data-h'), tx: 0, ty: 0
+      };
+    });
+    function refresh(id) {
+      svg.querySelectorAll('[data-self="' + id + '"]').forEach(function (el) {
+        var n = nodes[id]; el.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+      });
+      svg.querySelectorAll('[data-from],[data-to]').forEach(function (el) {
+        if (el.getAttribute('data-self')) return;
+        var f = el.getAttribute('data-from'), t = el.getAttribute('data-to');
+        if (f !== id && t !== id) return;
+        var a = nodes[f], b = nodes[t]; if (!a || !b) return;
+        var ca = [a.cx + a.tx, a.cy + a.ty], cb = [b.cx + b.tx, b.cy + b.ty];
+        if (el.tagName === 'path') {
+          var p1 = edgePt(a, cb[0], cb[1]), p2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('d', 'M' + p1[0] + ',' + p1[1] + ' L' + p2[0] + ',' + p2[1]);
+        } else if (el.tagName === 'line') {
+          var q1 = edgePt(a, cb[0], cb[1]), q2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('x1', q1[0]); el.setAttribute('y1', q1[1]);
+          el.setAttribute('x2', q2[0]); el.setAttribute('y2', q2[1]);
+        } else {
+          el.setAttribute('transform', 'translate(' + ((a.tx + b.tx) / 2) + ',' + ((a.ty + b.ty) / 2) + ')');
+        }
+      });
+    }
+    function nodeRect(id) { var n = nodes[id]; return { x: n.cx + n.tx - n.w / 2, y: n.cy + n.ty - n.h / 2, w: n.w, h: n.h }; }
+    function zoneRecompute(zg) {
+      var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+      if (!mem.length) return;
+      var pad = +zg.getAttribute('data-pad'), lbl = +zg.getAttribute('data-lbl'), lp = zg.getAttribute('data-lblpos');
+      var rs = mem.map(nodeRect);
+      var zx1 = Math.min.apply(null, rs.map(function (r) { return r.x; })) - pad;
+      var zy1 = Math.min.apply(null, rs.map(function (r) { return r.y; })) - pad - lbl;
+      var zx2 = Math.max.apply(null, rs.map(function (r) { return r.x + r.w; })) + pad;
+      var zy2 = Math.max.apply(null, rs.map(function (r) { return r.y + r.h; })) + pad;
+      var rect = zg.querySelector('rect'), txt = zg.querySelector('text');
+      rect.setAttribute('x', zx1); rect.setAttribute('y', zy1);
+      rect.setAttribute('width', zx2 - zx1); rect.setAttribute('height', zy2 - zy1);
+      if (lp === 'tr') { txt.setAttribute('x', zx2 - 12); txt.setAttribute('y', zy1 + 15); }
+      else { txt.setAttribute('x', zx1 + 10); txt.setAttribute('y', zy1 + 13); }
+    }
+    function recomputeZones() { svg.querySelectorAll('.iff-zone').forEach(zoneRecompute); }
+    var active = null, start = null;
+    function toSvg(evt) {
+      var pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      g.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        active = nodes[g.getAttribute('data-id')];
+        var p = toSvg(evt); start = { x: p.x, y: p.y, tx: active.tx, ty: active.ty };
+        g.setPointerCapture(evt.pointerId);
+      });
+      g.addEventListener('pointermove', function (evt) {
+        if (!active) return;
+        var p = toSvg(evt);
+        active.tx = start.tx + (p.x - start.x); active.ty = start.ty + (p.y - start.y);
+        active.g.setAttribute('transform', 'translate(' + active.tx + ',' + active.ty + ')');
+        refresh(active.g.getAttribute('data-id'));
+        recomputeZones();
+      });
+      g.addEventListener('pointerup', function () { active = null; });
+      g.addEventListener('pointercancel', function () { active = null; });
+    });
+    var zdrag = null;
+    svg.querySelectorAll('.iff-zone').forEach(function (zg) {
+      zg.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+        var p = toSvg(evt);
+        zdrag = { x: p.x, y: p.y, base: mem.map(function (id) { return { id: id, tx: nodes[id].tx, ty: nodes[id].ty }; }) };
+        zg.setPointerCapture(evt.pointerId);
+      });
+      zg.addEventListener('pointermove', function (evt) {
+        if (!zdrag) return;
+        var p = toSvg(evt), ddx = p.x - zdrag.x, ddy = p.y - zdrag.y;
+        zdrag.base.forEach(function (b) {
+          var n = nodes[b.id]; n.tx = b.tx + ddx; n.ty = b.ty + ddy;
+          n.g.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+          refresh(b.id);
+        });
+        recomputeZones();
+      });
+      zg.addEventListener('pointerup', function () { zdrag = null; });
+      zg.addEventListener('pointercancel', function () { zdrag = null; });
+    });
+    return function () {
+      var out = {};
+      Object.keys(nodes).forEach(function (id) {
+        var n = nodes[id];
+        out[id] = { x: Math.round(n.cx + n.tx - n.w / 2), y: Math.round(n.cy + n.ty - n.h / 2) };
+      });
+      return out;
+    };
+  }
+  document.querySelectorAll('.sheet').forEach(function (sheet) {
+    var svg = sheet.querySelector('svg'); if (!svg) return;
+    var exporter = initSvg(svg);
+    var btn = sheet.querySelector('.iff-export');
+    if (btn) btn.addEventListener('click', function () {
+      var json = JSON.stringify(exporter(), null, 2);
+      window.__iffExport = json;
+      if (navigator.clipboard) navigator.clipboard.writeText(json);
+      btn.textContent = '✅ 좌표 복사됨 (JSON nodes의 x/y에 반영)';
+      setTimeout(function () { btn.textContent = '📋 좌표 복사'; }, 1800);
+    });
+  });
+})();
+</script>
+</body>
+</html>

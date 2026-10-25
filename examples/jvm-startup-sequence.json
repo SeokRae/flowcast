@@ -1,0 +1,322 @@
+{
+  "system": "JVM 시작",
+  "source": "flowcast 합성 예제 (sequence). Amazon Corretto 21.0.1에서 java -Xlog:startuptime,class+load,class+init,class+resolve=debug 실행 출력과 JDK 소스 sun.launcher.LauncherHelper (checkAndLoadMain, loadMainClass, validateMainClass), JVMS 21 5장 기준",
+  "view": "sequence",
+  "zones": [
+    {
+      "id": "native",
+      "name": "네이티브"
+    },
+    {
+      "id": "java",
+      "name": "자바"
+    }
+  ],
+  "actors": [
+    {
+      "id": "sh",
+      "name": "셸",
+      "tone": "slate"
+    },
+    {
+      "id": "launcher",
+      "name": "java 런처",
+      "zone": "native",
+      "tone": "violet"
+    },
+    {
+      "id": "vm",
+      "name": "HotSpot VM",
+      "zone": "native",
+      "tone": "violet"
+    },
+    {
+      "id": "helper",
+      "name": "LauncherHelper",
+      "zone": "java",
+      "tone": "violet"
+    },
+    {
+      "id": "app",
+      "name": "App 클래스 로더",
+      "zone": "java",
+      "tone": "violet"
+    },
+    {
+      "id": "main",
+      "name": "Main",
+      "zone": "java",
+      "tone": "violet"
+    },
+    {
+      "id": "dep",
+      "name": "Helper",
+      "zone": "java",
+      "tone": "violet"
+    }
+  ],
+  "scenarios": [
+    {
+      "title": "java -cp . Main 에서 main 실행까지",
+      "steps": [
+        {
+          "n": 1,
+          "from": "sh",
+          "to": "launcher",
+          "label": "java -cp . Main",
+          "kind": "req"
+        },
+        {
+          "n": 2,
+          "from": "launcher",
+          "to": "vm",
+          "label": "VM 생성",
+          "kind": "req"
+        },
+        {
+          "n": 3,
+          "from": "vm",
+          "to": "vm",
+          "label": "인터프리터 생성, java.lang 클래스 초기화,\n모듈 시스템 초기화",
+          "kind": "self"
+        },
+        {
+          "n": 4,
+          "from": "vm",
+          "to": "launcher",
+          "label": "Create VM 완료",
+          "kind": "res"
+        },
+        {
+          "kind": "note",
+          "label": "로딩: 초기화하지 않고 적재만",
+          "from": "sh",
+          "to": "dep"
+        },
+        {
+          "n": 5,
+          "from": "launcher",
+          "to": "helper",
+          "label": "checkAndLoadMain",
+          "kind": "req"
+        },
+        {
+          "n": 6,
+          "from": "helper",
+          "to": "app",
+          "label": "Class.forName(\"Main\", false, scl)",
+          "kind": "req"
+        },
+        {
+          "n": 7,
+          "from": "app",
+          "to": "app",
+          "label": "부모 위임 뒤 클래스 경로에서 찾아 적재\n(source: file:)",
+          "kind": "self"
+        },
+        {
+          "n": 8,
+          "from": "app",
+          "to": "helper",
+          "label": "Class<Main>",
+          "kind": "res"
+        },
+        {
+          "kind": "note",
+          "label": "링킹: main 메서드를 찾는 리플렉션이 검증을 일으킴",
+          "from": "sh",
+          "to": "dep"
+        },
+        {
+          "n": 9,
+          "from": "helper",
+          "to": "main",
+          "label": "validateMainClass\n(MainMethodFinder.findMainMethod)",
+          "kind": "req"
+        },
+        {
+          "n": 10,
+          "from": "main",
+          "to": "main",
+          "label": "검증 (class verification)\n준비 (static 필드 = 기본값)",
+          "kind": "self"
+        },
+        {
+          "n": 11,
+          "from": "main",
+          "to": "helper",
+          "label": "main(String[]) 확인",
+          "kind": "res"
+        },
+        {
+          "n": 12,
+          "from": "helper",
+          "to": "launcher",
+          "label": "Main 클래스",
+          "kind": "res"
+        },
+        {
+          "kind": "note",
+          "label": "초기화와 실행",
+          "from": "sh",
+          "to": "dep"
+        },
+        {
+          "n": 13,
+          "from": "launcher",
+          "to": "main",
+          "label": "main 호출 (JNI)",
+          "kind": "req"
+        },
+        {
+          "n": 14,
+          "from": "main",
+          "to": "main",
+          "label": "초기화: <clinit> 실행\n(static int counter = init())",
+          "kind": "self"
+        },
+        {
+          "n": 15,
+          "from": "main",
+          "to": "main",
+          "label": "main 본문 실행",
+          "kind": "self"
+        },
+        {
+          "kind": "note",
+          "label": "지연 로딩: 처음 쓰는 순간 해석",
+          "from": "sh",
+          "to": "dep"
+        },
+        {
+          "n": 16,
+          "from": "main",
+          "to": "app",
+          "label": "Helper 심볼 해석, 로딩 요청\n(Main.java:6)",
+          "kind": "req"
+        },
+        {
+          "n": 17,
+          "from": "app",
+          "to": "main",
+          "label": "Class<Helper>",
+          "kind": "res"
+        },
+        {
+          "n": 18,
+          "from": "main",
+          "to": "dep",
+          "label": "invokestatic Helper.hello()",
+          "kind": "req"
+        },
+        {
+          "n": 19,
+          "from": "dep",
+          "to": "dep",
+          "label": "검증, 초기화\n뒤 hello 실행",
+          "kind": "self"
+        },
+        {
+          "n": 20,
+          "from": "dep",
+          "to": "main",
+          "label": "",
+          "kind": "res"
+        },
+        {
+          "n": 21,
+          "from": "main",
+          "to": "launcher",
+          "label": "main 반환",
+          "kind": "res"
+        },
+        {
+          "n": 22,
+          "from": "launcher",
+          "to": "sh",
+          "label": "종료 코드 0",
+          "kind": "res"
+        }
+      ]
+    },
+    {
+      "title": "예외: 메인 클래스를 찾지 못함",
+      "steps": [
+        {
+          "n": 1,
+          "from": "sh",
+          "to": "launcher",
+          "label": "java -cp . Nope",
+          "kind": "req"
+        },
+        {
+          "n": 2,
+          "from": "launcher",
+          "to": "vm",
+          "label": "VM 생성",
+          "kind": "req"
+        },
+        {
+          "n": 3,
+          "from": "vm",
+          "to": "launcher",
+          "label": "Create VM 완료",
+          "kind": "res"
+        },
+        {
+          "n": 4,
+          "from": "launcher",
+          "to": "helper",
+          "label": "checkAndLoadMain",
+          "kind": "req"
+        },
+        {
+          "n": 5,
+          "from": "helper",
+          "to": "app",
+          "label": "Class.forName(\"Nope\", false, scl)",
+          "kind": "req"
+        },
+        {
+          "n": 6,
+          "from": "app",
+          "to": "app",
+          "label": "부모 위임 뒤 클래스 경로에도 없음",
+          "kind": "self"
+        },
+        {
+          "n": 7,
+          "from": "app",
+          "to": "helper",
+          "label": "ClassNotFoundException",
+          "kind": "res",
+          "tone": "danger"
+        },
+        {
+          "n": 8,
+          "from": "helper",
+          "to": "sh",
+          "label": "abort: 오류 메시지 출력\n오류: 기본 클래스 Nope을(를) 찾거나 로드할 수 없습니다.\n원인: java.lang.ClassNotFoundException: Nope",
+          "kind": "res",
+          "tone": "danger"
+        },
+        {
+          "n": 9,
+          "from": "helper",
+          "to": "vm",
+          "label": "System.exit(1)",
+          "kind": "req",
+          "tone": "danger"
+        },
+        {
+          "n": 10,
+          "from": "vm",
+          "to": "sh",
+          "label": "종료 코드 1",
+          "kind": "res",
+          "tone": "danger"
+        }
+      ]
+    }
+  ]
+}

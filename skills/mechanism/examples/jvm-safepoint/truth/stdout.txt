@@ -1,0 +1,8 @@
+CompileCommand: exclude SafepointProbe.interpretedLoop bool exclude = true
+before gc: compiled RUNNABLE
+before gc: interp RUNNABLE
+before gc: native RUNNABLE
+before gc: sleeper TIMED_WAITING
+before gc: waiter WAITING
+after gc
+loops stopped

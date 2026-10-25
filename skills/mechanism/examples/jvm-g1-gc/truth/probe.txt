@@ -1,0 +1,40 @@
+block_bytes 262144
+alloc epoch 0 addr 0x11d5383d8 garbage
+alloc epoch 0 addr 0x11d5783d8 garbage
+alloc epoch 0 addr 0x11d5b83d8 name A
+alloc epoch 0 addr 0x11d400000 garbage
+alloc epoch 0 addr 0x11d440000 garbage
+alloc epoch 0 addr 0x11d480000 garbage
+alloc epoch 0 addr 0x11d4c0000 garbage
+alloc epoch 1 addr 0x11d500000 garbage
+alloc epoch 1 addr 0x11d544ed0 name B
+alloc epoch 1 addr 0x11d584ed0 garbage
+alloc epoch 1 addr 0x11d400000 garbage
+alloc epoch 1 addr 0x11d440000 garbage
+alloc epoch 1 addr 0x11d480000 garbage
+alloc epoch 1 addr 0x11d4c0000 garbage
+alloc epoch 2 addr 0x11d500000 garbage
+alloc epoch 2 addr 0x11d549990 garbage
+alloc epoch 2 addr 0x11d589990 garbage
+alloc epoch 2 addr 0x11d400000 garbage
+alloc epoch 2 addr 0x11d440000 name C
+alloc epoch 2 addr 0x11d480000 garbage
+alloc epoch 2 addr 0x11d4c0000 garbage
+alloc epoch 2 addr 0x11d300000 garbage
+alloc epoch 2 addr 0x11d340000 garbage
+alloc epoch 2 addr 0x11d380000 garbage
+alloc epoch 2 addr 0x11d3c0000 garbage
+alloc epoch 2 addr 0x11d100000 garbage
+alloc epoch 2 addr 0x11d140000 garbage
+alloc epoch 2 addr 0x11d180000 garbage
+alloc epoch 2 addr 0x11d1c0000 garbage
+alloc epoch 2 addr 0x11d000000 garbage
+alloc epoch 2 addr 0x11d040000 garbage
+alloc epoch 2 addr 0x11d080000 garbage
+alloc epoch 2 addr 0x11d0c0000 garbage
+after GC(0) A addr 0x11d31a020 age 1
+after GC(1) A addr 0x11d25ad20 age 2
+after GC(1) B addr 0x11d21ad20 age 1
+after GC(2) A addr 0x11c819b78 age 2
+after GC(2) B addr 0x11cf43cd8 age 2
+after GC(2) C addr 0x11cf03cd8 age 1

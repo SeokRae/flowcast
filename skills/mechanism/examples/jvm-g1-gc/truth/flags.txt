@@ -1,0 +1,8 @@
+   size_t G1HeapRegionSize                         = 1048576                                   {product} {ergonomic}
+    uintx InitialTenuringThreshold                 = 7                                         {product} {default}
+   size_t MaxHeapSize                              = 16777216                                  {product} {command line}
+    uintx MaxTenuringThreshold                     = 15                                        {product} {default}
+     uint ParallelGCThreads                        = 1                                         {product} {command line}
+    uintx SurvivorRatio                            = 8                                         {product} {default}
+    uintx TargetSurvivorRatio                      = 50                                        {product} {default}
+     bool UseG1GC                                  = true                                      {product} {command line}

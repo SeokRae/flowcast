@@ -1,0 +1,109 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title JVM 시작 — java -cp . Main 에서 main 실행까지
+' flowcast source: flowcast 합성 예제 (sequence). Amazon Corretto 21.0.1에서 java -Xlog:startuptime,class+load,class+init,class+resolve=debug 실행 출력과 JDK 소스 sun.launcher.LauncherHelper (checkAndLoadMain, loadMainClass, validateMainClass), JVMS 21 5장 기준
+participant "셸" as sh
+box "네이티브"
+  participant "java 런처" as launcher
+  participant "HotSpot VM" as vm
+end box
+box "자바"
+  participant "LauncherHelper" as helper
+  participant "App 클래스 로더" as app
+  participant "Main" as main
+  participant "Helper" as dep
+end box
+
+sh -> launcher : 1. java -cp . Main
+launcher -> vm : 2. VM 생성
+vm -> vm : 3. 인터프리터 생성, java.lang 클래스 초기화,\n모듈 시스템 초기화
+vm --> launcher : 4. Create VM 완료
+note over sh, dep
+로딩: 초기화하지 않고 적재만
+end note
+launcher -> helper : 5. checkAndLoadMain
+helper -> app : 6. Class.forName("Main", false, scl)
+app -> app : 7. 부모 위임 뒤 클래스 경로에서 찾아 적재\n(source: file:)
+app --> helper : 8. Class<Main>
+note over sh, dep
+링킹: main 메서드를 찾는 리플렉션이 검증을 일으킴
+end note
+helper -> main : 9. validateMainClass\n(MainMethodFinder.findMainMethod)
+main -> main : 10. 검증 (class verification)\n준비 (static 필드 = 기본값)
+main --> helper : 11. main(String[]) 확인
+helper --> launcher : 12. Main 클래스
+note over sh, dep
+초기화와 실행
+end note
+launcher -> main : 13. main 호출 (JNI)
+main -> main : 14. 초기화: <clinit> 실행\n(static int counter = init())
+main -> main : 15. main 본문 실행
+note over sh, dep
+지연 로딩: 처음 쓰는 순간 해석
+end note
+main -> app : 16. Helper 심볼 해석, 로딩 요청\n(Main.java:6)
+app --> main : 17. Class<Helper>
+main -> dep : 18. invokestatic Helper.hello()
+dep -> dep : 19. 검증, 초기화\n뒤 hello 실행
+dep --> main : 20.
+main --> launcher : 21. main 반환
+launcher --> sh : 22. 종료 코드 0
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #F1F5F9
+  ParticipantBorderColor #475569
+  ParticipantFontColor #1B2635
+  ActorBackgroundColor #F1F5F9
+  ActorBorderColor #475569
+  BoxBackgroundColor #E8F1FF
+  BoxBorderColor #94A3B8
+}
+skinparam noteBackgroundColor #FAF6EE
+skinparam noteBorderColor #E0C998
+title JVM 시작 — 예외: 메인 클래스를 찾지 못함
+' flowcast source: flowcast 합성 예제 (sequence). Amazon Corretto 21.0.1에서 java -Xlog:startuptime,class+load,class+init,class+resolve=debug 실행 출력과 JDK 소스 sun.launcher.LauncherHelper (checkAndLoadMain, loadMainClass, validateMainClass), JVMS 21 5장 기준
+participant "셸" as sh
+box "네이티브"
+  participant "java 런처" as launcher
+  participant "HotSpot VM" as vm
+end box
+box "자바"
+  participant "LauncherHelper" as helper
+  participant "App 클래스 로더" as app
+  participant "Main" as main
+  participant "Helper" as dep
+end box
+
+sh -> launcher : 1. java -cp . Nope
+launcher -> vm : 2. VM 생성
+vm --> launcher : 3. Create VM 완료
+launcher -> helper : 4. checkAndLoadMain
+helper -> app : 5. Class.forName("Nope", false, scl)
+app -> app : 6. 부모 위임 뒤 클래스 경로에도 없음
+app --> helper : 7. ClassNotFoundException
+helper --> sh : 8. abort: 오류 메시지 출력\n오류: 기본 클래스 Nope을(를) 찾거나 로드할 수 없습니다.\n원인: java.lang.ClassNotFoundException: Nope
+helper -> vm : 9. System.exit(1)
+vm --> sh : 10. 종료 코드 1
+@enduml

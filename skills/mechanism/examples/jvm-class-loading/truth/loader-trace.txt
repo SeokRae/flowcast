@@ -1,0 +1,68 @@
+request 0 java.time.Duration
+  0 app ClassLoader.findLoadedClass(java.time.Duration) -> null
+  0 app BuiltinClassLoader.findLoadedModule(java.time.Duration) -> module java.base @boot
+  0 boot ClassLoader.findBootstrapClassOrNull(java.time.Duration) -> class java.time.Duration
+  0 boot ClassLoaders$BootClassLoader.loadClassOrNull(java.time.Duration) -> class java.time.Duration
+  0 boot BuiltinClassLoader.loadClassOrNull(java.time.Duration) -> class java.time.Duration
+  0 app BuiltinClassLoader.loadClassOrNull(java.time.Duration) -> class java.time.Duration
+  0 app BuiltinClassLoader.loadClass(java.time.Duration) -> class java.time.Duration
+  0 app ClassLoaders$AppClassLoader.loadClass(java.time.Duration) -> class java.time.Duration
+  0 app ClassLoader.loadClass(java.time.Duration) -> class java.time.Duration
+request 1 java.sql.Types
+  1 app ClassLoader.findLoadedClass(java.sql.Types) -> null
+  1 app BuiltinClassLoader.findLoadedModule(java.sql.Types) -> module java.sql @platform
+  1 platform ClassLoader.findLoadedClass(java.sql.Types) -> null
+  1 platform BuiltinClassLoader.findLoadedModule(java.sql.Types) -> module java.sql @platform
+  1 platform ClassLoader.findLoadedClass(java.lang.Object) -> null
+  1 platform BuiltinClassLoader.findLoadedModule(java.lang.Object) -> module java.base @boot
+  1 boot ClassLoader.findBootstrapClassOrNull(java.lang.Object) -> class java.lang.Object
+  1 boot ClassLoaders$BootClassLoader.loadClassOrNull(java.lang.Object) -> class java.lang.Object
+  1 boot BuiltinClassLoader.loadClassOrNull(java.lang.Object) -> class java.lang.Object
+  1 platform BuiltinClassLoader.loadClassOrNull(java.lang.Object) -> class java.lang.Object
+  1 platform BuiltinClassLoader.loadClass(java.lang.Object) -> class java.lang.Object
+  1 platform ClassLoader.loadClass(java.lang.Object) -> class java.lang.Object
+  1 platform BuiltinClassLoader.findClassInModuleOrNull(module java.sql @platform) -> class java.sql.Types
+  1 platform BuiltinClassLoader.loadClassOrNull(java.sql.Types) -> class java.sql.Types
+  1 platform BuiltinClassLoader.loadClassOrNull(java.sql.Types) -> class java.sql.Types
+  1 app BuiltinClassLoader.loadClassOrNull(java.sql.Types) -> class java.sql.Types
+  1 app BuiltinClassLoader.loadClass(java.sql.Types) -> class java.sql.Types
+  1 app ClassLoaders$AppClassLoader.loadClass(java.sql.Types) -> class java.sql.Types
+  1 app ClassLoader.loadClass(java.sql.Types) -> class java.sql.Types
+request 2 demo.Greeter
+  2 app ClassLoader.findLoadedClass(demo.Greeter) -> null
+  2 app BuiltinClassLoader.findLoadedModule(demo.Greeter) -> null
+  2 platform ClassLoader.findLoadedClass(demo.Greeter) -> null
+  2 platform BuiltinClassLoader.findLoadedModule(demo.Greeter) -> null
+  2 boot ClassLoader.findBootstrapClassOrNull(demo.Greeter) -> null
+  2 boot ClassLoaders$BootClassLoader.loadClassOrNull(demo.Greeter) -> null
+  2 boot BuiltinClassLoader.loadClassOrNull(demo.Greeter) -> null
+  2 platform BuiltinClassLoader.hasClassPath() -> false
+  2 platform BuiltinClassLoader.loadClassOrNull(demo.Greeter) -> null
+  2 platform BuiltinClassLoader.loadClassOrNull(demo.Greeter) -> null
+  2 app BuiltinClassLoader.hasClassPath() -> true
+  2 app BuiltinClassLoader.findClassOnClassPathOrNull(demo.Greeter) -> class demo.Greeter
+  2 app BuiltinClassLoader.loadClassOrNull(demo.Greeter) -> class demo.Greeter
+  2 app BuiltinClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+  2 app ClassLoaders$AppClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+  2 app ClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+request 3 demo.Greeter
+  3 app ClassLoader.findLoadedClass(demo.Greeter) -> class demo.Greeter
+  3 app BuiltinClassLoader.loadClassOrNull(demo.Greeter) -> class demo.Greeter
+  3 app BuiltinClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+  3 app ClassLoaders$AppClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+  3 app ClassLoader.loadClass(demo.Greeter) -> class demo.Greeter
+request 4 demo.Missing
+  4 app ClassLoader.findLoadedClass(demo.Missing) -> null
+  4 app BuiltinClassLoader.findLoadedModule(demo.Missing) -> null
+  4 platform ClassLoader.findLoadedClass(demo.Missing) -> null
+  4 platform BuiltinClassLoader.findLoadedModule(demo.Missing) -> null
+  4 boot ClassLoader.findBootstrapClassOrNull(demo.Missing) -> null
+  4 boot ClassLoaders$BootClassLoader.loadClassOrNull(demo.Missing) -> null
+  4 boot BuiltinClassLoader.loadClassOrNull(demo.Missing) -> null
+  4 platform BuiltinClassLoader.hasClassPath() -> false
+  4 platform BuiltinClassLoader.loadClassOrNull(demo.Missing) -> null
+  4 platform BuiltinClassLoader.loadClassOrNull(demo.Missing) -> null
+  4 app BuiltinClassLoader.hasClassPath() -> true
+  4 app BuiltinClassLoader.findClassOnClassPathOrNull(demo.Missing) -> null
+  4 app BuiltinClassLoader.loadClassOrNull(demo.Missing) -> null
+  4 app BuiltinClassLoader.loadClass(demo.Missing) throws java.lang.ClassNotFoundException

@@ -1,0 +1,188 @@
+[0.004s][info][gc,init] CardTable entry size: 512
+[0.004s][debug][gc,heap] Minimum heap 16777216  Initial heap 16777216  Maximum heap 16777216
+[0.004s][info ][gc     ] Using G1
+[0.004s][debug][gc,heap,coops] Heap address: 0x000000011c800000, size: 16 MB, Compressed Oops mode: Zero based, Oop shift amount: 3
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011c800000, 0x000000011c800000, 0x000000011c900000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011c900000, 0x000000011c900000, 0x000000011ca00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011ca00000, 0x000000011ca00000, 0x000000011cb00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011cb00000, 0x000000011cb00000, 0x000000011cc00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011cc00000, 0x000000011cc00000, 0x000000011cd00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011cd00000, 0x000000011cd00000, 0x000000011ce00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011ce00000, 0x000000011ce00000, 0x000000011cf00000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011cf00000, 0x000000011cf00000, 0x000000011d000000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d000000, 0x000000011d000000, 0x000000011d100000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d100000, 0x000000011d100000, 0x000000011d200000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d200000, 0x000000011d200000, 0x000000011d300000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d600000, 0x000000011d600000, 0x000000011d700000]
+[0.004s][trace][gc,region    ] G1HR COMMIT(FREE) [0x000000011d700000, 0x000000011d700000, 0x000000011d800000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011c800000, 0x000000011c800000, 0x000000011c900000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011c900000, 0x000000011c900000, 0x000000011ca00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011ca00000, 0x000000011ca00000, 0x000000011cb00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011cb00000, 0x000000011cb00000, 0x000000011cc00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011cc00000, 0x000000011cc00000, 0x000000011cd00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011cd00000, 0x000000011cd00000, 0x000000011ce00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011ce00000, 0x000000011ce00000, 0x000000011cf00000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011cf00000, 0x000000011cf00000, 0x000000011d000000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d000000, 0x000000011d000000, 0x000000011d100000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d100000, 0x000000011d100000, 0x000000011d200000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d200000, 0x000000011d200000, 0x000000011d300000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.004s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.005s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.005s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d600000, 0x000000011d600000, 0x000000011d700000]
+[0.005s][trace][gc,region    ] G1HR ACTIVE(FREE) [0x000000011d700000, 0x000000011d700000, 0x000000011d800000]
+[0.005s][info ][gc,init      ] Version: 21.0.1+12-LTS (release)
+[0.005s][info ][gc,init      ] CPUs: 11 total, 11 available
+[0.005s][info ][gc,init      ] Memory: 18432M
+[0.005s][info ][gc,init      ] Large Page Support: Disabled
+[0.005s][info ][gc,init      ] NUMA Support: Disabled
+[0.005s][info ][gc,init      ] Compressed Oops: Enabled (Zero based)
+[0.005s][info ][gc,init      ] Heap Region Size: 1M
+[0.005s][info ][gc,init      ] Heap Min Capacity: 16M
+[0.005s][info ][gc,init      ] Heap Initial Capacity: 16M
+[0.005s][info ][gc,init      ] Heap Max Capacity: 16M
+[0.005s][info ][gc,init      ] Pre-touch: Disabled
+[0.005s][info ][gc,init      ] Parallel Workers: 1
+[0.005s][info ][gc,init      ] Concurrent Workers: 1
+[0.005s][info ][gc,init      ] Concurrent Refinement Workers: 1
+[0.005s][info ][gc,init      ] Periodic GC: Disabled
+[0.008s][trace][gc,region    ] G1HR ALLOC(OLD) [0x000000011d600000, 0x000000011d700000, 0x000000011d700000]
+[0.008s][trace][gc,region    ] G1HR ALLOC(OLD) [0x000000011d700000, 0x000000011d703198, 0x000000011d800000]
+[0.008s][info ][gc,metaspace ] CDS archive(s) mapped at: [0x0000007000000000-0x0000007000ca4000-0x0000007000ca4000), size 13254656, SharedBaseAddress: 0x0000007000000000, ArchiveRelocationMode: 1.
+[0.008s][info ][gc,metaspace ] Compressed class space mapped at: 0x0000007001000000-0x0000007041000000, reserved size: 1073741824
+[0.008s][info ][gc,metaspace ] Narrow klass base: 0x0000007000000000, Narrow klass shift: 0, Narrow klass range: 0x100000000
+[0.008s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.018s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.018s][info ][gc,start     ] GC(0) Pause Young (Normal) (G1 Evacuation Pause)
+[0.018s][debug][gc,heap      ] GC(0) Heap before GC invocations=0 (full 0):
+[0.018s][debug][gc,heap      ] GC(0)  garbage-first heap   total 16384K, used 2060K [0x000000011c800000, 0x000000011d800000)
+[0.018s][debug][gc,heap      ] GC(0)   region size 1024K, 2 young (2048K), 0 survivors (0K)
+[0.018s][debug][gc,heap      ] GC(0)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.018s][debug][gc,heap      ] GC(0)   class space    used 7K, committed 128K, reserved 1048576K
+[0.018s][info ][gc,task      ] GC(0) Using 1 workers of 1 for evacuation
+[0.018s][debug][gc,age       ] GC(0) Desired survivor size 524288 bytes, new threshold 15 (max threshold 15)
+[0.018s][trace][gc,region    ] GC(0) G1HR RETIRE(EDEN) [0x000000011d500000, 0x000000011d5f83d8, 0x000000011d600000]
+[0.018s][trace][gc,region    ] GC(0) G1HR CSET(EDEN) [0x000000011d400000, 0x000000011d500000, 0x000000011d500000]
+[0.018s][trace][gc,region    ] GC(0) G1HR CSET(EDEN) [0x000000011d500000, 0x000000011d5f83d8, 0x000000011d600000]
+[0.018s][trace][gc,region    ] GC(0) G1HR ALLOC(SURV) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.018s][trace][gc,region    ] GC(0) G1HR RETIRE(SURV) [0x000000011d300000, 0x000000011d35a020, 0x000000011d400000]
+[0.018s][trace][gc,region    ] GC(0) G1HR CLEANUP(FREE) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.018s][trace][gc,region    ] GC(0) G1HR CLEANUP(FREE) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.018s][info ][gc,phases    ] GC(0)   Pre Evacuate Collection Set: 0.0ms
+[0.018s][info ][gc,phases    ] GC(0)   Merge Heap Roots: 0.0ms
+[0.018s][info ][gc,phases    ] GC(0)   Evacuate Collection Set: 0.3ms
+[0.018s][info ][gc,phases    ] GC(0)   Post Evacuate Collection Set: 0.0ms
+[0.018s][info ][gc,phases    ] GC(0)   Other: 0.0ms
+[0.018s][trace][gc,age       ] GC(0) Age table with threshold 15 (max threshold 15)
+[0.018s][trace][gc,age       ] GC(0) - age   1:     366720 bytes,     366720 total
+[0.018s][info ][gc,heap      ] GC(0) Eden regions: 2->0(2)
+[0.018s][info ][gc,heap      ] GC(0) Survivor regions: 0->1(1)
+[0.018s][info ][gc,heap      ] GC(0) Old regions: 2->2
+[0.018s][info ][gc,heap      ] GC(0) Humongous regions: 0->0
+[0.018s][info ][gc,metaspace ] GC(0) Metaspace: 145K(384K)->145K(384K) NonClass: 138K(256K)->138K(256K) Class: 7K(128K)->7K(128K)
+[0.018s][debug][gc,heap      ] GC(0) Heap after GC invocations=1 (full 0):
+[0.018s][debug][gc,heap      ] GC(0)  garbage-first heap   total 16384K, used 1396K [0x000000011c800000, 0x000000011d800000)
+[0.018s][debug][gc,heap      ] GC(0)   region size 1024K, 1 young (1024K), 1 survivors (1024K)
+[0.018s][debug][gc,heap      ] GC(0)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.018s][debug][gc,heap      ] GC(0)   class space    used 7K, committed 128K, reserved 1048576K
+[0.018s][info ][gc           ] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 2M->1M(16M) 0.490ms
+[0.018s][info ][gc,cpu       ] GC(0) User=0.00s Sys=0.00s Real=0.00s
+[0.018s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.018s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.018s][info ][gc,start     ] GC(1) Pause Young (Normal) (G1 Evacuation Pause)
+[0.018s][debug][gc,heap      ] GC(1) Heap before GC invocations=1 (full 0):
+[0.018s][debug][gc,heap      ] GC(1)  garbage-first heap   total 16384K, used 2420K [0x000000011c800000, 0x000000011d800000)
+[0.018s][debug][gc,heap      ] GC(1)   region size 1024K, 3 young (3072K), 1 survivors (1024K)
+[0.018s][debug][gc,heap      ] GC(1)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.018s][debug][gc,heap      ] GC(1)   class space    used 7K, committed 128K, reserved 1048576K
+[0.018s][info ][gc,task      ] GC(1) Using 1 workers of 1 for evacuation
+[0.018s][debug][gc,age       ] GC(1) Desired survivor size 524288 bytes, new threshold 15 (max threshold 15)
+[0.018s][trace][gc,region    ] GC(1) G1HR RETIRE(EDEN) [0x000000011d500000, 0x000000011d5c4ed0, 0x000000011d600000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CSET(EDEN) [0x000000011d300000, 0x000000011d35a020, 0x000000011d400000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CSET(EDEN) [0x000000011d400000, 0x000000011d500000, 0x000000011d500000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CSET(EDEN) [0x000000011d500000, 0x000000011d5c4ed0, 0x000000011d600000]
+[0.018s][trace][gc,region    ] GC(1) G1HR ALLOC(SURV) [0x000000011d200000, 0x000000011d200000, 0x000000011d300000]
+[0.018s][trace][gc,region    ] GC(1) G1HR RETIRE(SURV) [0x000000011d200000, 0x000000011d29ad20, 0x000000011d300000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CLEANUP(FREE) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CLEANUP(FREE) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.018s][trace][gc,region    ] GC(1) G1HR CLEANUP(FREE) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.018s][info ][gc,phases    ] GC(1)   Pre Evacuate Collection Set: 0.0ms
+[0.018s][info ][gc,phases    ] GC(1)   Merge Heap Roots: 0.0ms
+[0.019s][info ][gc,phases    ] GC(1)   Evacuate Collection Set: 0.1ms
+[0.019s][info ][gc,phases    ] GC(1)   Post Evacuate Collection Set: 0.0ms
+[0.019s][info ][gc,phases    ] GC(1)   Other: 0.0ms
+[0.019s][trace][gc,age       ] GC(1) Age table with threshold 15 (max threshold 15)
+[0.019s][trace][gc,age       ] GC(1) - age   1:     262176 bytes,     262176 total
+[0.019s][trace][gc,age       ] GC(1) - age   2:     366688 bytes,     628864 total
+[0.019s][info ][gc,heap      ] GC(1) Eden regions: 2->0(5)
+[0.019s][info ][gc,heap      ] GC(1) Survivor regions: 1->1(1)
+[0.019s][info ][gc,heap      ] GC(1) Old regions: 2->2
+[0.019s][info ][gc,heap      ] GC(1) Humongous regions: 0->0
+[0.019s][info ][gc,metaspace ] GC(1) Metaspace: 145K(384K)->145K(384K) NonClass: 138K(256K)->138K(256K) Class: 7K(128K)->7K(128K)
+[0.019s][debug][gc,heap      ] GC(1) Heap after GC invocations=2 (full 0):
+[0.019s][debug][gc,heap      ] GC(1)  garbage-first heap   total 16384K, used 1655K [0x000000011c800000, 0x000000011d800000)
+[0.019s][debug][gc,heap      ] GC(1)   region size 1024K, 1 young (1024K), 1 survivors (1024K)
+[0.019s][debug][gc,heap      ] GC(1)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.019s][debug][gc,heap      ] GC(1)   class space    used 7K, committed 128K, reserved 1048576K
+[0.019s][info ][gc           ] GC(1) Pause Young (Normal) (G1 Evacuation Pause) 3M->1M(16M) 0.297ms
+[0.019s][info ][gc,cpu       ] GC(1) User=0.00s Sys=0.00s Real=0.00s
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d100000, 0x000000011d100000, 0x000000011d200000]
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d000000, 0x000000011d000000, 0x000000011d100000]
+[0.019s][info ][gc,start     ] GC(2) Pause Young (Normal) (G1 Evacuation Pause)
+[0.019s][debug][gc,heap      ] GC(2) Heap before GC invocations=2 (full 0):
+[0.019s][debug][gc,heap      ] GC(2)  garbage-first heap   total 16384K, used 5751K [0x000000011c800000, 0x000000011d800000)
+[0.019s][debug][gc,heap      ] GC(2)   region size 1024K, 6 young (6144K), 1 survivors (1024K)
+[0.019s][debug][gc,heap      ] GC(2)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.019s][debug][gc,heap      ] GC(2)   class space    used 7K, committed 128K, reserved 1048576K
+[0.019s][info ][gc,task      ] GC(2) Using 1 workers of 1 for evacuation
+[0.019s][debug][gc,age       ] GC(2) Desired survivor size 524288 bytes, new threshold 2 (max threshold 15)
+[0.019s][trace][gc,region    ] GC(2) G1HR RETIRE(EDEN) [0x000000011d500000, 0x000000011d5c9990, 0x000000011d600000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d000000, 0x000000011d100000, 0x000000011d100000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d100000, 0x000000011d200000, 0x000000011d200000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d200000, 0x000000011d29ad20, 0x000000011d300000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d300000, 0x000000011d400000, 0x000000011d400000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d400000, 0x000000011d500000, 0x000000011d500000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CSET(EDEN) [0x000000011d500000, 0x000000011d5c9990, 0x000000011d600000]
+[0.019s][trace][gc,region    ] GC(2) G1HR ALLOC(OLD) [0x000000011c800000, 0x000000011c800000, 0x000000011c900000]
+[0.019s][trace][gc,region    ] GC(2) G1HR ALLOC(SURV) [0x000000011cf00000, 0x000000011cf00000, 0x000000011d000000]
+[0.019s][trace][gc,region    ] GC(2) G1HR RETIRE(SURV) [0x000000011cf00000, 0x000000011cf83cd8, 0x000000011d000000]
+[0.019s][trace][gc,region    ] GC(2) G1HR RETIRE(OLD) [0x000000011c800000, 0x000000011c85bbb8, 0x000000011c900000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d000000, 0x000000011d000000, 0x000000011d100000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d100000, 0x000000011d100000, 0x000000011d200000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d200000, 0x000000011d200000, 0x000000011d300000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d300000, 0x000000011d300000, 0x000000011d400000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.019s][trace][gc,region    ] GC(2) G1HR CLEANUP(FREE) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.019s][info ][gc,phases    ] GC(2)   Pre Evacuate Collection Set: 0.0ms
+[0.019s][info ][gc,phases    ] GC(2)   Merge Heap Roots: 0.0ms
+[0.019s][info ][gc,phases    ] GC(2)   Evacuate Collection Set: 0.2ms
+[0.019s][info ][gc,phases    ] GC(2)   Post Evacuate Collection Set: 0.0ms
+[0.019s][info ][gc,phases    ] GC(2)   Other: 0.0ms
+[0.019s][trace][gc,age       ] GC(2) Age table with threshold 2 (max threshold 15)
+[0.019s][trace][gc,age       ] GC(2) - age   1:     262176 bytes,     262176 total
+[0.019s][trace][gc,age       ] GC(2) - age   2:     262144 bytes,     524320 total
+[0.019s][info ][gc,heap      ] GC(2) Eden regions: 5->0(8)
+[0.019s][info ][gc,heap      ] GC(2) Survivor regions: 1->1(1)
+[0.019s][info ][gc,heap      ] GC(2) Old regions: 2->3
+[0.019s][info ][gc,heap      ] GC(2) Humongous regions: 0->0
+[0.019s][info ][gc,metaspace ] GC(2) Metaspace: 145K(384K)->145K(384K) NonClass: 138K(256K)->138K(256K) Class: 7K(128K)->7K(128K)
+[0.019s][debug][gc,heap      ] GC(2) Heap after GC invocations=3 (full 0):
+[0.019s][debug][gc,heap      ] GC(2)  garbage-first heap   total 16384K, used 1930K [0x000000011c800000, 0x000000011d800000)
+[0.019s][debug][gc,heap      ] GC(2)   region size 1024K, 1 young (1024K), 1 survivors (1024K)
+[0.019s][debug][gc,heap      ] GC(2)  Metaspace       used 145K, committed 384K, reserved 1114112K
+[0.019s][debug][gc,heap      ] GC(2)   class space    used 7K, committed 128K, reserved 1048576K
+[0.019s][info ][gc           ] GC(2) Pause Young (Normal) (G1 Evacuation Pause) 6M->1M(16M) 0.351ms
+[0.019s][info ][gc,cpu       ] GC(2) User=0.00s Sys=0.00s Real=0.00s
+[0.019s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d500000, 0x000000011d500000, 0x000000011d600000]
+[0.032s][trace][gc,region    ] G1HR ALLOC(EDEN) [0x000000011d400000, 0x000000011d400000, 0x000000011d500000]
+[0.033s][info ][gc,heap,exit ] Heap
+[0.033s][info ][gc,heap,exit ]  garbage-first heap   total 16384K, used 3216K [0x000000011c800000, 0x000000011d800000)
+[0.033s][info ][gc,heap,exit ]   region size 1024K, 3 young (3072K), 1 survivors (1024K)
+[0.033s][info ][gc,heap,exit ]  Metaspace       used 379K, committed 576K, reserved 1114112K
+[0.033s][info ][gc,heap,exit ]   class space    used 30K, committed 128K, reserved 1048576K

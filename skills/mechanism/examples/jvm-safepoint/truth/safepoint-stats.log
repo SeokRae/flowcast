@@ -1,0 +1,11 @@
+VM Operation                 [ threads: total initial_running ][ time:       sync    cleanup       vmop      total ] page_trap_count
+PrintThreads                 [             16               1 ][           147834       7666     281459     436959 ]               1
+FindDeadlocks                [             16               1 ][            94917       3416      18750     117083 ]               1
+G1CollectFull                [             16               1 ][            63834       3541    1960542    2027917 ]               1
+Halt                                 1
+PrintThreads                         1
+FindDeadlocks                        1
+G1CollectFull                        1
+Maximum sync time  147834 ns
+Maximum cleanup time  7666 ns
+Maximum vm operation time (except for Exit VM operation)  1964083 ns

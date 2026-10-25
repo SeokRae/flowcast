@@ -794,7 +794,7 @@ const PARTS_HTML =
 const body =
   css +
   k.plateHtml({
-    fig: "Fig 1",
+    fig: "Fig 4",
     title: "바이트코드 테이프 리더",
     hint: "클릭이나 → 한 칸, Home 처음",
     readout: M.readout(TRACE[INIT_STEPS]),
