@@ -9,7 +9,7 @@
   :root {
     --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
     --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
-    --teal:#4ecdbe; --violet:#b9a3ff;
+    --teal:#4ecdbe; --violet:#b9a3ff; --rose:#ff9eb3;
     --shadow:0 24px 72px rgba(0,0,0,0.34);
     --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
     --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
@@ -17,7 +17,7 @@
   :root[data-theme="light"] {
     --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
     --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
-    --teal:#148278; --violet:#6b4fc8;
+    --teal:#148278; --violet:#6b4fc8; --rose:#b4235a;
     --shadow:0 10px 32px rgba(23,48,88,0.10);
   }
   * { box-sizing:border-box; }
@@ -91,6 +91,7 @@
   .badge-topology { color:var(--warn); border-color:var(--warn); }
   .badge-component { color:var(--teal); border-color:var(--teal); }
   .badge-mechanism { color:var(--violet); border-color:var(--violet); }
+  .badge-state-loop { color:var(--rose); border-color:var(--rose); }
   .card-body h3 { margin:0; font-size:17px; letter-spacing:-0.01em; }
   .card-body p { margin:0; color:var(--muted); font-size:14px; flex:1; }
   .card-links { display:flex; gap:16px; font-size:13.5px; margin-top:4px; }
@@ -280,7 +281,7 @@
 
   <section class="section">
     <h2 class="sec-title">JVM 동작 구조</h2>
-    <p class="sec-lede">클래스 파일이 JVM에 올라가 실행되기까지를 지도 한 장, 시퀀스 한 장, 메커니즘 다섯 장으로 나눴습니다. 수치는 모두 Amazon Corretto 21.0.1의 실행 출력과 JDK 소스에서 가져왔어요. 지도에서 위치를 잡고 번호 순서대로 따라가면 됩니다.</p>
+    <p class="sec-lede">클래스 파일이 JVM에 올라가 실행되기까지를 지도 한 장, 시퀀스 한 장, 메커니즘 다섯 장, 구동 애니메이션 한 장으로 나눴습니다. 1~7의 수치는 Amazon Corretto 21.0.1의 실행 출력과 JDK 소스에서, 8은 OpenJDK jdk21u 21.0.13 소스에서 가져왔어요. 지도에서 위치를 잡고 번호 순서대로 따라가면 됩니다.</p>
   </section>
 
   <section class="grid">
@@ -386,6 +387,21 @@
         <div class="card-links">
           <a href="examples/jvm-safepoint.html" data-dark="examples/jvm-safepoint.html" data-light="examples/jvm-safepoint-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
           <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-safepoint" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="state-loop">
+      <div class="card-preview">
+        <iframe src="examples/jvm-startup-loop.html" loading="lazy" title="java 명령부터 main 종료까지 애니메이션 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-startup-loop.html" target="_blank" rel="noopener" aria-label="java 명령부터 main 종료까지 애니메이션 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-state-loop">state-loop</span>
+        <h3>JVM 8 | java 명령부터 main 종료까지 애니메이션</h3>
+        <p>구성도를 고정하고 main 스레드 표시점이 <code>java -cp app.jar com.example.Main</code>의 호출 34스텝을 따라 움직이며 무한 반복합니다. 구간 7개마다 쓰이는 구성 요소에 색이 켜져요. 링크가 <code>validateMainClass</code>의 리플렉션에서 일어나는 점은 JVM 2와 같고, 단계마다 jdk21u 소스의 함수와 줄 번호를 달았습니다. 이전, 다음, 속도 버튼과 Space, 화살표 키로 조작.</p>
+        <div class="card-links">
+          <a href="examples/jvm-startup-loop.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/skills/state-loop/examples/jvm-startup-loop.html" target="_blank" rel="noopener">HTML 소스</a>
         </div>
       </div>
     </article>

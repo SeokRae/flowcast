@@ -35,6 +35,13 @@ for html in skills/mechanism/examples/*/*.html; do
   echo "✓ $(basename "$html" .html): mechanism 게시본"
 done
 
+# state-loop 예제(skills/state-loop/examples/*.html)도 완성된 self-contained HTML 이라 복사만 한다.
+for html in skills/state-loop/examples/*.html; do
+  [ -e "$html" ] || continue
+  cp "$html" "docs/examples/$(basename "$html")"
+  echo "✓ $(basename "$html" .html): state-loop 게시본"
+done
+
 if command -v plantuml >/dev/null 2>&1; then
   # -nometadata 필수 — 없으면 PlantUML 이 압축 소스 블롭(<?plantuml-src?>)을 SVG 에 심는데,
   # 그 base64 가 실 데이터 blocklist 토큰을 우연히 포함해 scan-sensitive 가 오탐한다
