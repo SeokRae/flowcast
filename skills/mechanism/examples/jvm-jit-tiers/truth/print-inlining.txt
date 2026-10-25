@@ -1,0 +1,23 @@
+# run.sh step 4: java -XX:CompileCommand=quiet -XX:CompileCommand=dontinline,Tiers::measure -XX:+UnlockDiagnosticVMOptions -XX:+PrintCompilation -XX:+PrintInlining Tiers | grep -A4 'Tiers::measure (9 bytes)'
+# (diagnostic flags shift compile ids and timing; the tier sequence is the same)
+ Tiers::measure (9 bytes)
+                              @ 1   Tiers$Shape::area (0 bytes)   no static binding
+     67   64       3       Tiers$Square::area (10 bytes)
+# calls=400
+# calls=500
+--
+    701   84       4       Tiers::measure (9 bytes)
+# calls=5500
+    702   63       3       Tiers::measure (9 bytes)   made not entrant
+                              @ 1   Tiers$Square::area (10 bytes)   inline (hot)
+                               \-> TypeProfile (5200/5200 counts) = Tiers$Square
+# calls=5600
+# calls=5700
+--
+    903   84       4       Tiers::measure (9 bytes)   made not entrant
+    904   87       # calls=7101
+4       Tiers::measure (9 bytes)
+                              @ 1   Tiers$Square::area (10 bytes)   inline (hot)
+                              @ 1   Tiers$Circle::area (12 bytes)   inline (hot)
+                               \-> TypeProfile (51/5298 counts) = Tiers$Circle
+                               \-> TypeProfile (5247/5298 counts) = Tiers$Square

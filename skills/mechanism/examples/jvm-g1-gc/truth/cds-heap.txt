@@ -1,0 +1,5 @@
+[info][cds]     heap range = [0x00000007f8000000 - 0x0000000800000000]
+[info][cds]     heap range = [0x000000011f000000 - 0x0000000120000000]
+[info][cds] Requested heap region [0x00000007ffe00000 - 0x00000007fff03198] =  1061272 bytes
+[info][cds] Trying to map heap data at 0x000000011fe00000, size =  1061272 bytes
+[info][gc,heap] GC(0) Old regions: 0->0

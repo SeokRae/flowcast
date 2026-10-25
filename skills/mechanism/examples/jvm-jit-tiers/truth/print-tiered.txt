@@ -1,0 +1,162 @@
+# run.sh step 3, run 1 of 4 (runs 2 to 4 gave the same event sequence and counter values; times and compile ids differ)
+# java -XX:CompileCommand=quiet -XX:CompileCommand=dontinline,Tiers::measure -XX:+PrintCompilation -XX:+PrintTieredEvents -Xlog:deoptimization=debug Tiers | grep -E 'Tiers.measure|Tiers::measure|^# |deoptimization'
+# phase 1: Square only
+# calls=100
+0.043178: [call level=0 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=n/a k=1.00,1.00 total=128,0 mdo=0(0),0(0) max levels=0,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+# calls=200
+0.055946: [call level=0 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=n/a k=1.00,1.00 total=256,0 mdo=0(0),0(0) max levels=0,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+0.056037: [compile level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=n/a k=1.00,1.00]
+     56   80       3       Tiers::measure (9 bytes)
+# calls=300
+# calls=400
+# calls=500
+# calls=600
+# calls=700
+# calls=800
+# calls=900
+# calls=1000
+# calls=1100
+# calls=1200
+# calls=1300
+0.193930: [call level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00 total=1324,0 mdo=1024(0),0(0) max levels=3,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+# calls=1400
+# calls=1500
+# calls=1600
+# calls=1700
+# calls=1800
+# calls=1900
+# calls=2000
+# calls=2100
+# calls=2200
+# calls=2300
+0.319076: [call level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00 total=2348,0 mdo=2048(0),0(0) max levels=3,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+# calls=2400
+# calls=2500
+# calls=2600
+# calls=2700
+# calls=2800
+# calls=2900
+# calls=3000
+# calls=3200
+# calls=3300
+0.442751: [call level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00 total=3372,0 mdo=3072(0),0(0) max levels=3,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+# calls=3400
+# calls=3500
+# calls=3600
+# calls=3700
+# calls=3800
+# calls=3900
+# calls=4100
+# calls=4200
+# calls=4300
+0.567416: [call level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00 total=4396,0 mdo=4096(0),0(0) max levels=3,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+# calls=4400
+# calls=4500
+# calls=4600
+# calls=4700
+# calls=4800
+# calls=4900
+# calls=5000
+# calls=5100
+# calls=5200
+# calls=5300
+# calls=5400
+0.704223: [call level=3 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00 total=5420,0 mdo=5120(0),0(0) max levels=3,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+0.704402: [compile level=4 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=4.830189 k=1.00,1.00]
+    704   99       4       Tiers::measure (9 bytes)
+# calls=5500
+    705   80       3       Tiers::measure (9 bytes)   made not entrant
+# calls=5600
+# calls=5700
+# calls=5800
+# calls=5900
+# calls=6000
+# calls=6100
+# calls=6200
+# calls=6400
+# calls=6500
+# calls=6600
+# calls=6700
+# calls=6800
+# calls=6900
+# calls=7000
+# phase 2: first Circle
+[0.899s][debug][deoptimization] cid=  99     level=4 Tiers.measure(LTiers$Shape;)I trap_bci=1 class_check maybe_recompile pc=0x00000001148e9be8 relative_pc=0x0000000000000068
+# calls=7001
+# phase 3: Square and Circle
+[0.912s][debug][deoptimization] cid=  99     level=4 Tiers.measure(LTiers$Shape;)I trap_bci=1 class_check maybe_recompile pc=0x00000001148e9be8 relative_pc=0x0000000000000068
+[0.912s][debug][deoptimization] cid=  99     level=4 Tiers.measure(LTiers$Shape;)I trap_bci=1 class_check maybe_recompile pc=0x00000001148e9be8 relative_pc=0x0000000000000068
+[0.912s][debug][deoptimization] cid=  99     level=4 Tiers.measure(LTiers$Shape;)I trap_bci=1 class_check maybe_recompile pc=0x00000001148e9be8 relative_pc=0x0000000000000068
+    912   99       4       Tiers::measure (9 bytes)   made not entrant
+0.912353: [call level=0 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=0.000000 k=1.00,1.00 total=5548,0 mdo=5248(0),0(0) max levels=4,0 compilable=c1,c1-osr,c2,c2-osr status=idle]
+0.912579: [compile level=4 [Tiers.measure(LTiers$Shape;)I] @-1 queues=0,0 rate=0.000000 k=1.00,1.00]
+    912  102       4       Tiers::measure (9 bytes)
+# calls=7101
+# calls=7201
+# calls=7301
+# calls=7401
+# calls=7501
+# calls=7601
+# calls=7701
+# calls=7801
+# calls=7901
+# calls=8001
+# calls=8301
+# calls=8401
+# calls=8501
+# calls=8601
+# calls=8701
+# calls=8801
+# calls=8901
+# calls=9001
+# calls=9101
+# calls=9201
+# calls=9301
+# calls=9401
+# calls=9501
+# calls=9601
+# calls=9701
+# calls=9801
+# calls=9901
+# calls=10001
+# calls=10101
+# calls=10201
+# calls=10301
+# calls=10401
+# calls=10501
+# calls=10601
+# calls=10701
+# calls=10801
+# calls=10901
+# calls=11001
+# calls=11101
+# calls=11201
+# calls=11301
+# calls=11401
+# calls=11501
+# calls=11601
+# calls=11701
+# calls=11801
+# calls=11901
+# calls=12001
+# calls=12101
+# calls=12201
+# calls=12301
+# calls=12401
+# calls=12501
+# calls=12601
+# calls=12701
+# calls=12801
+# calls=12901
+# calls=13001
+# calls=13101
+# calls=13201
+# calls=13301
+# calls=13401
+# calls=13501
+# calls=13601
+# calls=13701
+# calls=13801
+# calls=13901
+# calls=14001
+# done sum=150513

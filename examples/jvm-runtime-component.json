@@ -1,0 +1,155 @@
+{
+  "system": "JVM 런타임 구조",
+  "source": "flowcast 합성 예제 (component). JVMS 21 2.5 런타임 데이터 영역, HotSpot 구현은 Amazon Corretto 21.0.1 기준",
+  "view": "component",
+  "scenarios": [
+    {
+      "title": "클래스 파일이 JVM에 올라가 실행되기까지",
+      "zones": [
+        {
+          "id": "jvm",
+          "name": "< JVM 프로세스 (HotSpot 21) >"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "javac",
+          "name": "javac",
+          "kind": "ext",
+          "col": 0,
+          "row": 0
+        },
+        {
+          "id": "cls",
+          "name": "클래스 파일\n클래스 경로, jrt",
+          "kind": "db",
+          "col": 1,
+          "row": 0
+        },
+        {
+          "id": "loader",
+          "name": "클래스 로더\nBoot, Platform, App",
+          "zone": "jvm",
+          "col": 2,
+          "row": 0
+        },
+        {
+          "id": "meta",
+          "name": "메서드 영역\nMetaspace",
+          "kind": "db",
+          "zone": "jvm",
+          "col": 3,
+          "row": 0
+        },
+        {
+          "id": "stack",
+          "name": "스레드별 영역\n스택 프레임, pc",
+          "kind": "db",
+          "zone": "jvm",
+          "col": 2,
+          "row": 1
+        },
+        {
+          "id": "interp",
+          "name": "인터프리터",
+          "zone": "jvm",
+          "col": 3,
+          "row": 1
+        },
+        {
+          "id": "jit",
+          "name": "JIT 컴파일러\nC1, C2",
+          "zone": "jvm",
+          "col": 4,
+          "row": 1
+        },
+        {
+          "id": "gc",
+          "name": "가비지 컬렉터\nG1",
+          "zone": "jvm",
+          "col": 2,
+          "row": 2
+        },
+        {
+          "id": "heap",
+          "name": "힙\n객체, 배열",
+          "kind": "db",
+          "zone": "jvm",
+          "col": 3,
+          "row": 2
+        },
+        {
+          "id": "code",
+          "name": "코드 캐시\n컴파일된 기계어",
+          "kind": "db",
+          "zone": "jvm",
+          "col": 4,
+          "row": 2
+        }
+      ],
+      "edges": [
+        {
+          "from": "javac",
+          "to": "cls",
+          "n": 1,
+          "label": "컴파일"
+        },
+        {
+          "from": "cls",
+          "to": "loader",
+          "n": 2,
+          "label": "읽기"
+        },
+        {
+          "from": "loader",
+          "to": "meta",
+          "n": 3,
+          "label": "적재"
+        },
+        {
+          "from": "meta",
+          "to": "interp",
+          "n": 4,
+          "label": "바이트코드"
+        },
+        {
+          "from": "interp",
+          "to": "stack",
+          "n": 5,
+          "label": "프레임",
+          "bidir": true
+        },
+        {
+          "from": "interp",
+          "to": "heap",
+          "n": 6,
+          "label": "객체 할당"
+        },
+        {
+          "from": "interp",
+          "to": "jit",
+          "n": 7,
+          "label": "호출 카운터"
+        },
+        {
+          "from": "jit",
+          "to": "code",
+          "n": 8,
+          "label": "기계어 설치"
+        },
+        {
+          "from": "gc",
+          "to": "heap",
+          "n": 9,
+          "label": "회수, 승격"
+        },
+        {
+          "from": "gc",
+          "to": "stack",
+          "n": 10,
+          "label": "루트 스캔 (세이프포인트)"
+        }
+      ]
+    }
+  ]
+}

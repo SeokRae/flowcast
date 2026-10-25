@@ -1,0 +1,3 @@
+boot 589
+platform 0
+app 1

@@ -146,7 +146,11 @@ plantuml -tsvg out.puml                                     # .puml → SVG (gra
     { view:'component', system:'Microservice · 결제 처리',      file:'microservice-component',
       scenarios:['결제 처리 Process', '알림 발송 Process'] },
     { view:'component', system:'Analytics Platform · ELT 파이프라인', file:'analytics-elt-component',
-      scenarios:['ELT 데이터 파이프라인 (Medallion)', 'Medallion 계층 상세'] }
+      scenarios:['ELT 데이터 파이프라인 (Medallion)', 'Medallion 계층 상세'] },
+    { view:'component', system:'JVM 런타임 구조', file:'jvm-runtime-component',
+      scenarios:['클래스 파일이 JVM에 올라가 실행되기까지'] },
+    { view:'sequence',  system:'JVM 시작', file:'jvm-startup-sequence',
+      scenarios:['java -cp . Main 에서 main 실행까지', '예외: 메인 클래스를 찾지 못함'] }
   ];
 
   function svgName(file, i) {

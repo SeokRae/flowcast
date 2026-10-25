@@ -1,0 +1,28 @@
+[3.293s][26115][debug][vmthread] Adding VM operation: PrintThreads
+[3.293s][19971][debug][vmthread] Evaluating  safepoint VM operation: PrintThreads
+[3.293s][19971][debug][safepoint] Safepoint synchronization initiated using semaphore wait barrier. (16 threads)
+[3.293s][19971][trace][safepoint] Setting thread local yield flag for threads
+[3.293s][19971][trace][safepoint] Thread: 0x000000014f82f200  [0x6303] State: _running _at_poll_safepoint 0
+[3.293s][25347][debug][safepoint] ... found polling page loop exception at pc = 0x00000001174fb410, stub =0x0000000116fa6600
+[3.293s][19971][trace][safepoint]    JavaThread state: _thread_in_Java
+[3.293s][19971][info ][safepoint] Safepoint "PrintThreads", Time since last: 3284008583 ns, Reaching safepoint: 147834 ns, Cleanup: 7666 ns, At safepoint: 281459 ns, Total: 436959 ns
+[3.293s][26115][debug][vmthread ] Adding VM operation: FindDeadlocks
+[3.294s][19971][debug][vmthread ] Evaluating  safepoint VM operation: FindDeadlocks
+[3.294s][19971][debug][safepoint] Safepoint synchronization initiated using semaphore wait barrier. (16 threads)
+[3.294s][19971][trace][safepoint] Setting thread local yield flag for threads
+[3.294s][19971][trace][safepoint] Thread: 0x000000014f82f200  [0x6303] State: _running _at_poll_safepoint 0
+[3.294s][25347][debug][safepoint] ... found polling page loop exception at pc = 0x00000001174fb410, stub =0x0000000116fa6600
+[3.294s][19971][trace][safepoint]    JavaThread state: _thread_in_Java
+[3.294s][19971][info ][safepoint] Safepoint "FindDeadlocks", Time since last: 172708 ns, Reaching safepoint: 94917 ns, Cleanup: 3416 ns, At safepoint: 18750 ns, Total: 117083 ns
+[4.349s][5123 ][debug][vmthread ] Adding VM operation: G1CollectFull
+[4.349s][19971][debug][vmthread ] Evaluating  safepoint VM operation: G1CollectFull
+[4.349s][19971][debug][safepoint] Safepoint synchronization initiated using semaphore wait barrier. (16 threads)
+[4.349s][19971][trace][safepoint] Setting thread local yield flag for threads
+[4.349s][19971][trace][safepoint] Thread: 0x000000014f82f200  [0x6303] State: _running _at_poll_safepoint 0
+[4.349s][19971][trace][safepoint]    JavaThread state: _thread_in_Java
+[4.349s][19971][trace][safepoint] Thread: 0x000000014f82f200  [0x6303] State: _running _at_poll_safepoint 0
+[4.349s][25347][debug][safepoint] ... found polling page loop exception at pc = 0x00000001174fb410, stub =0x0000000116fa6600
+[4.349s][19971][trace][safepoint]    JavaThread state: _thread_in_Java
+[4.351s][19971][info ][safepoint] Safepoint "G1CollectFull", Time since last: 1055660500 ns, Reaching safepoint: 63834 ns, Cleanup: 3541 ns, At safepoint: 1960542 ns, Total: 2027917 ns
+[4.352s][19971][debug][safepoint] Safepoint synchronization initiated using semaphore wait barrier. (12 threads)
+[4.352s][19971][trace][safepoint] Setting thread local yield flag for threads

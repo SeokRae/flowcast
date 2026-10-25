@@ -1,0 +1,142 @@
+[0.023s][info][class,load] demo.Probe source: file:<work>/classes/
+layer.boot.modules: 21
+layer.platform.modules: 22
+layer.app.modules: 19
+layer.boot: [java.base, java.datatransfer, java.desktop, java.instrument, java.logging, java.management, java.management.rmi, java.naming, java.prefs, java.rmi, java.security.sasl, java.xml, jdk.jfr, jdk.management, jdk.management.agent, jdk.management.jfr, jdk.naming.rmi, jdk.net, jdk.nio.mapmode, jdk.sctp, jdk.unsupported]
+layer.platform: [java.compiler, java.net.http, java.scripting, java.security.jgss, java.smartcardio, java.sql, java.sql.rowset, java.transaction.xa, java.xml.crypto, jdk.accessibility, jdk.charsets, jdk.crypto.cryptoki, jdk.crypto.ec, jdk.dynalink, jdk.httpserver, jdk.jsobject, jdk.localedata, jdk.naming.dns, jdk.security.auth, jdk.security.jgss, jdk.xml.dom, jdk.zipfs]
+layer.app: [jdk.attach, jdk.compiler, jdk.editpad, jdk.internal.ed, jdk.internal.jvmstat, jdk.internal.le, jdk.internal.opt, jdk.jartool, jdk.javadoc, jdk.jconsole, jdk.jdeps, jdk.jdi, jdk.jdwp.agent, jdk.jlink, jdk.jpackage, jdk.jshell, jdk.jstatd, jdk.random, jdk.unsupported.desktop]
+layer.java.sql: platform
+main.loader: app
+app.name: app
+app.parent: platform
+platform.parent: null
+cnfe: java.lang.ClassNotFoundException
+== request 0 java.time.Duration
+  package: java.time
+  packageToModule: java.base -> boot
+  before app.findLoadedClass: null
+  before platform.findLoadedClass: null
+  -- loadClass begin
+[0.027s][info][class,load] java.time.temporal.TemporalAmount source: shared objects file
+[0.027s][info][class,load] java.time.Duration source: shared objects file
+  -- loadClass end
+  getClassLoader: null (bootstrap)
+  getModule: java.base
+  after app.findLoadedClass: null
+  after platform.findLoadedClass: null
+== request 1 java.sql.Types
+  package: java.sql
+  packageToModule: java.sql -> platform
+  before app.findLoadedClass: null
+  before platform.findLoadedClass: null
+  -- loadClass begin
+[0.028s][info][class,load] jdk.internal.loader.BuiltinClassLoader$5 source: shared objects file
+[0.028s][info][class,load] java.lang.module.ModuleReader source: shared objects file
+[0.028s][info][class,load] jdk.internal.module.SystemModuleFinders$SystemModuleReader source: shared objects file
+[0.028s][info][class,load] jdk.internal.module.ModulePatcher$PatchedModuleReader source: jrt:/java.base
+[0.028s][info][class,load] jdk.internal.module.SystemModuleFinders$SystemImage source: shared objects file
+[0.028s][info][class,load] jdk.internal.jimage.ImageReaderFactory source: shared objects file
+[0.028s][info][class,load] java.nio.file.Paths source: shared objects file
+[0.028s][info][class,load] java.nio.file.Watchable source: shared objects file
+[0.028s][info][class,load] java.nio.file.Path source: shared objects file
+[0.028s][info][class,load] java.nio.file.FileSystems source: shared objects file
+[0.028s][info][class,load] java.nio.file.FileSystems$DefaultFileSystemHolder source: shared objects file
+[0.028s][info][class,load] java.nio.file.FileSystems$DefaultFileSystemHolder$1 source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.DefaultFileSystemProvider source: shared objects file
+[0.028s][info][class,load] java.nio.file.spi.FileSystemProvider source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.AbstractFileSystemProvider source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.UnixFileSystemProvider source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.BsdFileSystemProvider source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.MacOSXFileSystemProvider source: shared objects file
+[0.028s][info][class,load] java.nio.file.OpenOption source: shared objects file
+[0.028s][info][class,load] java.nio.file.StandardOpenOption source: shared objects file
+[0.028s][info][class,load] java.nio.file.FileSystem source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.UnixFileSystem source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.BsdFileSystem source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.MacOSXFileSystem source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.UnixPath source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.Util source: shared objects file
+[0.028s][info][class,load] sun.nio.fs.UnixNativeDispatcher source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$LibraryPaths source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$1 source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$2 source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$CountedLock source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$NativeLibraryContext source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$NativeLibraryContext$1 source: shared objects file
+[0.028s][info][class,load] java.util.ArrayDeque$DeqIterator source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$NativeLibraryImpl source: shared objects file
+[0.028s][info][class,load] jdk.internal.loader.NativeLibraries$NativeLibraryImpl$1 source: shared objects file
+[0.029s][info][class,load] jdk.internal.loader.NativeLibraries$3 source: shared objects file
+[0.029s][info][class,load] java.util.concurrent.ConcurrentHashMap$ValuesView source: shared objects file
+[0.029s][info][class,load] java.util.concurrent.ConcurrentHashMap$Traverser source: shared objects file
+[0.029s][info][class,load] java.util.concurrent.ConcurrentHashMap$BaseIterator source: shared objects file
+[0.029s][info][class,load] java.util.concurrent.ConcurrentHashMap$ValueIterator source: shared objects file
+[0.029s][info][class,load] java.nio.file.attribute.BasicFileAttributes source: shared objects file
+[0.029s][info][class,load] java.nio.file.attribute.PosixFileAttributes source: shared objects file
+[0.029s][info][class,load] sun.nio.fs.UnixFileAttributes source: shared objects file
+[0.029s][info][class,load] sun.nio.fs.UnixFileStoreAttributes source: shared objects file
+[0.029s][info][class,load] sun.nio.fs.UnixMountEntry source: shared objects file
+[0.030s][info][class,load] java.net.URI$Parser source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageReaderFactory$1 source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageReader source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.BasicImageReader source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageReader$SharedImageReader source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.BasicImageReader$1 source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.NativeImageBuffer source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.NativeImageBuffer$1 source: shared objects file
+[0.030s][info][class,load] sun.nio.ch.DirectBuffer source: shared objects file
+[0.030s][info][class,load] java.nio.MappedByteBuffer source: shared objects file
+[0.030s][info][class,load] java.nio.DirectByteBuffer source: shared objects file
+[0.030s][info][class,load] java.nio.Bits source: shared objects file
+[0.030s][info][class,load] java.util.concurrent.atomic.AtomicLong source: shared objects file
+[0.030s][info][class,load] jdk.internal.misc.VM$BufferPool source: shared objects file
+[0.030s][info][class,load] java.nio.Bits$1 source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageHeader source: shared objects file
+[0.030s][info][class,load] java.nio.IntBuffer source: shared objects file
+[0.030s][info][class,load] java.nio.DirectIntBufferU source: shared objects file
+[0.030s][info][class,load] java.nio.DirectByteBufferR source: shared objects file
+[0.030s][info][class,load] java.nio.DirectIntBufferRU source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageStrings source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageStringsReader source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.decompressor.Decompressor source: shared objects file
+[0.030s][info][class,load] jdk.internal.jimage.ImageLocation source: shared objects file
+[0.030s][info][class,load] sun.net.www.protocol.jrt.Handler source: jrt:/java.base
+[0.031s][info][class,load] java.sql.Types source: jrt:/java.sql
+  -- loadClass end
+  getClassLoader: platform
+  getModule: java.sql
+  after app.findLoadedClass: null
+  after platform.findLoadedClass: hit
+== request 2 demo.Greeter
+  package: demo
+  packageToModule: null (no named module)
+  before app.findLoadedClass: null
+  before platform.findLoadedClass: null
+  -- loadClass begin
+[0.031s][info][class,load] demo.Greeter source: file:<work>/classes/
+  -- loadClass end
+  getClassLoader: app
+  getModule: null
+  after app.findLoadedClass: hit
+  after platform.findLoadedClass: null
+== request 3 demo.Greeter
+  package: demo
+  packageToModule: null (no named module)
+  before app.findLoadedClass: hit
+  before platform.findLoadedClass: null
+  -- loadClass begin
+  -- loadClass end
+  getClassLoader: app
+  getModule: null
+  after app.findLoadedClass: hit
+  after platform.findLoadedClass: null
+== request 4 demo.Missing
+  package: demo
+  packageToModule: null (no named module)
+  before app.findLoadedClass: null
+  before platform.findLoadedClass: null
+  -- loadClass begin
+  ClassNotFoundException: demo.Missing
+  -- loadClass end
+  after app.findLoadedClass: null
+  after platform.findLoadedClass: null

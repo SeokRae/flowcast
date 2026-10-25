@@ -1,0 +1,9 @@
+     22   29 %     3       SafepointProbe::compiledLoop @ 2 (23 bytes)
+### Excluding compile: static SafepointProbe::interpretedLoop
+made not compilable on level 3  SafepointProbe::interpretedLoop (23 bytes)   excluded by CompileCommand
+     22   30       3       SafepointProbe::compiledLoop (23 bytes)
+     22   31 %     4       SafepointProbe::compiledLoop @ 2 (23 bytes)
+     23   29 %     3       SafepointProbe::compiledLoop @ 2 (23 bytes)   made not entrant
+### Excluding compile: static SafepointProbe::interpretedLoop
+made not compilable on level 4  SafepointProbe::interpretedLoop (23 bytes)   excluded by CompileCommand
+   4351   31 %     4       SafepointProbe::compiledLoop @ 2 (23 bytes)   made not entrant

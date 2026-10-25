@@ -18,10 +18,10 @@
 | 메커니즘 | 기계 후보 | 움직임 = 의미 | 리드아웃 | 출처 예 |
 |---|---|---|---|---|
 | 바이트코드 실행 | 천공 테이프 리더 + 서랍 + 스택 튜브 | 테이프 한 칸 = opcode 한 바이트, 서랍 = 지역 변수 슬롯(`max_locals`), 튜브 높이 = `max_stack`, 프레스 = 산술 명령 | pc, opcode, 스택 내용 | `javap -c -v`, JVMS 6.5 (예제 `examples/jvm-bytecode/`) |
-| 클래스 로딩 | 3층 서고와 엘리베이터 | 요청 카드가 먼저 꼭대기(Bootstrap)까지 올라가고, 없으면 한 층씩 내려옴(Platform, App) = 부모 위임 | 로드한 로더, 조회한 층 수 | `-Xlog:class+load`, `ClassLoader.loadClass` 소스 |
-| JIT 계층 컴파일 | 호출 카운터가 달린 변속기 | 카운터가 임계값을 넘으면 손 크랭크에서 모터(C1), 다시 정밀 CNC(C2)로 기어가 바뀌고, 가정이 깨지면 내려옴 = deopt | 호출 수, 현재 tier | `-XX:+PrintCompilation`, `-XX:+PrintFlagsFinal`의 `Tier*Threshold` |
-| 세대별 GC (G1) | 트레이 격자와 갠트리 피커 | 새 객체는 Eden 트레이로 떨어지고, 피커가 루트에서 줄이 이어진 객체만 Survivor로 옮기며 나이 도장을 찍음, 임계 나이를 넘으면 Old로, 쓰레기가 가장 많은 트레이부터 비움 | 영역별 점유율, 객체 age | `-Xlog:gc*`, `-XX:+PrintFlagsFinal`의 `MaxTenuringThreshold`, `G1HeapRegionSize` |
-| 세이프포인트 | 역마다 신호기가 있는 철도 | GC가 신호를 내리면 모든 열차(mutator 스레드)가 다음 역(폴링 지점)에서 멈춤 = stop-the-world | 정지까지 걸린 시간, 멈춘 스레드 수 | `-Xlog:safepoint` |
+| 클래스 로딩 | 3층 서고와 승강기 | 요청 카드를 실은 승강 칸이 지금 판단하는 로더의 층에 선다. 층마다 기록 서랍(`findLoadedClass`)을 보고, 색인 기둥(`packageToModule`)이 가리키는 모듈의 로더 층으로 곧장 간다. 이름 있는 모듈에 없는 패키지만 부모 층으로 올라갔다가 App 층의 클래스 경로 서랍으로 돌아온다(JDK 9 이후. 꼭대기까지 올라갔다 한 층씩 내려오는 부모 우선은 JDK 8식 설명) | 요청 클래스, 지금 판단하는 로더, 판단 결과 | `BuiltinClassLoader.loadClassOrNull`(src.zip), JDI 추적, `-Xlog:class+load` (예제 `examples/jvm-class-loading/`) |
+| JIT 계층 컴파일 | 호출 카운터가 달린 변속기 | 카운터는 알림 간격(128회, 1024회)마다 검사되고, 그때 임계값을 넘었으면 컴파일 요청이 큐에 들어감 = tier 0에서 3(C1), 다시 4(C2). 설치는 백그라운드에서 나중에 일어남. 타입 가정이 깨져 트랩이 한도를 넘으면 0으로 내려오고(deopt), 프로파일이 이미 있으면 C1을 건너뛰고 4로 바로 감 | 현재 tier, 검사 때 읽은 카운터(i 또는 mdo)와 임계값, 큐 길이 | `-XX:+PrintFlagsFinal`의 `Tier*Threshold`, `-XX:+PrintTieredEvents`, `-XX:+PrintCompilation`, jdk21u `compilationPolicy.cpp` (예제 `examples/jvm-jit-tiers/`) |
+| 세대별 GC (G1) | 트레이 격자와 갠트리 피커 | 새 객체는 Eden 트레이에 쌓이고, young GC 때 피커가 살아 있는 객체만 Survivor로 옮기며 나이를 올림. 나이가 임계값 이상이면 Old로. 임계값은 pause마다 직전 나이표와 희망 survivor 크기로 다시 계산돼 15보다 작아질 수 있음. young GC는 collection set의 young 영역을 모두 비우고, 쓰레기가 많은 Old 영역부터 고르는 것은 mixed GC다 | 영역 종류별 수, 객체 나이, 임계값, 희망 survivor 크기 | `-Xlog:gc*`, `gc+age=trace`, `gc+region=trace`, `-XX:+PrintFlagsFinal`의 `MaxTenuringThreshold`, `TargetSurvivorRatio`, `G1HeapRegionSize` (예제 `examples/jvm-g1-gc/`) |
+| 세이프포인트 | 신호소와 트립 스톱이 있는 철도 야드 | VM 스레드가 VM 작업 전에 레버를 당기면 모든 선로의 스톱이 올라오고, 자바 코드를 달리던 열차만 다음 폴링 지점에서 멈춤. native나 blocked 상태의 열차는 폴링 없이 safe로 세어지고, VM 스레드가 모두 세면 작업을 시작 | safe n/N, 처음에 달리던 스레드 수(`initial_running`), 폴링 트랩 수 | `-Xlog:safepoint=trace`, `-Xlog:safepoint+stats`, jdk21u `safepoint.cpp` (예제 `examples/jvm-safepoint/`) |
 
 ## 이 스킬에 맞지 않는 것
 

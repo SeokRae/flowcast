@@ -276,6 +276,59 @@
         </div>
       </div>
     </article>
+  </section>
+
+  <section class="section">
+    <h2 class="sec-title">JVM 동작 구조</h2>
+    <p class="sec-lede">클래스 파일이 JVM에 올라가 실행되기까지를 지도 한 장, 시퀀스 한 장, 메커니즘 다섯 장으로 나눴습니다. 수치는 모두 Amazon Corretto 21.0.1의 실행 출력과 JDK 소스에서 가져왔어요. 지도에서 위치를 잡고 번호 순서대로 따라가면 됩니다.</p>
+  </section>
+
+  <section class="grid">
+    <article class="card" data-view="component">
+      <div class="card-preview">
+        <iframe src="examples/jvm-runtime-component.html" loading="lazy" title="런타임 구조 지도 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-runtime-component.html" target="_blank" rel="noopener" aria-label="런타임 구조 지도 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-component">component</span>
+        <h3>JVM 1 | 런타임 구조 지도</h3>
+        <p>javac가 만든 클래스 파일이 클래스 로더를 거쳐 메서드 영역에 올라가고, 인터프리터와 JIT, GC가 스레드별 영역과 힙을 쓰는 관계를 한 장에 담았습니다. 뒤의 카드는 이 지도의 화살표를 하나씩 확대해요.</p>
+        <div class="card-links">
+          <a href="examples/jvm-runtime-component.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/jvm-runtime-component.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="sequence">
+      <div class="card-preview">
+        <iframe src="examples/jvm-startup-sequence.html" loading="lazy" title="java 명령부터 main까지 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-startup-sequence.html" target="_blank" rel="noopener" aria-label="java 명령부터 main까지 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-sequence">sequence</span>
+        <h3>JVM 2 | java 명령부터 main까지</h3>
+        <p><code>java -cp . Main</code>부터 VM 생성, 초기화 없는 로딩, 리플렉션이 일으키는 검증, <code>&lt;clinit&gt;</code>, <code>main</code>, 처음 쓰는 순간의 지연 로딩까지입니다. 순서는 <code>-Xlog:class+load,class+init</code> 실출력과 <code>LauncherHelper</code> 소스를 따랐고, 메인 클래스를 못 찾는 예외 흐름도 한 장 더 있어요.</p>
+        <div class="card-links">
+          <a href="examples/jvm-startup-sequence.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/blob/main/examples/jvm-startup-sequence.json" target="_blank" rel="noopener">JSON 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/jvm-class-loading.html" data-dark="examples/jvm-class-loading.html" data-light="examples/jvm-class-loading-light.html" loading="lazy" title="클래스 로더 서고 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-class-loading.html" data-dark="examples/jvm-class-loading.html" data-light="examples/jvm-class-loading-light.html" target="_blank" rel="noopener" aria-label="클래스 로더 서고 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>JVM 3 | 클래스 로더 서고</h3>
+        <p>JDK 21 내장 로더 3개가 클래스를 찾는 순서를 서고와 승강기로 그렸습니다. 이름 있는 모듈의 패키지는 부모를 거치지 않고 그 모듈의 로더로 곧장 가요(JDK 8식 부모 우선과 다른 점). 판단 순서는 JDI로 추적한 실제 로더 호출입니다.</p>
+        <div class="card-links">
+          <a href="examples/jvm-class-loading.html" data-dark="examples/jvm-class-loading.html" data-light="examples/jvm-class-loading-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-class-loading" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
     <article class="card" data-view="mechanism">
       <div class="card-preview">
         <iframe src="examples/jvm-bytecode.html" data-dark="examples/jvm-bytecode.html" data-light="examples/jvm-bytecode-light.html" loading="lazy" title="JVM 바이트코드 테이프 리더 미리보기"></iframe>
@@ -283,11 +336,56 @@
       </div>
       <div class="card-body">
         <span class="badge badge-mechanism">mechanism</span>
-        <h3>JVM | 바이트코드 테이프 리더</h3>
+        <h3>JVM 4 | 바이트코드 테이프 리더</h3>
         <p>javac 21.0.1이 만든 <code>calc(3, 4)</code>의 바이트코드 6개를 천공 테이프 리더가 한 칸씩 실행. 서랍 2칸은 <code>locals=2</code>, 스택 튜브 2칸은 <code>stack=2</code> 그대로이고, 리드아웃과 디스크 값은 javap 실출력으로 검증한 모델에서 나옴. 클릭이나 → 키로 한 칸씩 진행.</p>
         <div class="card-links">
           <a href="examples/jvm-bytecode.html" data-dark="examples/jvm-bytecode.html" data-light="examples/jvm-bytecode-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
           <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-bytecode" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/jvm-jit-tiers.html" data-dark="examples/jvm-jit-tiers.html" data-light="examples/jvm-jit-tiers-light.html" loading="lazy" title="JIT 계층 변속기 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-jit-tiers.html" data-dark="examples/jvm-jit-tiers.html" data-light="examples/jvm-jit-tiers-light.html" target="_blank" rel="noopener" aria-label="JIT 계층 변속기 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>JVM 5 | JIT 계층 변속기</h3>
+        <p>한 메서드가 인터프리터에서 C1, C2로 올라가고 타입 가정이 깨져 deopt로 내려오는 과정입니다. 카운터는 정해진 간격마다 검사될 때만 판단에 쓰이고, 재컴파일은 C1을 건너뛰어요. 사건 순서는 <code>-XX:+PrintTieredEvents</code> 실출력 그대로입니다.</p>
+        <div class="card-links">
+          <a href="examples/jvm-jit-tiers.html" data-dark="examples/jvm-jit-tiers.html" data-light="examples/jvm-jit-tiers-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-jit-tiers" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/jvm-g1-gc.html" data-dark="examples/jvm-g1-gc.html" data-light="examples/jvm-g1-gc-light.html" loading="lazy" title="G1 영역 트레이와 피커 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-g1-gc.html" data-dark="examples/jvm-g1-gc.html" data-light="examples/jvm-g1-gc-light.html" target="_blank" rel="noopener" aria-label="G1 영역 트레이와 피커 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>JVM 6 | G1 영역 트레이와 피커</h3>
+        <p>16MB 힙의 1MB 영역 16개에서 young GC가 살아 있는 객체를 Survivor로 복사하고 Old로 승격합니다. 임계 나이가 15, 15, 2로 바뀌어 배열이 나이 2에 Old로 가는 장면이 실측 그대로 나와요. 수치는 <code>-Xlog:gc*</code>와 mark word의 age 비트에서 읽었습니다.</p>
+        <div class="card-links">
+          <a href="examples/jvm-g1-gc.html" data-dark="examples/jvm-g1-gc.html" data-light="examples/jvm-g1-gc-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-g1-gc" target="_blank" rel="noopener">빌드 소스</a>
+        </div>
+      </div>
+    </article>
+    <article class="card" data-view="mechanism">
+      <div class="card-preview">
+        <iframe src="examples/jvm-safepoint.html" data-dark="examples/jvm-safepoint.html" data-light="examples/jvm-safepoint-light.html" loading="lazy" title="세이프포인트 신호 야드 미리보기"></iframe>
+        <a class="preview-cover" href="examples/jvm-safepoint.html" data-dark="examples/jvm-safepoint.html" data-light="examples/jvm-safepoint-light.html" target="_blank" rel="noopener" aria-label="세이프포인트 신호 야드 전체화면으로 열기"></a>
+      </div>
+      <div class="card-body">
+        <span class="badge badge-mechanism">mechanism</span>
+        <h3>JVM 7 | 세이프포인트 신호 야드</h3>
+        <p><code>System.gc()</code> 전에 VM 스레드가 모든 자바 스레드를 세이프포인트에 세우는 과정입니다. 자바 코드를 달리던 스레드만 폴링 지점에서 멈추고, native, sleep, wait 스레드는 폴링 없이 safe로 세어져요. 순서와 수치는 <code>-Xlog:safepoint=trace</code> 1회 실행 기록입니다.</p>
+        <div class="card-links">
+          <a href="examples/jvm-safepoint.html" data-dark="examples/jvm-safepoint.html" data-light="examples/jvm-safepoint-light.html" target="_blank" rel="noopener">전체화면 열기 ↗</a>
+          <a class="muted" href="https://github.com/SeokRae/flowcast/tree/main/skills/mechanism/examples/jvm-safepoint" target="_blank" rel="noopener">빌드 소스</a>
         </div>
       </div>
     </article>

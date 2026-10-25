@@ -89,6 +89,7 @@ ls "/Applications/Google Chrome.app" 2>/dev/null || command -v google-chrome chr
 - 리드아웃 구분자는 `|`를 쓴다. 가운데점은 쓰지 않는다.
 - `check.mjs`는 모델을 import해 1차 출처 값과 대조하고, 실패하면 exit 1로 끝난다. 최소한 다음을 검사한다: 출처 상수 일치, 한계(예: `max_stack`) 위반 없음, 대표 입력의 최종값, 경계 입력(오버플로, 빈 입력)의 실측값, `step`의 비변경성, `trace().map(readout)` 고정 문자열.
 - 실측이 가능하면 실측한다. 예제는 `java`로 `calc(Integer.MAX_VALUE, 1)`을 실제로 돌려 기대값 0을 얻었다. 실측 원본은 `truth/`에 둔다.
+- **라이선스가 다른 소스의 원문은 커밋하지 않는다.** OpenJDK(GPLv2 + Classpath Exception)나 리눅스 커널(GPLv2) 소스는 `truth/*-refs.md`에 고정 태그 URL과 줄 범위, 함수명, 그 줄이 하는 일을 우리 말로 쓴 요약만 둔다. 원문 대조는 그 파일을 내려받는 스크립트와 `check-source.mjs`로 나누고, `check.mjs`는 오프라인으로 통과하게 한다. 실행 출력(`javap`, `-Xlog`)과 직접 쓴 프로브 소스는 원본 그대로 둔다.
 
 ```bash
 node {out_dir}/{name}/check.mjs    # exit 0 전에는 ④로 넘어가지 않는다
