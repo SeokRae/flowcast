@@ -68,6 +68,7 @@ ROW = 22              # 스텝 간 세로 간격
 LBL_LH = 13           # 라벨 줄 높이
 EXTRA_LH = 13         # sub/protocol 줄 높이
 ACT_W = 12            # 액티베이션바 폭
+LABEL_PAD_R = 12      # 오른쪽으로 넘친 라벨 끝과 캔버스 가장자리 사이 여백 (#150)
 FRAME_PAD_X = 72      # 조건 블록 프레임이 레인 중심에서 벌어지는 폭. 액터 박스 반폭(66)보다 조금 넓게
 FRAME_TAG_H = 18      # 프레임 좌상단 태그(alt/opt) 높이
 FRAME_HDR_H = 26      # 프레임 윗변에서 첫 스텝 행까지
@@ -117,6 +118,11 @@ def _text_width(text, size=10.5):
     for ch in text:
         w += 1.0 if ord(ch) > 0x2E7F else 0.55
     return w * size
+
+
+def _mono_width(text, size=10):
+    """고정폭 글꼴(보조 라벨, 프로토콜) 폭 추정. 라틴 문자가 0.6em 이라 `_text_width` 보다 넓다."""
+    return sum(1.0 if ord(ch) > 0x2E7F else 0.6 for ch in text) * size
 
 
 def esc(s):
@@ -524,6 +530,7 @@ def layout_sequence(data, scenario):
 
     cur = y0
     msgs = []          # (y, from, to) — 액티베이션 구간 계산용
+    rights = []        # 라벨이 닿는 오른쪽 끝 — 캔버스 폭을 정한다 (#150)
     frames, frame = [], None
     for st in scenario["steps"]:
         kind = st["kind"]
@@ -579,6 +586,11 @@ def layout_sequence(data, scenario):
             if val:
                 rec["extras"].append((cls, val))
         steps.append(rec)
+        # 자기호출 라벨은 self_x + 52 에서 왼쪽 정렬, 나머지 라벨과 보조 라벨은 mid 중심 정렬이다.
+        label_w = max([_text_width(ln) for ln in lines] + [0])
+        rights.append(rec["self_x"] + 52 + label_w if kind == "self" else mid + label_w / 2)
+        rights += [mid + _mono_width(f"( {v} )" if c == "proto" else v, 9.5 if c == "proto" else 10) / 2
+                   for c, v in rec["extras"]]
         if frame is not None:
             # 프레임은 블록 안 스텝이 닿는 레인과 라벨을 모두 덮는다.
             text_w = max([_text_width(ln) for ln in lines]
@@ -597,6 +609,18 @@ def layout_sequence(data, scenario):
         # 높이를 잴 때도 여기를 지나므로 예외 없이 닫는다.
         frames.append(_close_frame(frame, cur - 6, width))
         cur = frames[-1]["y2"] + 14
+
+    # 캔버스 폭은 레인 수로 시작하고, 라벨이나 프레임이 오른쪽으로 넘치면 그만큼 넓힌다 (#150).
+    # 고정 폭이면 맨 오른쪽 레인의 자기호출 라벨이 viewBox 밖으로 잘린다. 프레임은 _close_frame 이
+    # 오른쪽을 자르지 않고 넘기므로, 넓힌 뒤 여기서 캔버스 안으로 맞춘다.
+    need = max([r + LABEL_PAD_R for r in rights] + [f["x2"] + 4 for f in frames] + [width])
+    if need > width:
+        width = math.ceil(need)
+        for s in steps:
+            if s["type"] == "note":
+                s["x2"] = width - MR
+    for f in frames:
+        f["x2"] = min(f["x2"], width - 4)
 
     bottom = cur + 8
     height = bottom + 16
@@ -629,7 +653,8 @@ def _close_frame(fr, y2, width):
     x2 = max(fr["rights"]) if fr["rights"] else width - MR
     if x2 - x1 < need_w:
         x2 = x1 + need_w
-    x1, x2 = max(x1, 4), min(x2, width - 4)
+    # 오른쪽은 여기서 자르지 않는다. layout_sequence 가 라벨에 맞춰 캔버스를 넓힌 뒤 맞춘다 (#150).
+    x1 = max(x1, 4)
     y2 = max(y2, fr["y1"] + FRAME_TAG_H + 8)
     return {"kind": fr["kind"], "label": fr["label"], "x1": x1, "x2": x2, "y1": fr["y1"],
             "y2": y2, "tag_w": tag_w, "elses": fr["elses"]}

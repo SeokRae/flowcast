@@ -354,6 +354,59 @@ def test_layout_frame_is_wide_enough_for_guard():
     assert f["x2"] - f["x1"] >= f["tag_w"] + _mod._text_width(f"[{long_guard}]")
 
 
+def _last_lane_self(label, *, sub=None, block=False):
+    """맨 오른쪽 레인(c)의 자기호출 하나. 라벨이 캔버스 오른쪽으로 넘치는지 보는 픽스처 (#150)."""
+    st = {"n": 2, "from": "c", "to": "c", "label": label, "kind": "self"}
+    if sub:
+        st["sub"] = sub
+    body = [{"kind": "opt", "label": "조건"}, st, {"kind": "end"}] if block else [st]
+    return _alt(marker_steps=[_req(1)] + body)
+
+
+def _self_rec(L):
+    (st,) = [s for s in L["steps"] if s["type"] == "msg" and s["self"]]
+    return st
+
+
+def _mono_w(text, size=10):
+    # 보조 라벨은 고정폭 글꼴이라 라틴 문자가 0.6em, 한글이 1em 이다.
+    return sum(1.0 if ord(c) > 0x2E7F else 0.6 for c in text) * size
+
+
+def test_layout_keeps_lane_width_when_labels_fit():
+    data = _alt()
+    L = layout_sequence(data, data["scenarios"][0])
+    assert L["width"] == _mod.ML + _mod.MR + _mod.LANE_W * 3
+
+
+def test_layout_widens_canvas_for_last_lane_self_label():
+    data = _last_lane_self("validateAndPersistOrderLines()")
+    L = layout_sequence(data, data["scenarios"][0])
+    st = _self_rec(L)
+    assert st["self_x"] + 52 + _mod._text_width(st["lines"][0]) <= L["width"]
+
+
+def test_layout_widens_canvas_for_last_lane_sub_label():
+    sub = "txActive=true, 트랜잭션 이름은 바깥 것 demo.OrderService.outer"
+    data = _last_lane_self("본문", sub=sub)
+    L = layout_sequence(data, data["scenarios"][0])
+    assert _self_rec(L)["mid"] + _mono_w(sub) / 2 <= L["width"]
+
+
+def test_layout_widened_canvas_stretches_notes_and_frames():
+    label = "validateAndPersistOrderLines()"
+    data = _last_lane_self(label, block=True)
+    data["scenarios"][0]["steps"].insert(0, {"kind": "note", "from": "a", "to": "c", "label": "구간"})
+    L = layout_sequence(data, data["scenarios"][0])
+    st = _self_rec(L)
+    label_end = st["self_x"] + 52 + _mod._text_width(st["lines"][0])
+    (note,) = [s for s in L["steps"] if s["type"] == "note"]
+    assert note["x2"] == L["width"] - _mod.MR
+    # 프레임은 넓어진 캔버스 기준으로 라벨 끝까지 덮는다(예전엔 레인 폭에서 잘렸다)
+    (f,) = L["frames"]
+    assert label_end <= f["x2"] <= L["width"] - 4
+
+
 def test_render_svg_draws_frame_tag_guard_and_else():
     data = _alt()
     svg, _, _ = render_svg(data, data["scenarios"][0])
