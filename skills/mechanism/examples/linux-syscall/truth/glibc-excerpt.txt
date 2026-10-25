@@ -1,0 +1,15 @@
+## read: number into x6, then branch to an internal function at 0x828ec
+   e3e08:	mov	x6, #0x3f                  	// #63
+   e3e18:	b	828ec <__libc_alloca_cutoff@@GLIBC_PRIVATE+0x12c>
+## internal (no symbol): number moved to x8, svc, then -4095..-1 becomes errno and -1
+   82868:	mov	x8, x6
+   828d8:	svc	#0x0
+   828fc:	cmn	x0, #0x1, lsl #12
+   82900:	b.hi	82910 <__libc_alloca_cutoff@@GLIBC_PRIVATE+0x150>  // b.pmore
+   8291c:	neg	w3, w0
+   82920:	mov	x0, #0xffffffffffffffff    	// #-1
+   8292c:	str	w3, [x2, x1]
+## getpid: textbook three instructions, no errno check
+   c5bc4:	mov	x8, #0xac                  	// #172
+   c5bc8:	svc	#0x0
+   c5bcc:	ret

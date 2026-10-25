@@ -1,0 +1,203 @@
+# tracer: function
+#
+# entries-in-buffer/entries-written: 191/191   #P:11
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+     epoll_probe-73771   [003] ...1. 159169.693703: tracing_mark_write: phase poll-ready
+     epoll_probe-73771   [003] ..... 159169.693712: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] ..... 159169.693713: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] ..... 159169.693714: do_sys_poll <-__arm64_sys_ppoll
+     epoll_probe-73771   [003] ..... 159169.693715: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693715: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.693715: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693715: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.693715: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693716: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.693716: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693716: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693716: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693716: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.693716: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ...1. 159169.694306: tracing_mark_write: phase poll-drain
+     epoll_probe-73771   [003] ..... 159169.694309: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ..... 159169.694310: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ...1. 159169.694361: tracing_mark_write: phase poll-block
+     epoll_probe-73771   [003] ..... 159169.694447: do_sys_poll <-__arm64_sys_ppoll
+     epoll_probe-73771   [003] ..... 159169.694447: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694448: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694448: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694448: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694448: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694448: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694448: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694449: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694449: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694449: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694449: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694449: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694449: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694449: __pollwait <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.694449: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.694449: __pollwait <-pipe_poll
+     epoll_probe-73772   [003] ..... 159169.745661: anon_pipe_write <-vfs_write
+     epoll_probe-73772   [003] d..1. 159169.745662: pollwake <-__wake_up_common
+     epoll_probe-73771   [003] ..... 159169.745767: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745768: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745768: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745769: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745770: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745770: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745770: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745771: pipe_poll <-do_sys_poll
+     epoll_probe-73771   [003] ..... 159169.745840: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ...1. 159169.745927: tracing_mark_write: phase epoll-ctl
+     epoll_probe-73771   [003] ..... 159169.745936: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745938: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745938: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745938: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745938: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745939: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745939: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745939: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745939: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745940: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745940: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745940: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745940: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745941: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745941: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745941: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745941: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745942: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745942: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745942: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745942: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745942: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745943: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745943: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745943: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745943: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745943: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745943: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.745944: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745944: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.745944: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.745944: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ...1. 159169.745993: tracing_mark_write: phase write
+     epoll_probe-73771   [003] ..... 159169.745994: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] d..1. 159169.745994: ep_poll_callback <-__wake_up_common
+     epoll_probe-73771   [003] ..... 159169.745995: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] d..1. 159169.745995: ep_poll_callback <-__wake_up_common
+     epoll_probe-73771   [003] ...1. 159169.746032: tracing_mark_write: phase epoll-wait-1
+     epoll_probe-73771   [003] ..... 159169.746034: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.746034: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.746034: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746034: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746034: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746034: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746035: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746035: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.746078: tracing_mark_write: phase epoll-wait-2
+     epoll_probe-73771   [003] ..... 159169.746079: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.746079: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.746079: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746079: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746080: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746080: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746080: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746080: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.746130: tracing_mark_write: phase drain
+     epoll_probe-73771   [003] ..... 159169.746131: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ..... 159169.746132: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ...1. 159169.746174: tracing_mark_write: phase epoll-wait-3
+     epoll_probe-73771   [003] ..... 159169.746174: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.746175: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.746175: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746175: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746175: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746175: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.746175: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.746176: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.746213: tracing_mark_write: phase epoll-wait-4
+     epoll_probe-73771   [003] ..... 159169.746214: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ...1. 159169.746250: tracing_mark_write: phase epoll-block
+     epoll_probe-73771   [003] ..... 159169.746305: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73773   [003] ..... 159169.796713: anon_pipe_write <-vfs_write
+     epoll_probe-73773   [003] d..1. 159169.796715: ep_poll_callback <-__wake_up_common
+     epoll_probe-73773   [003] d..3. 159169.796717: ep_autoremove_wake_function <-__wake_up_common
+     epoll_probe-73771   [003] ..... 159169.796835: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.796835: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.796835: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.796836: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.796837: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.796928: anon_pipe_read <-vfs_read
+     epoll_probe-73771   [003] ...1. 159169.797035: tracing_mark_write: phase epoll-wait-5
+     epoll_probe-73771   [003] ..... 159169.797036: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.797037: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.797037: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797037: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797037: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797038: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.797137: tracing_mark_write: phase et-ctl
+     epoll_probe-73771   [003] ..... 159169.797145: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797146: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797146: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797148: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797148: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797149: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797149: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797149: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797150: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797150: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797150: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797150: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797151: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797152: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797152: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797152: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797152: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797153: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797153: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797153: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797154: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797154: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797154: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797154: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797155: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797155: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797155: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797155: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ..... 159169.797156: do_epoll_ctl <-__arm64_sys_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797157: ep_item_poll.isra.0 <-do_epoll_ctl
+     epoll_probe-73771   [003] ..... 159169.797157: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797157: ep_ptable_queue_proc <-pipe_poll
+     epoll_probe-73771   [003] ...1. 159169.797225: tracing_mark_write: phase et-write-1
+     epoll_probe-73771   [003] ..... 159169.797226: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] d..1. 159169.797227: ep_poll_callback <-__wake_up_common
+     epoll_probe-73771   [003] ...1. 159169.797284: tracing_mark_write: phase et-wait-1
+     epoll_probe-73771   [003] ..... 159169.797285: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.797285: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.797285: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797286: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797286: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797286: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.797343: tracing_mark_write: phase et-wait-2
+     epoll_probe-73771   [003] ..... 159169.797344: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ...1. 159169.797398: tracing_mark_write: phase et-write-2
+     epoll_probe-73771   [003] ..... 159169.797399: anon_pipe_write <-vfs_write
+     epoll_probe-73771   [003] d..1. 159169.797400: ep_poll_callback <-__wake_up_common
+     epoll_probe-73771   [003] ...1. 159169.797459: tracing_mark_write: phase et-wait-3
+     epoll_probe-73771   [003] ..... 159169.797460: do_epoll_wait <-do_epoll_pwait.part.0
+     epoll_probe-73771   [003] ..... 159169.797460: ep_send_events <-do_epoll_wait
+     epoll_probe-73771   [003] ..... 159169.797460: ep_start_scan <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797460: ep_item_poll.isra.0 <-ep_send_events
+     epoll_probe-73771   [003] ..... 159169.797460: pipe_poll <-ep_item_poll.isra.0
+     epoll_probe-73771   [003] ..... 159169.797461: ep_done_scan <-ep_send_events
+     epoll_probe-73771   [003] ...1. 159169.797511: tracing_mark_write: phase end

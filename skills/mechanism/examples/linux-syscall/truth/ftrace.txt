@@ -1,0 +1,169 @@
+   syscall-probe-77606   [000] ...1. 160120.389181: tracing_mark_write: lx-syscall begin
+   syscall-probe-77606   [000] ..... 160120.389181: sys_exit: NR 64 = 16
+   syscall-probe-77606   [000] ..... 160120.389181: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389181: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389181: sys_enter: NR 172 (0, 0, 0, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389182: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389182: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389182: __arm64_sys_getpid <-invoke_syscall.constprop.0
+   syscall-probe-77606   [000] ..... 160120.389182: <stack trace>
+ => ftrace_caller
+ => __arm64_sys_getpid
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389183: sys_exit: NR 172 = 45
+   syscall-probe-77606   [000] ..... 160120.389183: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389183: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389183: sys_enter: NR 63 (63, fffff69888e0, 8, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389184: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389184: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389184: __arm64_sys_read <-invoke_syscall.constprop.0
+   syscall-probe-77606   [000] ..... 160120.389184: <stack trace>
+ => ftrace_caller
+ => __arm64_sys_read
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389184: ksys_read <-__arm64_sys_read
+   syscall-probe-77606   [000] ..... 160120.389184: <stack trace>
+ => ftrace_caller
+ => ksys_read
+ => __arm64_sys_read
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389184: sys_exit: NR 63 = -9
+   syscall-probe-77606   [000] ..... 160120.389185: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389185: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389185: sys_enter: NR 244 (0, 0, 0, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389185: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389185: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389185: __arm64_sys_ni_syscall <-invoke_syscall.constprop.0
+   syscall-probe-77606   [000] ..... 160120.389185: <stack trace>
+ => ftrace_caller
+ => __arm64_sys_ni_syscall
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389186: sys_ni_syscall <-__arm64_sys_ni_syscall
+   syscall-probe-77606   [000] ..... 160120.389186: <stack trace>
+ => ftrace_caller
+ => sys_ni_syscall
+ => __arm64_sys_ni_syscall
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389186: sys_exit: NR 244 = -38
+   syscall-probe-77606   [000] ..... 160120.389186: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389186: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389186: sys_enter: NR 472 (0, 0, 0, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389186: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389186: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389187: sys_ni_syscall <-invoke_syscall.constprop.0
+   syscall-probe-77606   [000] ..... 160120.389187: <stack trace>
+ => ftrace_caller
+ => sys_ni_syscall
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389187: sys_exit: NR 472 = -38
+   syscall-probe-77606   [000] ..... 160120.389187: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389187: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389187: sys_enter: NR 471 (0, 0, 0, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389187: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389187: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389188: __arm64_sys_rseq_slice_yield <-invoke_syscall.constprop.0
+   syscall-probe-77606   [000] ..... 160120.389188: <stack trace>
+ => ftrace_caller
+ => __arm64_sys_rseq_slice_yield
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389188: sys_exit: NR 471 = -38
+   syscall-probe-77606   [000] ..... 160120.389189: do_el0_svc <-el0_svc
+   syscall-probe-77606   [000] ..... 160120.389189: <stack trace>
+ => ftrace_caller
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ..... 160120.389189: sys_enter: NR 64 (3, aaaae3051178, e, 0, 0, 0)
+   syscall-probe-77606   [000] ..... 160120.389189: invoke_syscall.constprop.0 <-do_el0_svc
+   syscall-probe-77606   [000] ..... 160120.389189: <stack trace>
+ => ftrace_caller
+ => invoke_syscall.constprop.0
+ => do_el0_svc
+ => el0_svc
+ => el0t_64_sync_handler
+ => el0t_64_sync
+   syscall-probe-77606   [000] ...1. 160120.389189: tracing_mark_write: lx-syscall end

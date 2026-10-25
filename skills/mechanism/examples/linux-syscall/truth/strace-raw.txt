@@ -1,0 +1,72 @@
+[ 221] execve("./syscall-probe", ["./syscall-probe"], 0xffffebece9c8 /* 7 vars */) = 0
+[ 214] brk(NULL)                        = 0xaaaaead6f000
+[ 222] mmap(NULL, 8192, 0x3, 0x22, -1, 0) = 0xffffac2e7000
+[  48] faccessat(-100, "/etc/ld.so.preload", 0x4) = -1 ENOENT (No such file or directory)
+[  56] openat(-100, "/etc/ld.so.cache", 0x80000) = 3
+[  80] fstat(3, {st_mode=0100644, st_size=10147, ...}) = 0
+[ 222] mmap(NULL, 10147, 0x1, 0x2, 3, 0) = 0xffffac2e4000
+[  57] close(3)                         = 0
+[  56] openat(-100, "/lib/aarch64-linux-gnu/libc.so.6", 0x80000) = 3
+[  63] read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\200$\2\0\0\0\0\0"..., 832) = 832
+[  80] fstat(3, {st_mode=0100755, st_size=1716616, ...}) = 0
+[ 222] mmap(NULL, 1892368, 0, 0x822, -1, 0) = 0xffffac0e2000
+[ 222] mmap(0xffffac0f0000, 1826832, 0x5, 0x812, 3, 0) = 0xffffac0f0000
+[ 215] munmap(0xffffac0e2000, 57344)    = 0
+[ 215] munmap(0xffffac2af000, 4112)     = 0
+[ 226] mprotect(0xffffac28c000, 69632, 0) = 0
+[ 222] mmap(0xffffac29d000, 20480, 0x3, 0x812, 3, 0x19d000) = 0xffffac29d000
+[ 222] mmap(0xffffac2a2000, 49168, 0x3, 0x32, -1, 0) = 0xffffac2a2000
+[ 222] mmap(0xffffac0f0000, 1687552, 0x15, 0x812, 3, 0) = 0xffffac0f0000
+[  57] close(3)                         = 0
+[ 222] mmap(NULL, 8192, 0x3, 0x22, -1, 0) = 0xffffac2e2000
+[  96] set_tid_address(0xffffac2e20f0)  = 39
+[  99] set_robust_list(0xffffac2e2100, 24) = 0
+[ 293] rseq(0xffffac2e2800, 0x20, 0, 0xd428bc00) = 0
+[ 226] mprotect(0xffffac29d000, 12288, 0x1) = 0
+[ 226] mprotect(0xaaaaba68f000, 4096, 0x1) = 0
+[ 226] mprotect(0xffffac2ef000, 8192, 0x1) = 0
+[ 261] prlimit64(0, 0x3, NULL, {rlim_cur=8388608, rlim_max=18446744073709551615}) = 0
+[ 215] munmap(0xffffac2e4000, 10147)    = 0
+[  80] fstat(1, {st_mode=020666, st_rdev=0x103, ...}) = 0
+[  29] ioctl(1, 0x5401, 0xfffffeddd1d0) = -1 ENOTTY (Inappropriate ioctl for device)
+[ 278] getrandom("\x60\xb4\xc3\xe0\xa4\xb4\xfc\x7c", 8, 0x1) = 8
+[ 214] brk(NULL)                        = 0xaaaaead6f000
+[ 214] brk(0xaaaaead90000)              = 0xaaaaead90000
+[  64] write(1, "SYS_openat 56\n", 14)  = 14
+[  64] write(1, "SYS_close 57\n", 13)   = 13
+[  64] write(1, "SYS_read 63\n", 12)    = 12
+[  64] write(1, "SYS_write 64\n", 13)   = 13
+[  64] write(1, "SYS_exit_group 94\n", 18) = 18
+[  64] write(1, "SYS_clock_gettime 113\n", 22) = 22
+[  64] write(1, "SYS_getpid 172\n", 15) = 15
+[  64] write(1, "SYS_mseal 462\n", 14)  = 14
+[  64] write(1, "SYS_rseq_slice_yield (not in the"..., 44) = 44
+[ 172] getpid()                         = 39
+[  63] read(99, 0xfffffeddd6e0, 8)      = -1 EBADF (Bad file descriptor)
+[ 244] syscall_0xf4(0, 0, 0, 0, 0, 0)   = -1 ENOSYS (Function not implemented)
+[ 472] syscall_0x1d8(0, 0, 0, 0, 0, 0)  = -1 ENOSYS (Function not implemented)
+[ 471] syscall_0x1d7(0, 0, 0, 0, 0, 0)  = -1 ENOSYS (Function not implemented)
+[  64] write(1, "raw svc x8=172 -> x0=39\n", 24) = 24
+[  64] write(1, "raw svc x8=63 x0=99 x2=8 -> x0=-"..., 40) = 40
+[  64] write(1, "raw svc x8=244 -> x0=-38 ENOSYS\n", 32) = 32
+[  64] write(1, "raw svc x8=472 -> x0=-38 ENOSYS\n", 32) = 32
+[  64] write(1, "raw svc x8=471 -> x0=-38 ENOSYS\n", 32) = 32
+[ 172] getpid()                         = 39
+[ 172] getpid()                         = 39
+[  64] write(1, "glibc getpid() = 39 (same as raw"..., 39) = 39
+[  63] read(99, 0xfffffeddd6e0, 8)      = -1 EBADF (Bad file descriptor)
+[  64] write(1, "glibc read(99, buf, 8) = -1 errn"..., 42) = 42
+[ 244] syscall_0xf4(0xffffac2f0b60, 0, 0, 0, 0, 0) = -1 ENOSYS (Function not implemented)
+[  64] write(1, "glibc syscall(244) = -1 errno 38"..., 40) = 40
+[  56] openat(-100, "/tmp/lx-syscall.txt", 0x241, 0600) = 3
+[  64] write(3, "hello\n", 6)           = 6
+[  57] close(3)                         = 0
+[  56] openat(-100, "/tmp/lx-syscall.txt", 0) = 3
+[  63] read(3, "hello\n", 16)           = 6
+[  57] close(3)                         = 0
+[  64] write(1, "glibc open = 3, read = 6, close "..., 36) = 36
+[  35] unlinkat(-100, "/tmp/lx-syscall.txt", 0) = 0
+[ 113] clock_gettime(0x1, {tv_sec=160120, tv_nsec=113641088}) = 0
+[  64] write(1, "glibc clock_gettime = 0, raw svc"..., 48) = 48
+[  94] exit_group(0)                    = ?
+[  94] +++ exited with 0 +++

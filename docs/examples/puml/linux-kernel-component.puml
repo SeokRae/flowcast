@@ -1,0 +1,53 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 리눅스 커널 구조 — 사용자 프로세스가 커널 서브시스템을 거치는 길
+' flowcast source: flowcast 합성 예제 (component). Linux 7.0.14 (Docker Desktop linuxkit, arm64) 기준. 연결은 upstream stable v7.0.14 소스(arch/arm64/kernel/syscall.c, kernel/fork.c, mm/mmap.c, fs/read_write.c, mm/filemap.c)와 같은 커널의 ftrace 기록으로 확인
+package "< 사용자 공간 (EL0) >" {
+  rectangle "사용자 프로세스\n앱 코드" as app <<ext>>
+  rectangle "glibc\n시스템 콜 래퍼" as libc
+}
+package "< 커널 (EL1) >" {
+  rectangle "시스템 콜 진입\nel0_svc, sys_call_table" as entry
+  rectangle "프로세스 관리\nkernel_clone" as proc
+  rectangle "메모리 관리\n페이지 테이블, 폴트 처리" as mm
+  rectangle "VFS\nread, epoll" as vfs
+  rectangle "스케줄러\nEEVDF" as sched
+  rectangle "파일 시스템\next4" as ext4
+  rectangle "페이지 캐시\nfolio" as pc <<db>>
+  rectangle "블록 계층\nblk-mq, virtio-blk" as blk
+}
+rectangle "MMU, TLB\n(하드웨어)" as mmu <<ext>>
+rectangle "가상 디스크\nDocker VM" as disk <<db>>
+
+app --> libc : 1. read(), fork()
+libc --> entry : 2. svc #0
+entry --> vfs : 3. read, epoll_wait
+entry --> proc : 4. clone
+proc --> mm : 5. 주소 공간 복제
+proc --> sched : 6. wake_up_new_task
+app --> mmu : 7. 가상 주소로 접근
+mmu <--> mm : 8. 테이블 걷기, page fault
+vfs --> ext4 : 9. read_iter
+ext4 --> pc : 10. filemap_read
+pc --> blk : 11. 캐시 미스\n( submit_bio )
+blk <--> disk : 12. 요청, 인터럽트
+pc <--> sched : 13. folio 대기, 깨우기
+@enduml

@@ -1,0 +1,12 @@
+pid 73778, 1024 pipes, readable: 2 5
+== poll-ready
+poll(nfds=1024, timeout=-1) = 2 revents: [2]=POLLIN [5]=POLLIN
+== poll-drain
+== poll-block
+poll(nfds=1024, timeout=-1) = 1 revents: [5]=POLLIN
+== epoll-ctl
+epoll_ctl(ADD) x1024, events=EPOLLIN
+== write
+== epoll-wait-1
+epoll_wait(maxevents=16, timeout=-1) = 2 events: [2]=EPOLLIN [5]=EPOLLIN
+== end

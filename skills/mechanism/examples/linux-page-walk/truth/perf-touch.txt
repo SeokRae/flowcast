@@ -1,0 +1,30 @@
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 0 (run 1)
+88,,minor-faults,361000,100.00,,
+0,,major-faults,361000,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 0 (run 2)
+88,,minor-faults,315250,100.00,,
+0,,major-faults,315250,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 0 (run 3)
+87,,minor-faults,314208,100.00,,
+0,,major-faults,314208,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 0 (run 4)
+87,,minor-faults,294833,100.00,,
+0,,major-faults,294833,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 0 (run 5)
+87,,minor-faults,300166,100.00,,
+0,,major-faults,300166,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 512 (run 1)
+600,,minor-faults,936834,100.00,,
+0,,major-faults,936834,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 512 (run 2)
+599,,minor-faults,683042,100.00,,
+0,,major-faults,683042,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 512 (run 3)
+600,,minor-faults,664792,100.00,,
+0,,major-faults,664792,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 512 (run 4)
+599,,minor-faults,610708,100.00,,
+0,,major-faults,610708,100.00,,
+## perf stat -x, -e minor-faults,major-faults setarch -R pagewalk-probe touch 512 (run 5)
+599,,minor-faults,1510084,100.00,,
+0,,major-faults,1510084,100.00,,

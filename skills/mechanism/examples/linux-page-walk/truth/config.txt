@@ -1,0 +1,21 @@
+uname: 7.0.14-linuxkit #1 SMP PREEMPT Fri Oct 16 11:55:50 UTC 2026 aarch64
+pagesize: 4096
+CONFIG_PGTABLE_LEVELS=4
+CONFIG_ARM64_4K_PAGES=y
+CONFIG_ARM64_VA_BITS=48
+CONFIG_ARM64_HW_AFDBM=y
+CONFIG_ARM64_CONTPTE=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
+CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS=y
+CONFIG_PER_VMA_LOCK=y
+thp enabled: [always] madvise never
+thp use_zero_page: 1
+thp hugepages-1024kB: always inherit madvise [never]
+thp hugepages-128kB: always inherit madvise [never]
+thp hugepages-16kB: always inherit madvise [never]
+thp hugepages-2048kB: always [inherit] madvise never
+thp hugepages-256kB: always inherit madvise [never]
+thp hugepages-32kB: always inherit madvise [never]
+thp hugepages-512kB: always inherit madvise [never]
+thp hugepages-64kB: always inherit madvise [never]
+gcc: gcc (Debian 14.2.0-19) 14.2.0

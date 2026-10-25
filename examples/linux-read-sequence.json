@@ -1,0 +1,319 @@
+{
+  "system": "리눅스 read() 한 번",
+  "source": "flowcast 합성 예제 (sequence). Linux 7.0.14 (Docker Desktop linuxkit, arm64), glibc 2.41에서 ext4 파일을 read()한 ftrace 기록(function tracer, func_stack_trace, sched와 block 이벤트)과 glibc read 역어셈블, upstream stable v7.0.14 소스 arch/arm64/kernel/syscall.c, fs/read_write.c, mm/filemap.c 기준",
+  "view": "sequence",
+  "zones": [
+    {
+      "id": "user",
+      "name": "사용자 공간 (EL0)"
+    },
+    {
+      "id": "kernel",
+      "name": "커널 (EL1)"
+    }
+  ],
+  "actors": [
+    {
+      "id": "app",
+      "name": "앱",
+      "line": "readprobe",
+      "zone": "user",
+      "tone": "slate"
+    },
+    {
+      "id": "libc",
+      "name": "glibc 2.41",
+      "line": "read 래퍼",
+      "zone": "user",
+      "tone": "violet"
+    },
+    {
+      "id": "entry",
+      "name": "arm64 진입",
+      "line": "el0_svc",
+      "zone": "kernel",
+      "tone": "violet"
+    },
+    {
+      "id": "vfs",
+      "name": "VFS",
+      "line": "vfs_read",
+      "zone": "kernel",
+      "tone": "violet"
+    },
+    {
+      "id": "fs",
+      "name": "ext4, 페이지 캐시",
+      "line": "filemap_read",
+      "zone": "kernel",
+      "tone": "violet"
+    },
+    {
+      "id": "blk",
+      "name": "블록 계층",
+      "line": "virtio-blk",
+      "zone": "kernel",
+      "tone": "violet"
+    },
+    {
+      "id": "dev",
+      "name": "가상 디스크",
+      "line": "Docker VM",
+      "tone": "slate"
+    }
+  ],
+  "scenarios": [
+    {
+      "title": "read(): 페이지 캐시 적중과 디스크 읽기",
+      "steps": [
+        {
+          "n": 1,
+          "from": "app",
+          "to": "libc",
+          "label": "read(3, buf, 4096)",
+          "kind": "req"
+        },
+        {
+          "n": 2,
+          "from": "libc",
+          "to": "libc",
+          "label": "x0, x1, x2 = 3, buf, 4096\n취소 처리 함수에서 x8 = 63",
+          "kind": "self"
+        },
+        {
+          "n": 3,
+          "from": "libc",
+          "to": "entry",
+          "label": "svc #0 (EL0에서 EL1로 예외)",
+          "kind": "req"
+        },
+        {
+          "n": 4,
+          "from": "entry",
+          "to": "entry",
+          "label": "el0t_64_sync → el0t_64_sync_handler\n→ el0_svc → do_el0_svc",
+          "kind": "self"
+        },
+        {
+          "n": 5,
+          "from": "entry",
+          "to": "entry",
+          "label": "invoke_syscall: sys_call_table[63]\n= __arm64_sys_read → ksys_read",
+          "kind": "self"
+        },
+        {
+          "n": 6,
+          "from": "entry",
+          "to": "vfs",
+          "label": "fdget_pos(3) 뒤 vfs_read",
+          "kind": "req"
+        },
+        {
+          "n": 7,
+          "from": "vfs",
+          "to": "vfs",
+          "label": "rw_verify_area\n(FMODE_READ, 범위 확인)",
+          "kind": "self"
+        },
+        {
+          "n": 8,
+          "from": "vfs",
+          "to": "fs",
+          "label": "new_sync_read → f_op->read_iter\n= ext4_file_read_iter",
+          "kind": "req"
+        },
+        {
+          "n": 9,
+          "from": "fs",
+          "to": "fs",
+          "label": "generic_file_read_iter → filemap_read\n→ filemap_get_pages (페이지 캐시 조회)",
+          "kind": "self"
+        },
+        {
+          "kind": "alt",
+          "label": "캐시에 있음"
+        },
+        {
+          "n": 10,
+          "from": "fs",
+          "to": "fs",
+          "label": "folio를 찾음, 디스크 I/O 없음",
+          "kind": "self"
+        },
+        {
+          "kind": "else",
+          "label": "캐시에 없음"
+        },
+        {
+          "n": 10,
+          "from": "fs",
+          "to": "fs",
+          "label": "posix_fadvise DONTNEED로 비운 뒤\npage_cache_sync_ra → read_pages\n→ ext4_readahead (3페이지 미리 읽기)",
+          "kind": "self"
+        },
+        {
+          "n": 11,
+          "from": "fs",
+          "to": "blk",
+          "label": "submit_bio → blk_mq_submit_bio",
+          "kind": "req"
+        },
+        {
+          "n": 12,
+          "from": "blk",
+          "to": "dev",
+          "label": "virtio_queue_rq: 24섹터(12288바이트)\n읽기 요청 (block_rq_issue)",
+          "kind": "req"
+        },
+        {
+          "n": 13,
+          "from": "fs",
+          "to": "fs",
+          "label": "folio 잠금 대기: io_schedule\nD 상태로 잠들고 CPU 3은 idle",
+          "kind": "self",
+          "tone": "info"
+        },
+        {
+          "n": 14,
+          "from": "dev",
+          "to": "blk",
+          "label": "완료 인터럽트 (CPU 0)\nvring_interrupt → virtblk_done",
+          "kind": "res"
+        },
+        {
+          "n": 15,
+          "from": "blk",
+          "to": "fs",
+          "label": "blk_mq_complete_request → softirq\nfolio_end_read 3회 (잠금 해제)",
+          "kind": "res"
+        },
+        {
+          "n": 16,
+          "from": "fs",
+          "to": "fs",
+          "label": "sched_wakeup: CPU 3에서 다시 실행\n(이번 실행에서 약 88µs 잠듦)",
+          "kind": "self",
+          "tone": "info"
+        },
+        {
+          "kind": "end"
+        },
+        {
+          "n": 17,
+          "from": "fs",
+          "to": "fs",
+          "label": "copy_folio_to_iter: 4096바이트를\n사용자 버퍼로 복사, file_accessed",
+          "kind": "self"
+        },
+        {
+          "n": 18,
+          "from": "fs",
+          "to": "vfs",
+          "label": "4096",
+          "kind": "res"
+        },
+        {
+          "n": 19,
+          "from": "vfs",
+          "to": "entry",
+          "label": "4096 (ksys_read가 f_pos 갱신)",
+          "kind": "res"
+        },
+        {
+          "n": 20,
+          "from": "entry",
+          "to": "entry",
+          "label": "syscall_set_return_value: x0 = 4096\nexit_to_user_mode → ret_to_user",
+          "kind": "self"
+        },
+        {
+          "n": 21,
+          "from": "entry",
+          "to": "libc",
+          "label": "eret (EL1에서 EL0로), x0 = 4096",
+          "kind": "res"
+        },
+        {
+          "n": 22,
+          "from": "libc",
+          "to": "libc",
+          "label": "x0가 -4095~-1이 아니므로 그대로",
+          "kind": "self"
+        },
+        {
+          "n": 23,
+          "from": "libc",
+          "to": "app",
+          "label": "4096",
+          "kind": "res"
+        }
+      ]
+    },
+    {
+      "title": "예외: 잘못된 fd (EBADF)",
+      "steps": [
+        {
+          "n": 1,
+          "from": "app",
+          "to": "libc",
+          "label": "read(99, buf, 16)",
+          "kind": "req"
+        },
+        {
+          "n": 2,
+          "from": "libc",
+          "to": "entry",
+          "label": "x8 = 63, svc #0",
+          "kind": "req"
+        },
+        {
+          "n": 3,
+          "from": "entry",
+          "to": "entry",
+          "label": "invoke_syscall → __arm64_sys_read\n→ ksys_read",
+          "kind": "self"
+        },
+        {
+          "n": 4,
+          "from": "entry",
+          "to": "entry",
+          "label": "fdget_pos(99): 열린 파일 없음\nvfs_read는 호출되지 않음",
+          "kind": "self",
+          "tone": "danger"
+        },
+        {
+          "n": 5,
+          "from": "entry",
+          "to": "entry",
+          "label": "x0 = -9 (-EBADF)\nraw_syscalls sys_exit: NR 63 = -9",
+          "kind": "self",
+          "tone": "danger"
+        },
+        {
+          "n": 6,
+          "from": "entry",
+          "to": "libc",
+          "label": "eret, x0 = -9",
+          "kind": "res",
+          "tone": "danger"
+        },
+        {
+          "n": 7,
+          "from": "libc",
+          "to": "libc",
+          "label": "x0가 -4095~-1이므로\nerrno = 9, x0 = -1",
+          "kind": "self",
+          "tone": "danger"
+        },
+        {
+          "n": 8,
+          "from": "libc",
+          "to": "app",
+          "label": "-1 (errno 9, Bad file descriptor)",
+          "kind": "res",
+          "tone": "danger"
+        }
+      ]
+    }
+  ]
+}

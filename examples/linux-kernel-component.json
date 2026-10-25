@@ -1,0 +1,204 @@
+{
+  "system": "리눅스 커널 구조",
+  "source": "flowcast 합성 예제 (component). Linux 7.0.14 (Docker Desktop linuxkit, arm64) 기준. 연결은 upstream stable v7.0.14 소스(arch/arm64/kernel/syscall.c, kernel/fork.c, mm/mmap.c, fs/read_write.c, mm/filemap.c)와 같은 커널의 ftrace 기록으로 확인",
+  "view": "component",
+  "scenarios": [
+    {
+      "title": "사용자 프로세스가 커널 서브시스템을 거치는 길",
+      "zones": [
+        {
+          "id": "user",
+          "name": "< 사용자 공간 (EL0) >"
+        },
+        {
+          "id": "kernel",
+          "name": "< 커널 (EL1) >"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "app",
+          "name": "사용자 프로세스\n앱 코드",
+          "kind": "ext",
+          "zone": "user",
+          "x": 30,
+          "y": 30
+        },
+        {
+          "id": "libc",
+          "name": "glibc\n시스템 콜 래퍼",
+          "zone": "user",
+          "x": 30,
+          "y": 160
+        },
+        {
+          "id": "mmu",
+          "name": "MMU, TLB\n(하드웨어)",
+          "kind": "ext",
+          "x": 840,
+          "y": 30
+        },
+        {
+          "id": "entry",
+          "name": "시스템 콜 진입\nel0_svc, sys_call_table",
+          "zone": "kernel",
+          "x": 300,
+          "y": 160
+        },
+        {
+          "id": "proc",
+          "name": "프로세스 관리\nkernel_clone",
+          "zone": "kernel",
+          "x": 570,
+          "y": 160
+        },
+        {
+          "id": "mm",
+          "name": "메모리 관리\n페이지 테이블, 폴트 처리",
+          "zone": "kernel",
+          "x": 840,
+          "y": 160
+        },
+        {
+          "id": "vfs",
+          "name": "VFS\nread, epoll",
+          "zone": "kernel",
+          "x": 300,
+          "y": 290
+        },
+        {
+          "id": "sched",
+          "name": "스케줄러\nEEVDF",
+          "zone": "kernel",
+          "x": 570,
+          "y": 290
+        },
+        {
+          "id": "ext4",
+          "name": "파일 시스템\next4",
+          "zone": "kernel",
+          "x": 300,
+          "y": 420
+        },
+        {
+          "id": "pc",
+          "name": "페이지 캐시\nfolio",
+          "kind": "db",
+          "zone": "kernel",
+          "x": 570,
+          "y": 420
+        },
+        {
+          "id": "blk",
+          "name": "블록 계층\nblk-mq, virtio-blk",
+          "zone": "kernel",
+          "x": 840,
+          "y": 420
+        },
+        {
+          "id": "disk",
+          "name": "가상 디스크\nDocker VM",
+          "kind": "db",
+          "x": 1110,
+          "y": 420
+        }
+      ],
+      "edges": [
+        {
+          "from": "app",
+          "to": "libc",
+          "n": 1,
+          "label": "read(), fork()",
+          "lx": 114,
+          "ly": 128
+        },
+        {
+          "from": "libc",
+          "to": "entry",
+          "n": 2,
+          "label": "svc #0"
+        },
+        {
+          "from": "entry",
+          "to": "vfs",
+          "n": 3,
+          "label": "read, epoll_wait",
+          "lx": 384,
+          "ly": 258
+        },
+        {
+          "from": "entry",
+          "to": "proc",
+          "n": 4,
+          "label": "clone"
+        },
+        {
+          "from": "proc",
+          "to": "mm",
+          "n": 5,
+          "label": "주소 공간 복제"
+        },
+        {
+          "from": "proc",
+          "to": "sched",
+          "n": 6,
+          "label": "wake_up_new_task",
+          "lx": 654,
+          "ly": 258
+        },
+        {
+          "from": "app",
+          "to": "mmu",
+          "n": 7,
+          "label": "가상 주소로 접근"
+        },
+        {
+          "from": "mmu",
+          "to": "mm",
+          "n": 8,
+          "label": "테이블 걷기, page fault",
+          "bidir": true,
+          "lx": 758,
+          "ly": 110
+        },
+        {
+          "from": "vfs",
+          "to": "ext4",
+          "n": 9,
+          "label": "read_iter",
+          "lx": 384,
+          "ly": 388
+        },
+        {
+          "from": "ext4",
+          "to": "pc",
+          "n": 10,
+          "label": "filemap_read"
+        },
+        {
+          "from": "pc",
+          "to": "blk",
+          "n": 11,
+          "label": "캐시 미스",
+          "protocol": "submit_bio"
+        },
+        {
+          "from": "blk",
+          "to": "disk",
+          "n": 12,
+          "label": "요청, 인터럽트",
+          "bidir": true
+        },
+        {
+          "from": "pc",
+          "to": "sched",
+          "n": 13,
+          "label": "folio 대기, 깨우기",
+          "bidir": true,
+          "lx": 654,
+          "ly": 388
+        }
+      ]
+    }
+  ]
+}

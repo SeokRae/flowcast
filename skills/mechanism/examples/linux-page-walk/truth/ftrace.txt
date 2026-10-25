@@ -1,0 +1,93 @@
+# tracer: function
+#
+# entries-in-buffer/entries-written: 19/19   #P:11
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+  pagewalk-probe-76867   [000] ...1. 159882.695684: tracing_mark_write: access 1 read p0
+  pagewalk-probe-76867   [000] ..... 159882.695736: handle_mm_fault <-do_page_fault
+  pagewalk-probe-76867   [000] ..... 159882.695736: <stack trace>
+ => ftrace_caller
+ => handle_mm_fault
+ => do_page_fault
+ => do_translation_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ..... 159882.695737: __pte_alloc <-__handle_mm_fault
+  pagewalk-probe-76867   [000] ..... 159882.695737: <stack trace>
+ => ftrace_caller
+ => __pte_alloc
+ => __handle_mm_fault
+ => handle_mm_fault
+ => do_page_fault
+ => do_translation_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ...1. 159882.695836: tracing_mark_write: access 2 write p0
+  pagewalk-probe-76867   [000] ..... 159882.695847: handle_mm_fault <-do_page_fault
+  pagewalk-probe-76867   [000] ..... 159882.695847: <stack trace>
+ => ftrace_caller
+ => handle_mm_fault
+ => do_page_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ...2. 159882.695847: do_wp_page <-__handle_mm_fault
+  pagewalk-probe-76867   [000] ...2. 159882.695847: <stack trace>
+ => ftrace_caller
+ => do_wp_page
+ => __handle_mm_fault
+ => handle_mm_fault
+ => do_page_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ..... 159882.695850: vma_alloc_zeroed_movable_folio <-do_wp_page
+  pagewalk-probe-76867   [000] ..... 159882.695850: <stack trace>
+ => ftrace_caller
+ => vma_alloc_zeroed_movable_folio
+ => do_wp_page
+ => __handle_mm_fault
+ => handle_mm_fault
+ => do_page_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ...1. 159882.695899: tracing_mark_write: access 3 write p1
+  pagewalk-probe-76867   [000] ..... 159882.695911: handle_mm_fault <-do_page_fault
+  pagewalk-probe-76867   [000] ..... 159882.695912: <stack trace>
+ => ftrace_caller
+ => handle_mm_fault
+ => do_page_fault
+ => do_translation_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ..... 159882.695912: vma_alloc_zeroed_movable_folio <-__handle_mm_fault
+  pagewalk-probe-76867   [000] ..... 159882.695912: <stack trace>
+ => ftrace_caller
+ => vma_alloc_zeroed_movable_folio
+ => __handle_mm_fault
+ => handle_mm_fault
+ => do_page_fault
+ => do_translation_fault
+ => do_mem_abort
+ => el0_da
+ => el0t_64_sync_handler
+ => el0t_64_sync
+  pagewalk-probe-76867   [000] ...1. 159882.695949: tracing_mark_write: access 4 read p1
+  pagewalk-probe-76867   [000] ...1. 159882.695983: tracing_mark_write: done

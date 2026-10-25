@@ -1,0 +1,19 @@
+SYS_openat 56
+SYS_close 57
+SYS_read 63
+SYS_write 64
+SYS_exit_group 94
+SYS_clock_gettime 113
+SYS_getpid 172
+SYS_mseal 462
+SYS_rseq_slice_yield (not in these headers)
+raw svc x8=172 -> x0=31
+raw svc x8=63 x0=99 x2=8 -> x0=-9 EBADF
+raw svc x8=244 -> x0=-38 ENOSYS
+raw svc x8=472 -> x0=-38 ENOSYS
+raw svc x8=471 -> x0=-38 ENOSYS
+glibc getpid() = 31 (same as raw: yes)
+glibc read(99, buf, 8) = -1 errno 9 EBADF
+glibc syscall(244) = -1 errno 38 ENOSYS
+glibc open = 3, read = 6, close = 0
+glibc clock_gettime = 0, raw svc x8=113 -> x0=0

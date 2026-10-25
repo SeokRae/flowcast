@@ -1,0 +1,2040 @@
+run main 1
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=3 trace=off
+region start=0xffff810d5000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x8526e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=132
+event fork child=76695 cpu=3
+state fork
+page parent 0 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=3
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=3
+state parent-write-0
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=143 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=3
+state parent-write-1
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x75e3a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=3
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x75e3a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=3
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x75e3a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x8526e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+done child_status=0
+run split 1
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=5 trace=off
+region start=0xffff9cf53000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xaab21 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=133
+event fork child=76697 cpu=5
+state fork
+page parent 0 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=5
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=5
+state parent-write-0
+page parent 0 present=1 pfn=0x9d0ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xaab21 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=143 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=5
+state parent-write-1
+page parent 0 present=1 pfn=0x9d0ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xaab21 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=5
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x9d0ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x874d6 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=5
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x9d0ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x874d6 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+done child_status=0
+run main 2
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=3 trace=off
+region start=0xffffa9c0f000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x792f1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=135
+event fork child=76699 cpu=3
+state fork
+page parent 0 present=1 pfn=0x9174e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x9174e exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=144 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=3
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=145 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=3
+state parent-write-0
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=146 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=3
+state parent-write-1
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xa15fb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=147 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=3
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xa15fb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=147 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=3
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x9174e exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xa15fb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x792f1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=147 child=42
+done child_status=0
+run split 2
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=5 trace=off
+region start=0xffff8f909000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xafcdb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=131
+event fork child=76701 cpu=5
+state fork
+page parent 0 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=140 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=5
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=5
+state parent-write-0
+page parent 0 present=1 pfn=0x83b81 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xafcdb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=142 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=5
+state parent-write-1
+page parent 0 present=1 pfn=0x83b81 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x91cd0 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xafcdb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=143 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=5
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x83b81 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x91cd0 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x84e3b exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=143 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=5
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x83b81 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x91cd0 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x84e3b exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=143 child=42
+done child_status=0
+run main 3
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=3 trace=off
+region start=0xffffa149e000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=133
+event fork child=76703 cpu=3
+state fork
+page parent 0 present=1 pfn=0x871a1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x871a1 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=3
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=143 child=40
+event parent write page=0 value=a2 minflt_delta=1 cpu=3
+state parent-write-0
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=144 child=40
+event parent write page=1 value=a3 minflt_delta=1 cpu=3
+state parent-write-1
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc5c20 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=40
+event child write page=1 value=c4 minflt_delta=1 cpu=3
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc5c20 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=41
+event child write page=0 value=c5 minflt_delta=0 cpu=3
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x871a1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc5c20 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=41
+done child_status=0
+run split 3
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=5 trace=off
+region start=0xffff83790000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf4148 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=133
+event fork child=76705 cpu=5
+state fork
+page parent 0 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x76cfb exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=5
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x76cfb exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc3b69 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=143 child=40
+event parent write page=0 value=a2 minflt_delta=1 cpu=5
+state parent-write-0
+page parent 0 present=1 pfn=0xcb7e1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc3b69 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xf4148 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=144 child=40
+event parent write page=1 value=a3 minflt_delta=1 cpu=5
+state parent-write-1
+page parent 0 present=1 pfn=0xcb7e1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc3b69 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xf4148 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=40
+event child write page=1 value=c4 minflt_delta=1 cpu=5
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0xcb7e1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc3b69 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xcc587 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=41
+event child write page=0 value=c5 minflt_delta=0 cpu=5
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0xcb7e1 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc6b44 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc3b69 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xcc587 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=41
+done child_status=0
+run main 4
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=3 trace=off
+region start=0xffffabfad000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=133
+event fork child=76707 cpu=3
+state fork
+page parent 0 present=1 pfn=0xcfcae exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xcfcae exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=3
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=143 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=3
+state parent-write-0
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=144 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=3
+state parent-write-1
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc24ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=3
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc24ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=3
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0xcfcae exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xc24ff exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x884fd exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=145 child=42
+done child_status=0
+run split 4
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=5 trace=off
+region start=0xffff83459000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=132
+event fork child=76709 cpu=5
+state fork
+page parent 0 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x97fc5 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=5
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x97fc5 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=5
+state parent-write-0
+page parent 0 present=1 pfn=0xb144a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=143 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=5
+state parent-write-1
+page parent 0 present=1 pfn=0xb144a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf32b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x7694d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=5
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0xb144a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf32b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xf3383 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=5
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0xb144a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf32b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x792b8 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xf3383 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+done child_status=0
+run main 5
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=3 trace=off
+region start=0xffffb9e15000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=132
+event fork child=76711 cpu=3
+state fork
+page parent 0 present=1 pfn=0x9942a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0x9942a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=3
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=3
+state parent-write-0
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=143 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=3
+state parent-write-1
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x97010 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=3
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x97010 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=3
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0x9942a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0x97010 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+page child 0 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0xf399a exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 2 present=1 pfn=0x89a6d exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=1 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+done child_status=0
+run split 5
+probe npages=3 page_size=4096 fault_cpu=3 run_cpu=5 trace=off
+region start=0xffff9d4ac000 bytes=12288 madvise=MADV_NOHUGEPAGE
+event parent first touch pages=3 minflt_delta=3 cpu=3
+state entry
+page parent 0 present=1 pfn=0x85379 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 12 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 0 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 12 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=132
+event fork child=76713 cpu=5
+state fork
+page parent 0 present=1 pfn=0x85379 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0x85379 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 6 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 12 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 0 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 6 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 12 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 0 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=141 child=0
+event child write page=0 value=c1 minflt_delta=1 cpu=5
+bytes child c1 11 12
+state child-write-0
+page parent 0 present=1 pfn=0x85379 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc8891 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent 10 11 12
+minflt parent=142 child=41
+event parent write page=0 value=a2 minflt_delta=1 cpu=5
+state parent-write-0
+page parent 0 present=1 pfn=0xf8b51 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc8891 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x87734 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 8 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 8 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 4 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 8 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 8 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 4 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 11 12
+minflt parent=143 child=41
+event parent write page=1 value=a3 minflt_delta=1 cpu=5
+state parent-write-1
+page parent 0 present=1 pfn=0xf8b51 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6ac6 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc8891 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0x87734 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=41
+event child write page=1 value=c4 minflt_delta=1 cpu=5
+bytes child c1 c4 12
+state child-write-1
+page parent 0 present=1 pfn=0xf8b51 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6ac6 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc8891 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xcf526 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+event child write page=0 value=c5 minflt_delta=0 cpu=5
+bytes child c5 c4 12
+state child-write-0-again
+page parent 0 present=1 pfn=0xf8b51 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 1 present=1 pfn=0xf6ac6 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page parent 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+page child 0 present=1 pfn=0xc8891 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=1 thp=0 ksm=0
+page child 1 present=1 pfn=0xcf526 exclusive=1 soft_dirty=0 kpagecount=1 anon=1 lru=0 thp=0 ksm=0
+page child 2 present=1 pfn=0xc4541 exclusive=0 soft_dirty=0 kpagecount=2 anon=1 lru=0 thp=0 ksm=0
+smaps parent Rss 12 kB
+smaps parent Pss 10 kB
+smaps parent Shared_Clean 0 kB
+smaps parent Shared_Dirty 4 kB
+smaps parent Private_Clean 0 kB
+smaps parent Private_Dirty 8 kB
+smaps parent Anonymous 12 kB
+smaps parent AnonHugePages 0 kB
+smaps parent THPeligible 0
+smaps parent VmFlags rd wr mr mw me ac nh 
+smaps child Rss 12 kB
+smaps child Pss 10 kB
+smaps child Shared_Clean 0 kB
+smaps child Shared_Dirty 4 kB
+smaps child Private_Clean 0 kB
+smaps child Private_Dirty 8 kB
+smaps child Anonymous 12 kB
+smaps child AnonHugePages 0 kB
+smaps child THPeligible 0
+smaps child VmFlags rd wr mr mw me ac nh 
+bytes parent a2 a3 12
+minflt parent=144 child=42
+done child_status=0
