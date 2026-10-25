@@ -1,0 +1,251 @@
+<!doctype html>
+<!-- jvm_startup_loop.py가 만든 파일이다. 손으로 고치지 않는다. 생성기는 flowcast 저장소 밖(작성자의 노트 저장소)에 있으니, 박자 표나 배치를 고칠 때는 생성기에서 다시 만들어 통째로 바꾼다. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JVM 구동 애니메이션</title>
+<script>try{var t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute('data-theme')}catch(e){}t=t||localStorage.getItem('flowcast-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<style>
+:root{--bg:#f8f9fa;--card:#ffffff;--ink:#1e1e1e;--muted:#6c757d;--line:#dee2e6;--edge:#bfc5cb;--zone:#fbfbfc;--zone-l:#ced4da;
+--accent:#1971c2;--call:#e8590c;--ret:#e8590c;--branch:#1971c2;--off-s:#ced4da;--off-f:#f1f3f5;--off-t:#adb5bd;
+--comp-s:#0c8599;--comp-f:#c3fae8;--ext-s:#e8590c;--ext-f:#ffe8cc;--db-s:#f08c00;--db-f:#fff3bf;--hot:#e8590c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181b;--card:#1f2226;--ink:#e9ecef;--muted:#9aa1a9;
+--line:#343a40;--edge:#4f565d;--zone:#1b1e21;--zone-l:#3b4046;--off-s:#3b4046;--off-f:#22262a;--off-t:#5c636a;--comp-s:#3bc9db;--comp-f:#0b3d40;
+--ext-s:#ff922b;--ext-f:#4a2a10;--db-s:#fcc419;--db-f:#3d3110;--accent:#4dabf7;--branch:#4dabf7}}
+:root[data-theme="dark"]{--bg:#16181b;--card:#1f2226;--ink:#e9ecef;--muted:#9aa1a9;--line:#343a40;--edge:#4f565d;--zone:#1b1e21;--zone-l:#3b4046;
+--off-s:#3b4046;--off-f:#22262a;--off-t:#5c636a;--comp-s:#3bc9db;--comp-f:#0b3d40;--ext-s:#ff922b;--ext-f:#4a2a10;
+--db-s:#fcc419;--db-f:#3d3110;--accent:#4dabf7;--branch:#4dabf7}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+main{max-width:1500px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:20px;margin:0 0 2px}.lead{color:var(--muted);margin:0 0 14px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+#wrap{position:relative;width:100%;overflow:hidden}
+#stage{position:absolute;left:0;top:0;transform-origin:0 0}
+#svg{display:block}
+.zone{fill:var(--zone);stroke:var(--zone-l);stroke-dasharray:5 4}.zone-t{fill:var(--accent);font-size:12px}
+.edge{fill:none;stroke:var(--edge);stroke-width:1.2}.mk-base{fill:var(--edge)}
+.mk-call{fill:var(--call)}.mk-ret{fill:var(--ret)}.mk-branch{fill:var(--branch)}
+.node .body{fill:var(--off-f);stroke:var(--off-s);stroke-width:1.2;transition:fill .35s,stroke .35s}
+.node .rim{fill:none;stroke:var(--off-s);stroke-width:1.2;transition:stroke .35s}
+.node text{fill:var(--off-t);font-size:12px;transition:fill .35s}.node text.sub{font-size:11px}
+.node.stage.k-comp .body{fill:var(--comp-f);stroke:var(--comp-s)}.node.stage.k-ext .body{fill:var(--ext-f);stroke:var(--ext-s)}
+.node.stage.k-db .body{fill:var(--db-f);stroke:var(--db-s)}.node.stage.k-db .rim{stroke:var(--db-s)}
+.node.stage text{fill:var(--ink)}
+.node.hot .body{stroke:var(--hot);stroke-width:3}.node.hot .rim{stroke:var(--hot);stroke-width:3}
+.shell{fill:var(--muted);font-size:12px}
+.live{fill:none;stroke-width:2.6}.live.call{stroke:var(--call)}.live.ret{stroke:var(--ret);stroke-dasharray:7 5}
+.live.branch{stroke:var(--branch)}
+#token{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;pointer-events:none;
+background:var(--call);color:#fff;font:600 12px/30px system-ui,sans-serif;text-align:center;
+box-shadow:0 0 0 5px color-mix(in srgb,var(--call) 28%,transparent)}
+#token.branch{background:var(--branch);box-shadow:0 0 0 5px color-mix(in srgb,var(--branch) 28%,transparent)}
+.panel{padding:16px}
+.stages{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
+.stages span{font-size:12px;text-align:center;padding:5px 0;border-radius:7px;background:var(--off-f);color:var(--muted)}
+.stages span.done{background:color-mix(in srgb,var(--call) 18%,var(--card));color:var(--ink)}
+.stages span.now{background:var(--call);color:#fff;font-weight:600}
+.stage-name{font-size:22px;font-weight:600;margin:0}
+.meta{color:var(--muted);font-size:12px;margin:2px 0 12px}
+.now-step{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding-top:12px}
+.badge{flex:none;min-width:34px;height:24px;padding:0 7px;border-radius:7px;background:var(--call);color:#fff;
+font-weight:600;font-size:13px;line-height:24px;text-align:center}.badge.branch{background:var(--branch)}
+.fn{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
+.desc{color:var(--muted);margin-top:3px;min-height:42px}
+.bar{height:5px;background:var(--off-f);border-radius:3px;margin:14px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--call);transition:width .3s}
+.count{font-size:12px;color:var(--muted)}
+.list{position:relative;margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--line);max-height:220px;overflow:auto}
+.list li{display:flex;gap:8px;padding:5px 2px;font-size:12px;color:var(--muted);border-bottom:1px dashed var(--line)}
+.list li b{flex:none;width:30px;color:var(--ink);font-weight:600}.list li.on{color:var(--ink);background:color-mix(in srgb,var(--call) 10%,transparent)}
+.controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.controls button,.controls select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);
+background:var(--card);color:var(--ink);cursor:pointer}
+.controls button:focus-visible,.controls select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--call);vertical-align:middle;margin-right:6px}
+.legend i.ret{border-top-style:dashed}.legend i.branch{border-color:var(--branch)}
+.legend i.dot{width:12px;height:12px;border:0;border-radius:50%;background:var(--call)}
+footer{color:var(--muted);font-size:12px;margin-top:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.node .body,.node .rim,.node text,.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>JVM 구동 애니메이션: java -cp app.jar com.example.Main</h1>
+<p class="lead">구성도는 고정하고, 번호가 붙은 점(main 스레드)이 호출을 따라 한 칸씩 움직입니다. 구간에 쓰이는 구성 요소는 색이 켜지고, 지금 일하는 곳은 주황 테두리로 표시돼요. JDK 21 HotSpot 기준.</p>
+<div class="layout">
+<section class="card">
+<div id="wrap"><div id="stage"><svg id="svg" viewBox="4.0 0.0 1198.0 880.0" width="1198.0" height="880.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JVM 구성 요소 위로 구동 흐름이 움직이는 그림"><defs><marker id="m-base" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-base"/></marker><marker id="m-call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-call"/></marker><marker id="m-ret" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-ret"/></marker><marker id="m-branch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-branch"/></marker></defs><rect class="zone" x="382.0" y="140.0" width="812.0" height="114.0" rx="10"/><text class="zone-t" x="1184.0" y="155.0" text-anchor="end">클래스 로더</text><rect class="zone" x="12.0" y="288.0" width="568.0" height="118.0" rx="10"/><text class="zone-t" x="570.0" y="303.0" text-anchor="end">런타임 데이터 영역 (스레드별)</text><rect class="zone" x="682.0" y="288.0" width="502.0" height="118.0" rx="10"/><text class="zone-t" x="1174.0" y="303.0" text-anchor="end">런타임 데이터 영역 (모든 스레드 공유)</text><rect class="zone" x="392.0" y="516.0" width="792.0" height="114.0" rx="10"/><text class="zone-t" x="1174.0" y="531.0" text-anchor="end">실행 엔진</text><rect class="zone" x="682.0" y="664.0" width="502.0" height="114.0" rx="10"/><text class="zone-t" x="1174.0" y="679.0" text-anchor="end">네이티브 연동</text><path class="edge" d="M562.0 731.0 L700.0 731.0" marker-end="url(#m-base)"/><path class="edge" d="M572.0 207.0 L690.0 207.0" marker-end="url(#m-base)"/><path class="edge" d="M862.0 207.0 L1004.0 207.0" marker-end="url(#m-base)"/><path class="edge" d="M776.0 178.0 L776.0 106.0" marker-end="url(#m-base)"/><path class="edge" d="M776.0 236.0 L776.0 326.0" marker-end="url(#m-base)"/><path class="edge" d="M776.0 554.0 L776.0 388.0" marker-end="url(#m-base)"/><path class="edge" d="M738.8 554.0 L525.8 388.0" marker-end="url(#m-base)"/><path class="edge" d="M714.4 554.0 L361.8 388.0" marker-end="url(#m-base)"/><path class="edge" d="M816.3 554.0 L1046.9 388.0" marker-end="url(#m-base)"/><path class="edge" d="M700.0 583.0 L562.0 583.0" marker-end="url(#m-base)"/><path class="edge" d="M410.0 583.0 L282.0 583.0" marker-end="url(#m-base)"/><path class="edge" d="M1090.0 554.0 L1090.0 388.0" marker-end="url(#m-base)"/><path class="edge" d="M776.0 612.0 L776.0 702.0" marker-end="url(#m-base)"/><path class="edge" d="M852.0 731.0 L1014.0 731.0" marker-end="url(#m-base)"/><path class="edge" d="M452.0 830.0 L452.0 760.0" marker-end="url(#m-base)"/><path class="edge" d="M520.0 760.0 L520.0 830.0" marker-end="url(#m-base)"/><g class="node k-db" id="n-src"><path class="body" d="M690.0 42.0 A86.0 12.0 0 0 1 862.0 42.0 V94.0 A86.0 12.0 0 0 1 690.0 94.0 Z"/><path class="rim" d="M690.0 42.0 A86.0 12.0 0 0 0 862.0 42.0"/><text class="nt" x="776.0" y="64.0" text-anchor="middle">클래스 소스 (JVM 밖)</text><text class="nt sub" x="776.0" y="78.0" text-anchor="middle">런타임 이미지 lib/modules</text><text class="nt sub" x="776.0" y="92.0" text-anchor="middle">클래스패스, 모듈패스</text></g><g class="node k-comp" id="n-syscl"><rect class="body" x="400.0" y="178.0" width="172" height="58" rx="9"/><text class="nt" x="486.0" y="204.0" text-anchor="middle">System(Application) CL</text><text class="nt sub" x="486.0" y="218.0" text-anchor="middle">애플리케이션 클래스</text></g><g class="node k-comp" id="n-platcl"><rect class="body" x="690.0" y="178.0" width="172" height="58" rx="9"/><text class="nt" x="776.0" y="204.0" text-anchor="middle">Platform CL</text><text class="nt sub" x="776.0" y="218.0" text-anchor="middle">Java SE 플랫폼 API</text></g><g class="node k-comp" id="n-bootcl"><rect class="body" x="1004.0" y="178.0" width="172" height="58" rx="9"/><text class="nt" x="1090.0" y="204.0" text-anchor="middle">Bootstrap CL</text><text class="nt sub" x="1090.0" y="218.0" text-anchor="middle">java.base 등 부트 모듈</text></g><g class="node k-db" id="n-nms"><path class="body" d="M30.0 338.0 A76.0 12.0 0 0 1 182.0 338.0 V376.0 A76.0 12.0 0 0 1 30.0 376.0 Z"/><path class="rim" d="M30.0 338.0 A76.0 12.0 0 0 0 182.0 338.0"/><text class="nt" x="106.0" y="360.0" text-anchor="middle">Native Method Stack</text><text class="nt sub" x="106.0" y="374.0" text-anchor="middle">네이티브 메서드 실행용</text></g><g class="node k-db" id="n-pc"><path class="body" d="M220.0 338.0 A76.0 12.0 0 0 1 372.0 338.0 V376.0 A76.0 12.0 0 0 1 220.0 376.0 Z"/><path class="rim" d="M220.0 338.0 A76.0 12.0 0 0 0 372.0 338.0"/><text class="nt" x="296.0" y="360.0" text-anchor="middle">PC Register</text><text class="nt sub" x="296.0" y="374.0" text-anchor="middle">실행 중인 명령 주소</text></g><g class="node k-db" id="n-stack"><path class="body" d="M410.0 338.0 A76.0 12.0 0 0 1 562.0 338.0 V376.0 A76.0 12.0 0 0 1 410.0 376.0 Z"/><path class="rim" d="M410.0 338.0 A76.0 12.0 0 0 0 562.0 338.0"/><text class="nt" x="486.0" y="360.0" text-anchor="middle">JVM Stack</text><text class="nt sub" x="486.0" y="374.0" text-anchor="middle">메서드 호출마다 프레임</text></g><g class="node k-db" id="n-method"><path class="body" d="M700.0 338.0 A76.0 12.0 0 0 1 852.0 338.0 V376.0 A76.0 12.0 0 0 1 700.0 376.0 Z"/><path class="rim" d="M700.0 338.0 A76.0 12.0 0 0 0 852.0 338.0"/><text class="nt" x="776.0" y="360.0" text-anchor="middle">Method Area</text><text class="nt sub" x="776.0" y="374.0" text-anchor="middle">HotSpot: Metaspace</text></g><g class="node k-db" id="n-heap"><path class="body" d="M1014.0 338.0 A76.0 12.0 0 0 1 1166.0 338.0 V376.0 A76.0 12.0 0 0 1 1014.0 376.0 Z"/><path class="rim" d="M1014.0 338.0 A76.0 12.0 0 0 0 1166.0 338.0"/><text class="nt" x="1090.0" y="360.0" text-anchor="middle">Heap</text><text class="nt sub" x="1090.0" y="374.0" text-anchor="middle">객체와 배열</text></g><g class="node k-db" id="n-codecache"><path class="body" d="M110.0 557.0 A86.0 12.0 0 0 1 282.0 557.0 V609.0 A86.0 12.0 0 0 1 110.0 609.0 Z"/><path class="rim" d="M110.0 557.0 A86.0 12.0 0 0 0 282.0 557.0"/><text class="nt" x="196.0" y="579.0" text-anchor="middle">코드 캐시</text><text class="nt sub" x="196.0" y="593.0" text-anchor="middle">non-method, profiled,</text><text class="nt sub" x="196.0" y="607.0" text-anchor="middle">non-profiled</text></g><g class="node k-comp" id="n-jit"><rect class="body" x="410.0" y="554.0" width="152" height="58" rx="9"/><text class="nt" x="486.0" y="580.0" text-anchor="middle">JIT (C1, C2)</text><text class="nt sub" x="486.0" y="594.0" text-anchor="middle">계층 컴파일</text></g><g class="node k-comp" id="n-interp"><rect class="body" x="700.0" y="554.0" width="152" height="58" rx="9"/><text class="nt" x="776.0" y="580.0" text-anchor="middle">Interpreter</text><text class="nt sub" x="776.0" y="594.0" text-anchor="middle">바이트코드 해석 실행</text></g><g class="node k-comp" id="n-gc"><rect class="body" x="1014.0" y="554.0" width="152" height="58" rx="9"/><text class="nt" x="1090.0" y="580.0" text-anchor="middle">GC</text><text class="nt sub" x="1090.0" y="594.0" text-anchor="middle">JDK 9부터 기본 G1</text></g><g class="node k-comp" id="n-launcher"><rect class="body" x="410.0" y="702.0" width="152" height="58" rx="9"/><text class="nt" x="486.0" y="728.0" text-anchor="middle">런처</text><text class="nt sub" x="486.0" y="742.0" text-anchor="middle">java 실행 파일, libjli</text></g><g class="node k-comp" id="n-jni"><rect class="body" x="700.0" y="702.0" width="152" height="58" rx="9"/><text class="nt" x="776.0" y="735.0" text-anchor="middle">JNI</text></g><g class="node k-ext" id="n-natlib"><rect class="body" x="1014.0" y="702.0" width="152" height="58" rx="9"/><text class="nt" x="1090.0" y="728.0" text-anchor="middle">네이티브 라이브러리</text><text class="nt sub" x="1090.0" y="742.0" text-anchor="middle">JVM 밖</text></g><text class="shell" x="452.0" y="848.0" text-anchor="middle">셸</text><text class="shell" x="520.0" y="848.0" text-anchor="middle">셸</text><g id="live"></g></svg><div id="token" aria-hidden="true">1</div></div></div>
+<div class="legend"><span><i class="dot"></i>main 스레드 위치와 시나리오 스텝</span><span><i></i>호출</span><span><i class="ret"></i>반환</span><span><i class="branch"></i>분기 B</span></div>
+</section>
+<aside class="card panel">
+<div class="stages" aria-hidden="true"><span>①</span><span>②</span><span>③</span><span>④</span><span>⑤</span><span>⑥</span><span>⑦</span></div>
+<p class="stage-name" id="stage-name"></p>
+<p class="meta" id="meta"></p>
+<div class="now-step"><span class="badge" id="badge"></span><div><div class="fn" id="call"></div><div class="desc" id="desc"></div></div></div>
+<div class="bar"><i id="bar"></i></div>
+<div class="count" id="count"></div>
+<div class="controls">
+<button id="play" type="button">일시정지</button>
+<button id="prev" type="button">이전</button>
+<button id="next" type="button">다음</button>
+<select id="speed" aria-label="속도"><option value="2300">느리게</option><option value="1500" selected>보통</option><option value="850">빠르게</option></select>
+<button id="restart" type="button">지금 재시작</button>
+</div>
+<ul class="list" id="list"></ul>
+</aside>
+</div>
+<footer>근거: OpenJDK jdk21u 태그 jdk-21.0.13-ga 소스(java.c, threads.cpp, System.java, ClassLoaders.java, BuiltinClassLoader.java, LauncherHelper.java, MainMethodFinder.java, jvm.cpp, jni.cpp). 분기 B와 예외 E: B2 이미 로딩됨, B4 JIT 계층 컴파일, B5 남은 non-daemon 스레드, E1 메인 클래스 없음, E2 main 시그니처 불일치, E3 &lt;clinit&gt; 실패, E4 main 미처리 예외, E5 System.exit(n). 키보드: Space 재생과 일시정지, 좌우 화살표 이전과 다음.</footer>
+<div class="sr" aria-live="polite" id="announce"></div>
+</main>
+<script>
+const STAGE_NAMES = [["① 런처 기동", "스텝 1~3 | 시퀀스 시트 1"], ["② main 스레드 분리", "스텝 4 | 시퀀스 시트 1"], ["③ VM 생성", "스텝 5~10 | 시퀀스 시트 1"], ["④ 메인 클래스 로딩과 링크", "스텝 11~22 | 시퀀스 시트 2"], ["⑤ 초기화", "스텝 23~26 | 시퀀스 시트 3"], ["⑥ main 실행", "스텝 27~30 | 시퀀스 시트 3"], ["⑦ 종료", "스텝 31~34 | 시퀀스 시트 3"]];
+const BEATS = [{"stage": 1, "n": "1", "call": "셸 → 런처", "desc": "java -cp app.jar com.example.Main 프로세스가 시작된다", "nodes": [], "lit": [], "hop": {"d": "M452.0 830.0 L452.0 760.0", "kind": "call", "pts": [[452.0, 830.0], [452.0, 830.0], [452.0, 760.0]]}, "at": "launcher", "pos": [452.0, 760.0]}, {"stage": 1, "n": "2", "call": "JLI_Launch → ParseArguments", "desc": "옵션을 파싱해 mode=LM_CLASS, what=com.example.Main을 정한다", "nodes": ["launcher"], "lit": [], "at": "launcher", "pos": [452.0, 760.0]}, {"stage": 1, "n": "3", "call": "LoadJavaVM(jvmpath)", "desc": "libjvm을 dlopen해 JNI_CreateJavaVM 심볼을 확보한다. VM은 아직 없다", "nodes": ["jni"], "lit": [{"d": "M562.0 731.0 L700.0 731.0", "kind": "call"}], "at": "launcher", "pos": [452.0, 760.0]}, {"stage": 2, "n": "4", "call": "ContinueInNewThread → CallJavaMainInNewThread", "desc": "새 네이티브 스레드에서 JavaMain이 돈다. 표시점이 이 스레드다. 원래 스레드는 pthread_join으로 기다린다", "nodes": ["launcher"], "lit": [], "at": "launcher", "pos": [452.0, 760.0]}, {"stage": 3, "n": "5", "call": "InitializeJVM → JNI_CreateJavaVM", "desc": "옵션을 넘겨 VM 생성을 요청한다", "nodes": [], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[452.0, 760.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 3, "n": "6", "call": "Threads::create_vm, init_globals", "desc": "main JavaThread를 이 스레드에 붙이고 힙과 GC, Metaspace, 코드 캐시, 인터프리터를 준비한다", "nodes": ["stack", "heap", "gc", "method", "codecache", "interp"], "lit": [], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 3, "n": "7", "call": "initialize_java_lang_classes", "desc": "부트스트랩 로더가 런타임 이미지에서 String, System, Thread 등 핵심 클래스를 적재한다. 끝에서 initPhase1로 시스템 프로퍼티와 표준 스트림을 준비한다", "nodes": ["bootcl", "src", "method"], "lit": [{"d": "M1024.5 178.0 L861.8 106.0", "kind": "call"}], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 3, "n": "8", "call": "CompileBroker::compilation_init_phase1", "desc": "C1, C2 컴파일러 스레드를 시작한다", "nodes": ["jit"], "lit": [], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 3, "n": "9", "call": "System.initPhase2, initPhase3", "desc": "자바 코드로 모듈 시스템을 올리고 시스템 클래스 로더를 확정한다. 세 로더 객체는 ClassLoaders static 초기화에서 생긴다", "nodes": ["platcl", "syscl", "interp"], "lit": [], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 3, "n": "10", "call": "JNI_CreateJavaVM 반환", "desc": "JavaVM*, JNIEnv*를 런처에 돌려준다", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[700.0, 731.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 4, "n": "11", "call": "LoadMainClass", "desc": "런처가 JNI로 자바 쪽 LauncherHelper를 호출한다", "nodes": [], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[562.0, 715.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 4, "n": "11", "call": "LauncherHelper.checkAndLoadMain", "desc": "자바 코드라 인터프리터가 실행한다", "nodes": [], "lit": [], "hop": {"d": "M792.0 702.0 L792.0 612.0", "kind": "call", "pts": [[700.0, 731.0], [792.0, 702.0], [792.0, 612.0]]}, "at": "interp", "pos": [792.0, 612.0]}, {"stage": 4, "n": "12", "call": "Class.forName(cn, false, scl)", "desc": "AppClassLoader.loadClass → loadClassOrNull. 로딩만 요청하고 초기화는 하지 않는다", "nodes": [], "lit": [], "hop": {"d": "M753.6 554.0 L508.4 236.0", "kind": "call", "pts": [[792.0, 612.0], [753.6, 554.0], [508.4, 236.0]]}, "at": "syscl", "pos": [508.4, 236.0]}, {"stage": 4, "n": "13", "call": "findLoadedClass", "desc": "이미 로딩됐는지 본다. 처음이라 없다 (있으면 B2로 바로 반환)", "nodes": ["syscl"], "lit": [], "at": "syscl", "pos": [508.4, 236.0]}, {"stage": 4, "n": "14", "call": "parent.loadClassOrNull", "desc": "System CL → Platform CL. 패키지가 이름 있는 모듈에 없어서 부모로 간다", "nodes": [], "lit": [], "hop": {"d": "M572.0 207.0 L690.0 207.0", "kind": "call", "pts": [[508.4, 236.0], [572.0, 207.0], [690.0, 207.0]]}, "at": "platcl", "pos": [690.0, 207.0]}, {"stage": 4, "n": "15", "call": "parent.loadClassOrNull", "desc": "Platform CL → Bootstrap CL. findBootstrapClassOrNull로 VM 내장 로더에 묻는다", "nodes": [], "lit": [], "hop": {"d": "M862.0 207.0 L1004.0 207.0", "kind": "call", "pts": [[690.0, 207.0], [862.0, 207.0], [1004.0, 207.0]]}, "at": "bootcl", "pos": [1004.0, 207.0]}, {"stage": 4, "n": "16", "call": "못 찾음", "desc": "부트 모듈에 com.example.Main이 없다", "nodes": [], "lit": [], "hop": {"d": "M1004.0 191.0 L862.0 191.0", "kind": "ret", "pts": [[1004.0, 207.0], [1004.0, 191.0], [862.0, 191.0]]}, "at": "platcl", "pos": [862.0, 191.0]}, {"stage": 4, "n": "17", "call": "못 찾음", "desc": "플랫폼 모듈에도 없다", "nodes": [], "lit": [], "hop": {"d": "M690.0 191.0 L572.0 191.0", "kind": "ret", "pts": [[862.0, 191.0], [690.0, 191.0], [572.0, 191.0]]}, "at": "syscl", "pos": [572.0, 191.0]}, {"stage": 4, "n": "18", "call": "findClassOnClassPathOrNull", "desc": "app.jar에서 com/example/Main.class 바이트를 읽는다. 없으면 E1로 끝난다", "nodes": ["src"], "lit": [{"d": "M546.5 178.0 L696.7 106.0", "kind": "call"}], "at": "syscl", "pos": [572.0, 191.0]}, {"stage": 4, "n": "19", "call": "defineClass", "desc": "VM이 Method Area에 클래스를 만든다", "nodes": ["method"], "lit": [{"d": "M542.1 236.0 L716.1 326.0", "kind": "call"}], "at": "syscl", "pos": [572.0, 191.0]}, {"stage": 4, "n": "20", "call": "Class<Main> 반환", "desc": "LauncherHelper가 클래스를 받는다", "nodes": [], "lit": [], "hop": {"d": "M495.7 245.8 L741.0 563.8", "kind": "ret", "pts": [[572.0, 191.0], [495.7, 245.8], [741.0, 563.8]]}, "at": "interp", "pos": [741.0, 563.8]}, {"stage": 4, "n": "21", "call": "validateMainClass → getMethod(\"main\")", "desc": "main 시그니처를 검사한다. 이 리플렉션이 VM에서 클래스를 링크한다(검증, 준비). 틀리면 E2로 끝난다", "nodes": ["interp", "method"], "lit": [{"d": "M776.0 554.0 L776.0 388.0", "kind": "call"}], "at": "interp", "pos": [741.0, 563.8]}, {"stage": 4, "n": "22", "call": "checkAndLoadMain 반환", "desc": "자바 코드에서 JNI로 돌아온다", "nodes": [], "lit": [], "hop": {"d": "M776.0 612.0 L776.0 702.0", "kind": "ret", "pts": [[741.0, 563.8], [776.0, 612.0], [776.0, 702.0]]}, "at": "jni", "pos": [776.0, 702.0]}, {"stage": 4, "n": "22", "call": "LoadMainClass 반환", "desc": "런처가 mainClass를 받는다", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[776.0, 702.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 5, "n": "23", "call": "getMainType → GetStaticMethodID(mainClass, \"main\")", "desc": "21에서 정해 둔 main 형태를 받고, main의 jmethodID를 요청한다", "nodes": [], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[562.0, 715.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 5, "n": "24", "call": "klass->initialize", "desc": "링크는 21에서 끝나 있어 초기화로 바로 간다 (jni.cpp:1092)", "nodes": ["method"], "lit": [{"d": "M776.0 702.0 L776.0 388.0", "kind": "call"}], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 5, "n": "25", "call": "초기화: <clinit> 실행", "desc": "static 블록과 static 필드 초기값을 인터프리터가 실행한다. 예외면 E3", "nodes": ["stack"], "lit": [{"d": "M738.8 554.0 L525.8 388.0", "kind": "call"}], "hop": {"d": "M792.0 702.0 L792.0 612.0", "kind": "call", "pts": [[700.0, 731.0], [792.0, 702.0], [792.0, 612.0]]}, "at": "interp", "pos": [792.0, 612.0]}, {"stage": 5, "n": "26", "call": "<clinit> 끝", "desc": "초기화가 끝나 VM으로 돌아온다", "nodes": [], "lit": [], "hop": {"d": "M776.0 612.0 L776.0 702.0", "kind": "ret", "pts": [[792.0, 612.0], [776.0, 612.0], [776.0, 702.0]]}, "at": "jni", "pos": [776.0, 702.0]}, {"stage": 5, "n": "26", "call": "GetStaticMethodID 반환", "desc": "jmethodID를 런처에 돌려준다", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[776.0, 702.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 6, "n": "27", "call": "CallStaticVoidMethod(mainClass, mainID, mainArgs)", "desc": "런처가 main을 호출한다", "nodes": [], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[562.0, 715.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 6, "n": "28", "call": "main(String[]) 실행", "desc": "인터프리터가 바이트코드를 실행하며 프레임, PC, 힙, Method Area를 쓴다. 새 클래스를 만나면 ④⑤가 반복된다", "nodes": ["method", "stack", "pc", "heap"], "lit": [{"d": "M776.0 554.0 L776.0 388.0", "kind": "call"}, {"d": "M738.8 554.0 L525.8 388.0", "kind": "call"}, {"d": "M714.4 554.0 L361.8 388.0", "kind": "call"}, {"d": "M816.3 554.0 L1046.9 388.0", "kind": "call"}], "hop": {"d": "M792.0 702.0 L792.0 612.0", "kind": "call", "pts": [[700.0, 731.0], [792.0, 702.0], [792.0, 612.0]]}, "at": "interp", "pos": [792.0, 612.0]}, {"stage": 6, "n": "B4", "call": "계층 컴파일", "desc": "자주 도는 메서드는 C1, C2로 컴파일해 코드 캐시에 싣는다", "nodes": ["jit", "codecache"], "lit": [{"d": "M700.0 583.0 L562.0 583.0", "kind": "branch"}, {"d": "M410.0 583.0 L282.0 583.0", "kind": "branch"}], "at": "interp", "pos": [792.0, 612.0]}, {"stage": 6, "n": "29", "call": "main 정상 반환", "desc": "System.exit(n)이면 여기로 돌아오지 않는다 (E5)", "nodes": [], "lit": [], "hop": {"d": "M776.0 612.0 L776.0 702.0", "kind": "ret", "pts": [[792.0, 612.0], [776.0, 612.0], [776.0, 702.0]]}, "at": "jni", "pos": [776.0, 702.0]}, {"stage": 6, "n": "30", "call": "CallStaticVoidMethod 반환", "desc": "예외가 없으니 ret = 0. 남았으면 1 (E4)", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[776.0, 702.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 7, "n": "31", "call": "LEAVE(): DetachCurrentThread", "desc": "main 스레드를 떼어낸다. 미처리 예외면 여기서 Exception in thread \"main\"을 출력한다", "nodes": ["stack"], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[562.0, 715.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 7, "n": "31", "call": "DetachCurrentThread 반환", "desc": "", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[700.0, 731.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 7, "n": "32", "call": "DestroyJavaVM", "desc": "VM 해체를 요청한다", "nodes": [], "lit": [], "hop": {"d": "M562.0 731.0 L700.0 731.0", "kind": "call", "pts": [[562.0, 715.0], [562.0, 731.0], [700.0, 731.0]]}, "at": "jni", "pos": [700.0, 731.0]}, {"stage": 7, "n": "33", "call": "Threads::destroy_vm", "desc": "non-daemon 스레드가 끝날 때까지 기다리고(B5), shutdown hook을 돌린 뒤 before_exit", "nodes": ["interp"], "lit": [], "at": "jni", "pos": [700.0, 731.0]}, {"stage": 7, "n": "34", "call": "DestroyJavaVM 반환", "desc": "JavaMain이 ret을 돌려준다", "nodes": [], "lit": [], "hop": {"d": "M700.0 715.0 L562.0 715.0", "kind": "ret", "pts": [[700.0, 731.0], [700.0, 715.0], [562.0, 715.0]]}, "at": "launcher", "pos": [562.0, 715.0]}, {"stage": 7, "n": "34", "call": "프로세스 종료", "desc": "종료 코드 = ret (지금은 0)", "nodes": [], "lit": [], "hop": {"d": "M520.0 760.0 L520.0 830.0", "kind": "call", "pts": [[562.0, 715.0], [520.0, 760.0], [520.0, 830.0]]}, "at": "out", "pos": [520.0, 830.0]}];
+const STAGE_NODES = [["jni", "launcher"], ["launcher"], ["bootcl", "codecache", "gc", "heap", "interp", "jit", "jni", "launcher", "method", "platcl", "src", "stack", "syscl"], ["bootcl", "interp", "jni", "launcher", "method", "platcl", "src", "syscl"], ["interp", "jni", "launcher", "method", "stack"], ["codecache", "heap", "interp", "jit", "jni", "launcher", "method", "pc", "stack"], ["interp", "jni", "launcher", "stack"]];
+const VIEW = [4.0, 0.0, 1198.0, 880.0];
+const PAUSE_MS = 1500;
+
+// STATE: 지금 몇 번째 박자인지와 끝났는지만 담는다
+function makeState() { return { beat: 0, done: false, moved: true }; }
+
+// STEP: 박자 1칸 = 호출이나 반환 1번, 또는 한 자리에서 일어나는 일 1번
+function doStep(s) {
+  if (s.beat >= BEATS.length - 1) { s.done = true; s.moved = false; return; }
+  s.beat += 1; s.moved = true;
+}
+
+// RENDER: 박자 데이터만 읽는다. JVM 구동이 무엇인지는 모른다
+const $ = (q) => document.querySelector(q);
+const live = $("#live"), token = $("#token"), list = $("#list");
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+let lastStage = 0, anim = null;
+// SVG 좌표(viewBox 원점 VIEW[0], VIEW[1])를 무대 px로 옮겨 표시점 중심을 그 점에 둔다
+function place(p) { return "translate(" + (p[0] - VIEW[0] - 15) + "px," + (p[1] - VIEW[1] - 15) + "px)"; }
+// 경로 꼭짓점마다 키프레임, offset은 누적 길이 비율이라 속도가 일정하다
+function moveToken(pts) {
+  if (anim) anim.cancel();
+  token.style.transform = place(pts[pts.length - 1]);
+  if (pts.length < 2 || reduced.matches) return;
+  const acc = [0];
+  for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = acc[acc.length - 1];
+  if (!total) return;
+  anim = token.animate(pts.map((p, i) => ({ transform: place(p), offset: acc[i] / total })),
+    { duration: Math.round(interval() * 0.62), easing: "cubic-bezier(.45,.05,.35,1)" });
+}
+// 목록 안에서만 스크롤한다. scrollIntoView는 페이지와 iframe 바깥 문서까지 같이 움직인다
+function keepInList(li) {
+  const top = li.offsetTop, bottom = top + li.offsetHeight;
+  if (top < list.scrollTop) list.scrollTop = top;
+  else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+}
+function render(s, animate) {
+  const b = BEATS[s.beat];
+  const stageSet = new Set(STAGE_NODES[b.stage - 1]);
+  const hot = new Set(b.nodes.concat([b.at]));
+  document.querySelectorAll(".node").forEach((g) => {
+    const id = g.id.slice(2);
+    g.classList.toggle("stage", stageSet.has(id));
+    g.classList.toggle("hot", hot.has(id));
+  });
+  live.textContent = "";
+  const paths = b.lit.slice();
+  if (b.hop) paths.push({ d: b.hop.d, kind: b.hop.kind });
+  for (const p of paths) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    el.setAttribute("d", p.d);
+    el.setAttribute("class", "live " + p.kind);
+    el.setAttribute("marker-end", "url(#m-" + p.kind + ")");
+    live.appendChild(el);
+  }
+  const branch = b.n.startsWith("B");
+  token.textContent = b.n;
+  token.classList.toggle("branch", branch);
+  moveToken(b.hop && animate && s.moved ? b.hop.pts : [b.pos]);
+  document.querySelectorAll(".stages span").forEach((el, i) => {
+    el.classList.toggle("now", i === b.stage - 1);
+    el.classList.toggle("done", i < b.stage - 1);
+  });
+  $("#stage-name").textContent = STAGE_NAMES[b.stage - 1][0];
+  $("#meta").textContent = STAGE_NAMES[b.stage - 1][1];
+  $("#badge").textContent = b.n;
+  $("#badge").classList.toggle("branch", branch);
+  $("#call").textContent = b.call;
+  $("#desc").textContent = b.desc;
+  $("#bar").style.width = ((s.beat + 1) / BEATS.length * 100) + "%";
+  $("#count").textContent = "박자 " + (s.beat + 1) + " / " + BEATS.length + " | 시나리오 스텝 " + b.n;
+  if (b.stage !== lastStage) {
+    list.textContent = "";
+    BEATS.forEach((x, i) => {
+      if (x.stage !== b.stage) return;
+      const li = document.createElement("li");
+      li.dataset.i = i;
+      li.innerHTML = "<b></b><span></span>";
+      li.firstChild.textContent = x.n;
+      li.lastChild.textContent = x.call;
+      list.appendChild(li);
+    });
+    $("#announce").textContent = STAGE_NAMES[b.stage - 1][0];
+    lastStage = b.stage;
+  }
+  list.querySelectorAll("li").forEach((li) => {
+    const on = Number(li.dataset.i) === s.beat;
+    li.classList.toggle("on", on);
+    if (on && !list.matches(":hover")) keepInList(li);
+  });
+  if (s.done) $("#count").textContent += " | 끝, 잠시 뒤 처음부터";
+}
+
+// LOOP: setTimeout 체인. 끝나면 PAUSE_MS 쉬었다가 처음부터
+let state = makeState(), timer = null, playing = true;
+const speed = $("#speed");
+function interval() { return Number(speed.value); }
+function schedule(ms) { clearTimeout(timer); timer = setTimeout(tick, ms); }
+function tick() {
+  if (!playing) return;
+  if (state.done) { state = makeState(); render(state, true); schedule(interval()); return; }
+  doStep(state);
+  render(state, true);
+  schedule(state.done ? PAUSE_MS : interval());
+}
+function setPlaying(p) {
+  playing = p;
+  $("#play").textContent = p ? "일시정지" : "재생";
+  if (p) schedule(interval()); else clearTimeout(timer);
+}
+$("#play").addEventListener("click", () => setPlaying(!playing));
+$("#next").addEventListener("click", () => { setPlaying(false); if (state.done) state = makeState(); else doStep(state); render(state, true); });
+// 이전은 박자를 되돌리기만 하고 이동은 그리지 않는다 (반대 방향 이동은 없는 호출이라)
+$("#prev").addEventListener("click", () => { setPlaying(false); state.done = false; state.beat = Math.max(0, state.beat - 1); render(state, false); });
+$("#restart").addEventListener("click", () => { state = makeState(); render(state, true); if (playing) schedule(interval()); });
+speed.addEventListener("change", () => { if (playing) schedule(interval()); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(timer); else if (playing) schedule(interval()); });
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("button, select")) return;
+  if (e.key === " ") { e.preventDefault(); setPlaying(!playing); }
+  if (e.key === "ArrowRight") $("#next").click();
+  if (e.key === "ArrowLeft") $("#prev").click();
+});
+
+// 무대 크기 맞추기: 무대는 SVG 원래 크기로 두고 통째로 축소해서, 표시점 좌표를 SVG 좌표 그대로 쓴다
+const wrap = $("#wrap"), stage = $("#stage");
+function fit() {
+  const k = wrap.clientWidth / VIEW[2];
+  stage.style.transform = "scale(" + k + ")";
+  wrap.style.height = (VIEW[3] * k) + "px";
+}
+stage.style.width = VIEW[2] + "px"; stage.style.height = VIEW[3] + "px";
+new ResizeObserver(fit).observe(wrap);
+fit();
+if (reduced.matches) setPlaying(false);
+render(state, true);
+if (playing) schedule(interval());
+window.jvmLoop = { step: () => $("#next").click(), reset: () => $("#restart").click(), beat: () => state.beat, total: BEATS.length };
+</script>
+</body>
+</html>

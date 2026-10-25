@@ -1349,3 +1349,30 @@ def test_docs_mechanism_example_matches_source(src):
         f"docs/examples/{src.name} (Pages 게시본) 이 {src.relative_to(MECH_EX.parent.parent.parent)} 과 다르다. "
         f"bash scripts/regen-examples.sh 후 함께 커밋"
     )
+
+
+# state-loop 예제는 render.py 파이프라인 밖에서 만든 완성 HTML 이다. 게시본은 그대로 복사한 것이어야 하고(#145),
+# 스킬 렌더 규칙대로 외부 스크립트나 URL 없이 혼자 열려야 한다.
+LOOP_EX = Path(__file__).parent.parent / "skills" / "state-loop" / "examples"
+LOOP_HTML = sorted(LOOP_EX.glob("*.html"))
+
+
+def test_state_loop_examples_present():
+    assert LOOP_HTML, "skills/state-loop/examples/*.html 이 없어 게시본 대조가 무력화된다"
+
+
+@pytest.mark.parametrize("src", LOOP_HTML, ids=[p.name for p in LOOP_HTML])
+def test_docs_state_loop_example_matches_source(src):
+    assert (DOCS_EX / src.name).read_text(encoding="utf-8") == src.read_text(encoding="utf-8"), (
+        f"docs/examples/{src.name} (Pages 게시본) 이 {src.relative_to(LOOP_EX.parent.parent.parent)} 과 다르다. "
+        f"bash scripts/regen-examples.sh 후 함께 커밋"
+    )
+
+
+@pytest.mark.parametrize("src", LOOP_HTML, ids=[p.name for p in LOOP_HTML])
+def test_state_loop_example_self_contained(src):
+    import re
+    text = src.read_text(encoding="utf-8")
+    urls = [u for u in re.findall(r"https?://[^\s\"')<>]+", text) if "www.w3.org" not in u]
+    assert not urls, f"{src.name} 에 외부 URL 이 있다: {urls[:3]}"
+    assert not re.search(r"<script[^>]+src=|<link[^>]+stylesheet", text), f"{src.name} 이 외부 스크립트나 스타일을 불러온다"

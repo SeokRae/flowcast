@@ -56,7 +56,7 @@ function doStep(state) {
 }
 
 // RENDER — state.done 여부와 값만 읽어서 그린다.
-// 도메인 로직을 전혀 몰라야 한다. CSS transition이 이동을 대신 그려준다.
+// 도메인 로직을 전혀 몰라야 한다. 이동은 CSS transition(경로를 따라가면 Web Animations)이 그린다.
 function render(state) { /* DOM/SVG 갱신 */ }
 
 // LOOP — setTimeout 체인. done이면 일시정지 후 재시작(restart),
@@ -73,8 +73,8 @@ function tick() {
 
 - **self-contained HTML 1개** — 외부 스크립트·폰트·CDN 없음. 인라인 `<style>`/`<script>`만 쓴다(다른 뷰들의 stdlib-only 원칙을 프론트엔드에도 그대로 적용).
 - **STEP은 정확히 최소 연산 1회만** 수행한다. 한 번 호출에 여러 스텝을 몰아서 하지 않는다.
-- 이동은 **CSS transition**, 틱 구동은 **setTimeout 체인**.
-- `@media (prefers-reduced-motion: reduce)`에서 transition을 끈다.
+- 이동은 **CSS transition**, 틱 구동은 **setTimeout 체인**. 꼭짓점 여러 개를 지나는 경로를 따라 움직여야 하면 `element.animate()`(Web Animations)로 꼭짓점마다 키프레임을 두고, 지속 시간은 틱 간격보다 짧게 잡아 다음 틱 전에 끝나게 한다. 이 경우에도 틱 구동은 setTimeout 체인이다.
+- `@media (prefers-reduced-motion: reduce)`에서 transition을 끈다. Web Animations는 `matchMedia`로 같은 조건을 읽어 애니메이션 없이 최종 위치로 바로 옮긴다.
 - **Play/Pause·속도·"지금 재시작" 컨트롤을 노출한다** — 무한 루프를 사용자가 통제할 수 있어야 한다.
 - 상태가 바뀔 때마다(예: 매 비교) `aria-live`를 쓰지 않는다 — 페이즈 전환처럼 드문 경계에만 쓴다.
 - **Claude 아티팩트로 게시해 확인할 경우**: 이 스킬을 만드는 과정에서 자동화 브라우저 세션 안 아티팩트 iframe에서 루프가 몇 틱 뒤 멈추는 현상이 관찰됐다(동일 코드를 평범한 페이지로 열면 계속 돈다 — 로컬 재현으로 확인함). 원인은 프리뷰 iframe 쪽으로 좁혀졌고 코드 쪽 버그는 아니었다. 아티팩트 프리뷰만 보고 "루프가 멈춘다"고 판단하지 말고, 실제 사용자 브라우저에서 한 번 더 확인한다.
@@ -94,3 +94,5 @@ function tick() {
 ## 예제
 
 `skills/state-loop/examples/bubble-sort.html` (합성) — 12개 값 배열을 버블 정렬로 무한 반복 정렬하는 프로토타입. STATE(정렬 배열+비교 인덱스+phase) · STEP(비교 1회, 필요하면 스왑) · RENDER(막대 위치·색상만 갱신, 정렬 로직은 모름) · LOOP(정렬 완료 시 일시정지 후 재섞기) 분리를 그대로 보여준다.
+
+`skills/state-loop/examples/jvm-startup-loop.html` (OpenJDK jdk21u `jdk-21.0.13-ga` 소스 기준): JVM 구성도를 고정한 무대 위로 main 스레드 표시점이 `java -cp app.jar com.example.Main`의 호출 34스텝(40박자)을 따라 움직인다. STATE는 지금 박자 번호와 done, 방금 움직였는지(moved)뿐이고, STEP은 박자 1칸(호출이나 반환 1번), RENDER는 박자 표의 켤 노드와 경로, 표시점 위치만 읽는다. 경유지가 있는 이동은 Web Animations 키프레임으로 그린다. 근거는 소스 파일 이름과 줄 번호, 함수 이름으로만 달았다(원문 없음). 생성기는 이 저장소 밖에 있어 파일 머리 주석에 적었다. 갤러리 JVM 8 카드로 게시된다.
