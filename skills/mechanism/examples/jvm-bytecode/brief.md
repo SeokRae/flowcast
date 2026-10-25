@@ -51,13 +51,29 @@
 
 움직이는 것: 테이프(한 STEP에 한 칸, 헤드 아래 칸 = `state.last.pc`, entry에서는 0번 칸 바로 앞), 픽업 암(서랍이나 호퍼에서 튜브로, iconst_2도 호퍼 디스크를 이 암이 옮긴다), 프레스, 옮겨지는 디스크, 스택 디스크(쌓이고 사라짐), 반환 디스크. 헤드, 서랍, 호퍼는 움직이지 않는다.
 
+## 부품 목록 (호버 설명)
+
+| 번호 | id | 이름 | 개념 | 감싸는 부품 |
+|---|---|---|---|---|
+| 01 | `tape` | 천공 테이프 | Code 배열 | 테이프, 테이프 베드와 눈금 띠, 가이드 2개, 테이프 받이 통 |
+| 02 | `head` | 리더 헤드 | pc | 리더 브리지(기둥 2개, 가로대, 헤드 블록, 포인터 날, 손나사) |
+| 03 | `locals` | 서랍 | 지역 변수 배열 | 서랍장 몸체, 서랍 2개와 디스크 |
+| 04 | `const` | 호퍼 | 명령에 든 상수 | 호퍼 다리와 받침, 통, 호퍼 디스크 |
+| 05 | `arm` | 픽업 암 | `iload_0`, `iload_1`, `iconst_2` | 캐리지, 호이스트 줄, 그리퍼 |
+| 06 | `stack` | 튜브 | 피연산자 스택 | 받침판, 기둥 4개, 위 테 4개, 스택 디스크 2칸 |
+| 07 | `press` | 프레스 | `iadd`, `imul` | 캐리지, 플런저 로드, 누름판, 누름판 받침대 |
+| 08 | `tray` | 슈트와 트레이 | `ireturn` | 반환 슈트와 레일 2개, 호출자 트레이 |
+
+설명 문장은 `build.mjs`의 `PARTS`에 있고, 바이트와 슬롯 수, 인자는 `model.mjs`에서 읽는다. 베이스, 갠트리 기둥과 빔, 옮겨지는 디스크는 어느 묶음에도 넣지 않았다.
+
 ## 리드아웃과 상호작용
 
 - 리드아웃: `readout(state)` 문자열 그대로. 7개 상태 순서대로 `pc 0 | entry | stack []`, `pc 0 | iload_0 | stack [3]`, `pc 1 | iload_1 | stack [3, 4]`, `pc 2 | iadd | stack [7]`, `pc 3 | iconst_2 | stack [7, 2]`, `pc 4 | imul | stack [14]`, `pc 5 | ireturn | returned 14`
 - 키보드: → 또는 Space = step 1회, Home = reset
-- 포인터: click = step 1회
+- 포인터: click = step 1회, hover = 부품 선택(그 묶음만 밝아지고 설명 줄이 바뀐다)
+- 부품 목록: 그림 아래 번호 버튼 8개. 호버, 포커스, 탭으로 고른다. 고르는 동안 idle tour를 멈추고, 풀면 6초 뒤 다시 돈다
 - idle tour: trace 전체를 한 칸씩(약 0.9초 간격) 돌고, 반환 뒤 1.4초 쉰 다음 reset
-- 검증 훅: `window.mechanism = { reset(), step(), readout() }`
+- 검증 훅: `window.mechanism = { reset(), step(), readout(), pick(id) }`
 - 첫 화면 상태: trace[2] (`pc 1 | iload_1 | stack [3, 4]`). 튜브가 `max_stack`까지 찬 모습이 정지 이미지에 남는다
 - 강조(lit): 방금 움직인 디스크 하나. entry에서는 다음 STEP(`iload_0`)이 옮길 0번 서랍 디스크
 
@@ -69,7 +85,7 @@ javac 21.0.1이 컴파일한 `calc(3, 4)`의 바이트코드 6개를 한 칸씩 
 
 1. `SKILL.md` ⑤를 따른다. 진실은 `model.mjs`로 확정됐다. 수치를 바꾸거나 모델 밖의 숫자를 그림에 쓰지 않는다. 매핑이 기계로 성립하지 않으면 그리기 전에 돌아온다.
 2. kit는 `join(HERE, "../../vendor/anatomy")`에서 동적 import한다(`MECHANISM_KIT` 환경 변수로 바꿀 수 있다). 모델은 `inlineModel()`로 감싸 페이지에 인라인한다.
-3. `window.mechanism` 검증 훅을 노출한다. `reset()`과 `step()`은 idle tour를 멈추고 `[data-readout]`을 동기로 갱신한다.
+3. `window.mechanism` 검증 훅을 노출한다. `reset()`과 `step()`은 idle tour를 멈추고 `[data-readout]`을 동기로 갱신한다. `pick(id)`는 부품 목록의 묶음 하나를 고르고 설명 줄 문자열을 돌려준다.
 4. 출력 HTML은 self-contained다. 앞부분에 `<!-- anatomy kit v1.1.0 (vendored in flowcast), MIT, Copyright (c) 2026 Ryan -->`를 넣는다.
 5. WebGL, 3D, React는 쓸 수 없다(이관하지 않았다).
 6. 산출물: `build.mjs`(필요하면 부품 모듈), `jvm-bytecode.html`, `jvm-bytecode-light.html`. `node build.mjs`와 `node build.mjs --light`로 다시 만들 수 있어야 한다.

@@ -30,6 +30,27 @@ const TRACE = M.trace();
 const LOCALS = M.makeState().locals; // 서랍 디스크 값
 const CONST_VALUE = TRACE.find((s) => s.moved && s.moved.from === "const").moved.value; // 호퍼 디스크 값
 const INIT_STEPS = 2; // 처음 보여줄 상태: 튜브가 max_stack까지 찬 순간 (trace[2])
+
+// ---- 부품 목록: 호버하거나 번호를 누르면 그 묶음만 밝아지고 설명이 나온다 (brief.md "부품 목록") ----
+const opsWhere = (test) => TRACE.filter((s) => s.moved && test(s.moved)).map((s) => s.last.op);
+const LOAD_OPS = opsWhere((m) => m.to === "stack" && m.from !== "stack");
+const MATH_OPS = opsWhere((m) => m.from === "stack" && m.to === "stack");
+const RETURN_OPS = opsWhere((m) => m.to === "caller");
+const CONST_OP = M.CODE.find((c) => c.op === TRACE.find((s) => s.moved && s.moved.from === "const").last.op);
+const hex = (b) => b.toString(16).padStart(2, "0");
+const PARTS = [
+  { id: "tape", name: "천공 테이프", concept: "Code 배열", text: `javac가 메서드 본문을 컴파일한 바이트 배열입니다. 칸 하나가 1바이트이고, 구멍 뚫린 자리가 1인 비트예요. 이 메서드는 ${M.CODE.length}바이트(${M.CODE.map((c) => hex(c.byte)).join(" ")})입니다.` },
+  { id: "head", name: "리더 헤드", concept: "pc", text: "지금 실행하는 명령이 Code 배열의 몇 번째 바이트인지 가리킵니다. 헤드는 제자리에 있고, 명령을 하나 실행할 때마다 테이프가 그 길이만큼 지나가요." },
+  { id: "locals", name: "서랍", concept: "지역 변수 배열", text: `호출하는 순간 인자가 0번 슬롯부터 채워집니다(a = ${LOCALS[0]}, b = ${LOCALS[1]}). 서랍 ${M.MAX_LOCALS}칸은 javac가 정한 max_locals이고, 값을 꺼내 가도 서랍의 디스크는 그대로 남아요.` },
+  { id: "const", name: "호퍼", concept: "명령에 든 상수", text: `${CONST_OP.op}는 값 ${CONST_VALUE}를 명령 1바이트(0x${hex(CONST_OP.byte)})에 담고 있습니다. 메모리 영역이 아니라 명령이 값을 직접 갖고 있다는 뜻이에요.` },
+  { id: "arm", name: "픽업 암", concept: LOAD_OPS.join(", "), text: "서랍이나 호퍼의 값을 복사해 스택 맨 위에 올립니다. 원본은 제자리에 두고 사본만 옮겨요." },
+  { id: "stack", name: "튜브", concept: "피연산자 스택", text: `계산은 모두 이 스택을 거칩니다. 마지막에 넣은 값이 먼저 나와요. 높이 ${M.MAX_STACK}장은 javac가 정한 max_stack이고, 클래스를 로드할 때 검증기가 넘지 않는지 확인합니다.` },
+  { id: "press", name: "프레스", concept: MATH_OPS.join(", "), text: "스택 위의 두 값을 꺼내 계산하고 결과 하나를 다시 올립니다. 결과는 32비트로 감겨서, 넘쳐도 예외 없이 값이 돌아가요." },
+  { id: "tray", name: "슈트와 트레이", concept: RETURN_OPS.join(", "), text: "스택 맨 위 값을 꺼내 호출한 쪽 프레임의 스택(트레이)으로 넘기고, 이 프레임을 버립니다." },
+].map((part, i) => ({ no: String(i + 1).padStart(2, "0"), ...part }));
+const NOTE_IDLE = "부품에 커서를 올리거나 번호를 누르면 그 부품이 무엇인지 보여 줍니다.";
+// 같은 data-sel을 단 노드가 한 묶음이다. 떨어져 그려지는 부품(튜브 뒤와 앞)은 같은 id로 여러 번 감싼다.
+const sel = (id, ...svg) => `<g data-sel="${id}">${svg.join("")}</g>`;
 if (TRACE[INIT_STEPS].stack.length !== M.MAX_STACK) throw new Error("initial pose should show a full stack");
 
 // ---- 월드 (단위 약 1px, x와 y가 바닥, z가 위) ----
@@ -226,30 +247,34 @@ const barPlan = {
 const barSvg = (name) => S(k.slabOf(barPlan[name], CAGE_TOP, BAR_H, P, 2), { tone: "mid" });
 
 function tubeBack() {
-  const out = [];
   const pad = box(-15, -15, 15, 15, 2);
-  out.push(`<path class="iso-halo" d="${k.haloOf(pad, 0, 4, P)}"/>`);
-  out.push(S(k.slabOf(pad, 0, TB, P, 3, 0.6), { tone: "mid" }));
-  out.push(D(k.corners(pad, 2.6).map(([x, y]) => at([x, y, TB])), { size: 0.45 }));
-  // 반환 슈트와 호출자 트레이 (튜브 앞, 낮다)
-  out.push(S(k.slabOf(CHUTE, 0, TB, P, 2, 0.4), { tone: "lo" }));
-  out.push(chuteRail(CHUTE.x));
-  out.push(`<path class="iso-halo" d="${k.haloOf(TRAY, 0, 2, P)}" style="opacity:.5"/>`);
-  out.push(S(k.slabOf(TRAY, 0, TRAY_TOP, P, 4, 0.6), { tone: "mid" }));
-  out.push(L(k.planOutline(k.insetPlan(TRAY, 2), TRAY_TOP, P, 4), { tone: "lo" }));
-  out.push(L(k.planOutline(k.insetPlan(TRAY, 3.4), TRAY_TOP, P, 4), { tone: "faint" }));
-  // 기둥: 뒤 둘, 왼쪽 앞 하나 (디스크보다 먼저), 위 테 뒤와 왼쪽
-  out.push(postSvg(-1, -1), postSvg(1, -1), postSvg(-1, 1));
-  out.push(barSvg("back"), barSvg("left"));
-  return out.join("");
+  return [
+    sel("stack",
+      `<path class="iso-halo" d="${k.haloOf(pad, 0, 4, P)}"/>`,
+      S(k.slabOf(pad, 0, TB, P, 3, 0.6), { tone: "mid" }),
+      D(k.corners(pad, 2.6).map(([x, y]) => at([x, y, TB])), { size: 0.45 })),
+    // 반환 슈트와 호출자 트레이 (튜브 앞, 낮다)
+    sel("tray",
+      S(k.slabOf(CHUTE, 0, TB, P, 2, 0.4), { tone: "lo" }),
+      chuteRail(CHUTE.x),
+      `<path class="iso-halo" d="${k.haloOf(TRAY, 0, 2, P)}" style="opacity:.5"/>`,
+      S(k.slabOf(TRAY, 0, TRAY_TOP, P, 4, 0.6), { tone: "mid" }),
+      L(k.planOutline(k.insetPlan(TRAY, 2), TRAY_TOP, P, 4), { tone: "lo" }),
+      L(k.planOutline(k.insetPlan(TRAY, 3.4), TRAY_TOP, P, 4), { tone: "faint" })),
+    // 기둥: 뒤 둘, 왼쪽 앞 하나 (디스크보다 먼저), 위 테 뒤와 왼쪽
+    sel("stack", postSvg(-1, -1), postSvg(1, -1), postSvg(-1, 1), barSvg("back"), barSvg("left")),
+  ].join("");
 }
 
 const chuteRail = (x) => S(k.slabOf(box(x, CHUTE.y, x + 1.4, CHUTE.y + CHUTE.d, 0.4), TB, 2.4, P, 2), { tone: "mid" });
 
 function tubeFront() {
-  const out = [postSvg(1, 1), chuteRail(CHUTE.x + CHUTE.w - 1.4), barSvg("right"), barSvg("front")];
-  out.push(D([[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sy]) => at([sx * POST, sy * POST, CAGE_TOP + BAR_H])), { size: 0.45, tone: "mid" }));
-  return out.join("");
+  return [
+    sel("stack", postSvg(1, 1)),
+    sel("tray", chuteRail(CHUTE.x + CHUTE.w - 1.4)),
+    sel("stack", barSvg("right"), barSvg("front"),
+      D([[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sy]) => at([sx * POST, sy * POST, CAGE_TOP + BAR_H])), { size: 0.45, tone: "mid" })),
+  ].join("");
 }
 
 // ---- 움직이는 부품 (정지 위치에서 한 번 만들고 transform으로 옮긴다) ----
@@ -403,9 +428,9 @@ function bridgeFront() {
 }
 
 // ---- 그림 조립 ----
-const SLOT_SVG = SLOT_Z.map((z, i) => groupAt([0, 0, z], disc(null, { part: `slot-${i}` }), ` data-slot="${i}"`));
+const SLOT_SVG = SLOT_Z.map((z, i) => groupAt([0, 0, z], disc(null, { part: `slot-${i}` }), ` data-slot="${i}" data-sel="stack"`));
 const MOVER = `<g data-part="mover" style="display:none" transform="">${disc(null, { part: "mover", lit: true })}</g>`;
-const ROD = `<g data-part="rod"></g>`;
+const ROD = `<g data-part="rod" data-sel="press"></g>`;
 
 const svg = k.figureSvg({
   width: WIDTH,
@@ -414,27 +439,25 @@ const svg = k.figureSvg({
   body: [
     base(),
     gantryPost(-152),
-    cabinet(),
-    hopper(),
+    sel("locals", cabinet()),
+    sel("const", hopper()),
     tubeBack(),
     ...SLOT_SVG,
-    `<path class="iso-line" data-part="cable" data-tone="mid" d=""/>`,
+    sel("arm", `<path class="iso-line" data-part="cable" data-tone="mid" d=""/>`),
     `<g data-layer="inner"></g>`,
     tubeFront(),
-    pressRest(),
-    `<g data-layer="high">${groupAt([PRESS_PARK, 0, PLATE_REST], pressPlate(), ` data-part="plate"`)}${ROD}${MOVER}${groupAt([ARM_PARK, 0, GRIP_TRAVEL], gripper(), ` data-part="grip"`)}</g>`,
+    sel("press", pressRest()),
+    `<g data-layer="high">${groupAt([PRESS_PARK, 0, PLATE_REST], pressPlate(), ` data-part="plate" data-sel="press"`)}${ROD}${MOVER}${groupAt([ARM_PARK, 0, GRIP_TRAVEL], gripper(), ` data-part="grip" data-sel="arm"`)}</g>`,
     gantryPost(58),
-    groupAt([ARM_PARK, 0, 0], carriage("arm"), ` data-part="arm"`),
-    groupAt([PRESS_PARK, 0, 0], carriage("press"), ` data-part="press"`),
+    groupAt([ARM_PARK, 0, 0], carriage("arm"), ` data-part="arm" data-sel="arm"`),
+    groupAt([PRESS_PARK, 0, 0], carriage("press"), ` data-part="press" data-sel="press"`),
     beam(),
-    bridgeBack(),
-    bed(),
+    sel("head", bridgeBack()),
+    sel("tape", bed()),
     tapeClip(),
-    `<g clip-path="url(#bc-tape-clip)"><g data-part="tape" transform="">${tape()}</g></g>`,
-    guide(GUIDE_IN[0] - 6),
-    guide(GUIDE_IN[1] - 2),
-    takeUp(),
-    bridgeFront(),
+    `<g clip-path="url(#bc-tape-clip)"><g data-part="tape" data-sel="tape" transform="">${tape()}</g></g>`,
+    sel("tape", guide(GUIDE_IN[0] - 6), guide(GUIDE_IN[1] - 2), takeUp()),
+    sel("head", bridgeFront()),
   ],
 });
 
@@ -464,6 +487,14 @@ const el = {
   sources: [...svg.querySelectorAll("[data-source]")],
 };
 const digit = (name) => q('[data-digit="' + name + '"]');
+const PARTS = ${JSON.stringify(PARTS)};
+const NOTE_IDLE = ${JSON.stringify(NOTE_IDLE)};
+const note = document.querySelector("[data-note]");
+const picks = [...document.querySelectorAll("[data-pick]")];
+const groups = [...svg.querySelectorAll("[data-sel]")];
+// 호버가 우선이고, 호버가 없으면 번호로 고른 것(pin)을 보여준다
+let hoverSel = null, pinSel = null, shownSel = null;
+const picked = () => hoverSel ?? pinSel;
 // 튜브 안을 지나는 부품은 뒤 테와 앞 테 사이(inner), 튜브 위에 있으면 앞 테 뒤(high)에 그린다
 const layer = { inner: q('[data-layer="inner"]'), high: q('[data-layer="high"]') };
 const LAYERED = [el.plate, el.rod, el.mover, el.grip];
@@ -641,8 +672,45 @@ function run() { if (!frame && visible) { last = 0; frame = requestAnimationFram
 function takeOver() {
   touring = false;
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { if (still.matches) return; touring = true; wait = C.TOUR_REST; run(); }, C.RESUME * 1000);
+  idleTimer = setTimeout(() => { if (still.matches || picked()) return; touring = true; wait = C.TOUR_REST; run(); }, C.RESUME * 1000);
 }
+// 고르는 동안 투어를 멈춘다: 커서 밑에서 부품이 움직이면 선택이 깜빡이고 lit이 둘이 된다
+function choose() {
+  const id = picked();
+  if (id === shownSel) return;
+  shownSel = id;
+  if (id) stage.dataset.focus = id;
+  else delete stage.dataset.focus;
+  groups.forEach((g) => g.toggleAttribute("data-picked", g.dataset.sel === id));
+  picks.forEach((b) => b.toggleAttribute("data-picked", b.dataset.pick === id));
+  const part = PARTS.find((p) => p.id === id);
+  if (part) {
+    const name = document.createElement("b");
+    name.textContent = part.no + " " + part.name + " | " + part.concept;
+    note.replaceChildren(name, " " + part.text);
+  } else note.textContent = NOTE_IDLE;
+  if (id) { touring = false; clearTimeout(idleTimer); }
+  else takeOver();
+}
+const mouse = (event) => event.pointerType !== "touch";
+svg.addEventListener("pointerover", (event) => {
+  if (!mouse(event)) return;
+  const g = event.target.closest("[data-sel]");
+  hoverSel = g ? g.dataset.sel : null;
+  choose();
+});
+stage.addEventListener("pointerleave", (event) => { if (mouse(event)) { hoverSel = null; choose(); } });
+picks.forEach((b) => {
+  b.addEventListener("pointerenter", (event) => { if (mouse(event)) { hoverSel = b.dataset.pick; choose(); } });
+  b.addEventListener("pointerleave", (event) => { if (mouse(event)) { hoverSel = null; choose(); } });
+  b.addEventListener("focus", () => { pinSel = b.dataset.pick; choose(); });
+  b.addEventListener("blur", () => { if (pinSel === b.dataset.pick) { pinSel = null; choose(); } });
+  b.addEventListener("click", () => { pinSel = b.dataset.pick; choose(); });
+});
+// 탭으로 고르면 포커스가 오지 않는 브라우저가 있다: 부품 목록과 그림 밖을 누르면 푼다
+document.addEventListener("click", (event) => {
+  if (pinSel && !event.target.closest(".bc-parts, .iso-stage")) { pinSel = null; choose(); }
+});
 // 손으로 STEP이나 reset을 하면 진행 중인 전이는 끝 자세로 맞추고 다음 전이를 시작한다
 function settleNow() { if (anim) { draw(rest(anim.to)); anim = null; } }
 function userStep() { takeOver(); settleNow(); advance(); status.textContent = say(); }
@@ -658,10 +726,41 @@ window.mechanism = {
   reset() { userReset(); return say(); },
   step() { userStep(); return say(); },
   readout() { return readoutEl.textContent; },
+  // 검증용: 묶음 하나를 번호로 고른 것처럼 (null이면 푼다). 설명 줄 문자열을 돌려준다
+  pick(id) { pinSel = id; hoverSel = null; choose(); return note.textContent; },
 };
 say();
 draw(rest(state));
 `;
+
+// 고른 묶음은 선 톤을 한 단계 올리고 면을 lit 채움으로, 나머지는 한 단계 내린다.
+// 투명도로 흐리게 하지 않는다: 앞 부품이 비치면 페인터 순서로 가린 뒤 선이 드러난다.
+const F = ".iso-stage[data-focus]";
+const FP = `${F} [data-picked]`;
+const SHADES = [0, 1, 2, 3];
+const FOCUS_CSS = [
+  `${F} .iso-line[data-tone="hi"],${F} .iso-line[data-tone="lit"]{stroke:var(--anatomy-mid)}`,
+  `${F} .iso-line[data-tone="mid"]{stroke:var(--anatomy-lo)}`,
+  `${F} .iso-line[data-tone="lo"]{stroke:var(--anatomy-faint)}`,
+  `${F} .iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-paper)}`,
+  `${F} .iso-solid[data-lit]>.iso-top{fill:var(--anatomy-top)}`,
+  `${F} .iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-top)}`,
+  ...SHADES.map((n) => `${F} .iso-solid[data-lit]>.iso-shade[data-shade="${n}"]{fill:var(--anatomy-shade-${n})}`),
+  ...SHADES.map((n) => `${F} .iso-solid[data-seamless][data-lit]>.iso-shade[data-shade="${n}"]{stroke:var(--anatomy-shade-${n})}`),
+  `${F} .iso-dots circle{opacity:.18}`,
+  `${F} .bc-digit{fill:var(--anatomy-mid)}`,
+  `${FP} .iso-line[data-tone="hi"],${FP} .iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}`,
+  `${FP} .iso-line[data-tone="mid"]{stroke:var(--anatomy-hi)}`,
+  `${FP} .iso-line[data-tone="lo"]{stroke:var(--anatomy-mid)}`,
+  `${FP} .iso-line[data-tone="faint"]{stroke:var(--anatomy-lo)}`,
+  `${FP} .iso-solid>.iso-fill{fill:var(--anatomy-face)}`,
+  `${FP} .iso-solid>.iso-top{fill:var(--anatomy-lit-top)}`,
+  `${FP} .iso-solid>.iso-shade[data-shade]{fill:var(--anatomy-lit-shade)}`,
+  `${FP} .iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-lit-top)}`,
+  `${FP} .iso-solid[data-seamless]>.iso-shade[data-shade]{stroke:var(--anatomy-lit-shade)}`,
+  `${FP} .iso-dots circle{opacity:.85}`,
+  `${FP} .bc-digit{fill:var(--anatomy-lit)}`,
+].join("\n");
 
 const css = `<style>
 .iso{--bc-hole:#030303;--bc-win:#0b0b0b}
@@ -676,7 +775,21 @@ const css = `<style>
 .iso-plate{overflow:hidden}
 @media (max-width:560px){.iso-plate .iso-svg{width:118%;margin:0 -9%}}
 .bc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.iso-halo{pointer-events:none}
+${FOCUS_CSS}
+.bc-parts{display:flex;flex-wrap:wrap;gap:6px}
+.bc-parts button{font:inherit;font-size:12.5px;line-height:1.4;color:var(--anatomy-text);background:transparent;border:1px solid var(--anatomy-faint);border-radius:999px;padding:3px 10px;cursor:pointer}
+.bc-parts button span{font-family:var(--anatomy-mono);font-size:11px;color:var(--anatomy-muted);margin-right:6px}
+.bc-parts button[data-picked]{color:var(--anatomy-strong);border-color:var(--anatomy-hi)}
+.bc-parts button[data-picked] span{color:var(--anatomy-strong)}
+.bc-parts button:focus-visible{outline:1px solid var(--anatomy-muted);outline-offset:2px}
+.bc-note{min-height:3.1em;color:var(--anatomy-text)}
+.bc-note b{color:var(--anatomy-strong);font-weight:600;margin-right:8px}
 </style>`;
+
+const PARTS_HTML =
+  `<span class="bc-parts" role="group" aria-label="부품 목록">${PARTS.map((p) => `<button type="button" data-pick="${p.id}"><span>${p.no}</span>${p.name}</button>`).join("")}</span>` +
+  `<span class="bc-note" data-note aria-live="polite">${NOTE_IDLE}</span>`;
 
 const body =
   css +
@@ -685,14 +798,10 @@ const body =
     title: "바이트코드 테이프 리더",
     hint: "클릭이나 → 한 칸, Home 처음",
     readout: M.readout(TRACE[INIT_STEPS]),
-    keys: [
-      { mark: "lit", label: "지금 움직이는 디스크: 옮겨지는 값, 프레스가 만든 값, 반환되는 값" },
-      { mark: "raised", label: `서랍 ${M.MAX_LOCALS}칸 = max_locals, 튜브 ${M.MAX_STACK}장 높이 = max_stack` },
-      { mark: "flat", label: `천공 테이프 ${M.CODE.length}칸: 칸마다 opcode 1바이트, 구멍 = 1` },
-    ],
+    keys: [{ mark: "lit", label: "지금 움직이는 디스크: 옮겨지는 값, 프레스가 만든 값, 반환되는 값" }],
     caption: CAPTION,
-    body: `<div class="iso-stage" tabindex="0" role="group" aria-label="바이트코드 테이프 리더. 클릭, 오른쪽 화살표, 스페이스로 opcode 하나를 실행하고 Home으로 처음 상태로 돌아갑니다.">${svg}<span class="bc-sr" role="status" aria-live="polite" data-status></span></div>`,
-  });
+    body: `<div class="iso-stage" tabindex="0" role="group" aria-label="바이트코드 테이프 리더. 클릭, 오른쪽 화살표, 스페이스로 opcode 하나를 실행하고 Home으로 처음 상태로 돌아갑니다. 아래 부품 목록에서 부품을 고르면 설명이 나옵니다.">${svg}<span class="bc-sr" role="status" aria-live="polite" data-status></span></div>`,
+  }).replace('<figcaption class="iso-legend">', `<figcaption class="iso-legend">${PARTS_HTML}`);
 
 const page = k
   .pageHtml({ title: "바이트코드 테이프 리더", theme, body, script: kitScript() + modelScript + live })

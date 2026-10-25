@@ -29,9 +29,9 @@ allowed-tools: Bash, Read, Write, Edit
 | ① 적합성 판정과 분해 | 이 스킬로 그릴 단위 1개 | 움직이는 부품마다 개념이 1:1로 대응 |
 | ② 질의 대본 | 대상 버전, 진실 출처, 기계 매핑, 생략 범위 | 1, 2, 8번 확정 |
 | ③ 진실 모델 | `model.mjs`, `check.mjs`, `truth/` | `node check.mjs` exit 0 |
-| ④ 브리프 | `brief.md` (부품표 포함) | 빈 칸 없음 |
+| ④ 브리프 | `brief.md` (부품표, 부품 목록 포함) | 빈 칸 없음 |
 | ⑤ 기계 설계와 빌드 | `build.mjs`, `{name}.html`, `{name}-light.html` | 두 테마 빌드 성공 |
-| ⑥ 검증 | 리드아웃 대조, 라인 검사, 캡션 검사, 정지 이미지 | 아래 표 전부 통과 |
+| ⑥ 검증 | 리드아웃 대조, 라인 검사, 부품 목록 검사, 캡션 검사, 정지 이미지 | 아래 표 전부 통과 |
 | ⑦ 파일링과 보고 | `{out_dir}/{name}/`, 상태 | |
 
 ## ⓪ 전제 확인
@@ -96,7 +96,7 @@ node {out_dir}/{name}/check.mjs    # exit 0 전에는 ④로 넘어가지 않는
 
 ## ④ 브리프 (`brief.md`)
 
-`references/brief-template.md`를 채운다. 대상과 버전, 출처, 매핑 문장과 대응표, **부품표**, 리드아웃 형식, 상호작용, 캡션 원문, 크기를 담는다. 브리프는 ⑤의 설계 입력이고, 그림이 끝난 뒤에는 "이 그림이 무엇을 근거로 무엇을 생략했는가"의 기록이 된다.
+`references/brief-template.md`를 채운다. 대상과 버전, 출처, 매핑 문장과 대응표, **부품표**, **부품 목록**(호버 설명의 묶음), 리드아웃 형식, 상호작용, 캡션 원문, 크기를 담는다. 브리프는 ⑤의 설계 입력이고, 그림이 끝난 뒤에는 "이 그림이 무엇을 근거로 무엇을 생략했는가"의 기록이 된다.
 
 부품표는 기하보다 먼저 쓴다. 품질 대부분이 여기서 정해진다. 부품 수는 부품표 항목으로 센다(발 하나가 솔리드 둘이어도 부품 하나다). Figure면 40개 이상을 다섯 묶음으로 나눈다: 베이스(판, 발, 홈, 모서리 나사, 라벨판, 눈금 띠), 구조(기둥, 레일, 프레임 바, 스토퍼), 메커니즘(캐리지, 부싱, 스프링, 플런저, 바늘), 조작부(널링 노브, 손나사), 그리고 강조 대상(subject, 유일하게 밝게 칠하는 부품). 모든 부품은 다른 부품 위에 놓인다.
 
@@ -113,9 +113,15 @@ anatomy 워크플로를 따르되, 이 스킬에서는 아래처럼 바뀐다.
 5. **기하는 한 번만** 만든다: `slabOf`, `cylinder`, `extrude`, `planOutline`, `topTicks`, `knurl`, `coil`, `radialTicks`. 회전체는 `kit/lathe.mjs`, 파이프와 케이블은 `kit/tube.mjs`. 움직이는 부품은 정지 위치에서 한 번 만들고 `translateAlong`으로 옮긴다. 모양이 바뀌는 부품만 프레임마다 다시 만든다.
 6. **페인터 순서**: 뒤에서 앞으로, 아래에서 위로. 다른 부품을 감싸는 부품(로드를 감은 스프링, 캐리지를 두른 프레임)은 뒤 절반과 앞 절반으로 나눈다. 케이지 안팎을 오가는 부품(튜브에 떨어지는 디스크, 내려오는 누름판)은 레이어를 둘 두고(뒤 테와 앞 테 사이, 앞 테 다음) 위치에 따라 프레임마다 노드를 옮긴다. `kit/lathe.mjs`나 `kit/tube.mjs`로 파이프, 케이블, 회전체를 그리면 눈으로 키를 맞추지 말고 `A.recorder`, `A.settle`, `A.auditOrExit`(`kit/audit.mjs`)로 증명한다.
 7. **카드**: 왼쪽 위 `Fig n`, 오른쪽 위 짧은 제목, 왼쪽 아래 조작 힌트, 오른쪽 아래 리드아웃(`[data-readout]`, 값은 `readout(state)` 그대로). 범례와 캡션은 카드 아래. 그림 안 글자는 각인 라벨 하나와 기계가 보여주는 표시창 글자뿐이다. 캡션은 브리프 `## 캡션` 절을 빌드할 때 읽어 넣는다. `plateHtml`이 escape하므로 백틱은 걷어 내고 평문으로 넣는다. 캡션의 숫자(버전, 입력값, 개수)는 `model.mjs` 상수와 같아야 한다.
-8. **라이브**: 시간 기반의 차분한 모션(지수 추종이나 실제 스프링). 손대지 않으면 idle tour가 돈다. 포인터와 키보드에 반응하고, 화면 밖에서는 멈추며, reduced motion에서는 정지한다. 프레임마다 다시 렌더하지 않고 ref의 속성만 고친다. 강조(lit) 부품은 상태마다 정확히 하나다. 방금 움직인 부품이 lit이고, 움직인 부품이 없는 상태(entry)에서는 다음 STEP에서 움직일 부품을 lit으로 둔다.
-9. **검증 훅**: `window.mechanism = { reset(), step(), readout() }`을 노출한다. `step()`은 모델 STEP 1회, `readout()`은 화면의 `[data-readout]`과 같은 문자열이다. `reset()`이나 `step()`을 부르면 idle tour를 멈추고 `[data-readout]`을 동기로 갱신한다(부품 이동은 이징해도 된다). `done` 상태의 `step()`은 모델대로 아무것도 바꾸지 않는다. 투어는 몇 초 동안 입력이 없으면 다시 돈다. 첫 화면에 보일 상태는 브리프에 적는다(정지 이미지가 이 상태로 찍힌다).
-10. **고지와 언어**: 페이지에 kit 소스가 인라인되므로 HTML 앞부분에 `<!-- anatomy kit v1.1.0 (vendored in flowcast), MIT, Copyright (c) 2026 Ryan -->`를 넣는다. `pageHtml`에는 훅이 없으니 아래 머리 예시처럼 결과 문자열을 후처리한다. 같은 방식으로 `lang`을 캡션 언어에 맞춘다(`pageHtml`은 `lang="en"` 고정). 출력은 self-contained다(외부 URL, CDN, 폰트 요청 없음).
+8. **부품 목록과 호버 설명**: 그림 안에는 글자가 없으므로 부품의 뜻은 카드 아래 부품 목록이 설명한다. 이게 없으면 처음 보는 사람은 어느 부품이 어떤 개념인지 알 수 없다. 브리프 `## 부품 목록`의 묶음마다 그 묶음을 이루는 노드를 `<g data-sel="{id}">`로 감싼다. 페인터 순서 때문에 떨어져 그려지는 부품(케이지의 뒤 절반과 앞 절반)은 같은 id로 여러 번 감싼다. 레이어를 오가는 노드는 감싸지 말고 노드 자신에 `data-sel`을 단다. `plateHtml` 결과의 `<figcaption class="iso-legend">` 바로 뒤에 번호 버튼(`data-pick`)과 설명 줄(`data-note`, `aria-live="polite"`)을 끼운다.
+   - 고르는 법: 그림 위 호버, 버튼 호버, 버튼 포커스나 탭. 호버가 우선이고, 호버가 없으면 버튼으로 고른 것을 보여준다. 터치의 `pointerover`(`pointerType === "touch"`)는 무시한다. 그림을 탭하면 step이기 때문이다. 탭해도 포커스가 오지 않는 브라우저가 있으니 버튼 `click`으로도 고르고, 목록과 그림 밖을 누르면 푼다.
+   - 고르는 동안 idle tour를 멈춘다. 커서 밑에서 부품이 움직이면 선택이 깜빡이고 lit이 둘이 된다. 풀면 투어 재개 타이머를 다시 걸고, 재개 직전에 아직 고른 것이 있으면 재개하지 않는다.
+   - 설명은 리드아웃에 쓰지 않는다. `$VENDOR/references/motion.md`의 Selection은 리드아웃에 쓰라고 하지만, 여기서 `[data-readout]`은 모델 출력과 대조하는 칸이다.
+   - 강조는 선 톤으로 한다. 고른 묶음은 한 단계 올리고(hi는 lit, mid는 hi, lo는 mid, 면은 lit 채움), 나머지는 lit 부품까지 한 단계 내린다. 투명도는 낮추지 않는다. 앞 부품이 비치면 페인터 순서로 가린 뒤 선이 드러난다. `.iso-halo`는 `pointer-events:none`으로 둔다(그림자가 호버를 가로챈다).
+   - 설명 문장의 숫자(바이트, 슬롯 수, 인자)는 `model.mjs`에서 읽는다. 구현 예: `examples/jvm-bytecode/build.mjs`의 `PARTS`, `sel()`, `choose()`, `FOCUS_CSS`.
+9. **라이브**: 시간 기반의 차분한 모션(지수 추종이나 실제 스프링). 손대지 않으면 idle tour가 돈다. 포인터와 키보드에 반응하고, 화면 밖에서는 멈추며, reduced motion에서는 정지한다. 프레임마다 다시 렌더하지 않고 ref의 속성만 고친다. 강조(lit) 부품은 상태마다 정확히 하나다. 방금 움직인 부품이 lit이고, 움직인 부품이 없는 상태(entry)에서는 다음 STEP에서 움직일 부품을 lit으로 둔다.
+10. **검증 훅**: `window.mechanism = { reset(), step(), readout(), pick(id) }`을 노출한다. `step()`은 모델 STEP 1회, `readout()`은 화면의 `[data-readout]`과 같은 문자열이다. `reset()`이나 `step()`을 부르면 idle tour를 멈추고 `[data-readout]`을 동기로 갱신한다(부품 이동은 이징해도 된다). `done` 상태의 `step()`은 모델대로 아무것도 바꾸지 않는다. 투어는 몇 초 동안 입력이 없으면 다시 돈다. 첫 화면에 보일 상태는 브리프에 적는다(정지 이미지가 이 상태로 찍힌다). `pick(id)`는 부품 목록에서 묶음 하나를 고른 것처럼 만들고 설명 줄 문자열을 돌려준다(`null`이면 푼다).
+11. **고지와 언어**: 페이지에 kit 소스가 인라인되므로 HTML 앞부분에 `<!-- anatomy kit v1.1.0 (vendored in flowcast), MIT, Copyright (c) 2026 Ryan -->`를 넣는다. `pageHtml`에는 훅이 없으니 아래 머리 예시처럼 결과 문자열을 후처리한다. 같은 방식으로 `lang`을 캡션 언어에 맞춘다(`pageHtml`은 `lang="en"` 고정). 출력은 self-contained다(외부 URL, CDN, 폰트 요청 없음).
 
 ```js
 // build.mjs 머리: kit는 vendor에서, 모델은 같은 폴더에서
@@ -161,9 +167,11 @@ node --input-type=module -e "import * as M from '$F/model.mjs'; console.log(M.re
 # 4. 라인 검사: 두 테마 모두 line ends: 0
 node "$VENDOR/scripts/lines.mjs" "$F/{name}.html" --out "$F/shots/lines.png"
 node "$VENDOR/scripts/lines.mjs" "$F/{name}-light.html" --out "$F/shots/lines-light.png" --reduced
-# 5. kit/lathe.mjs나 kit/tube.mjs를 써서 A.recorder를 걸었으면 기하 감사 (k.cylinder만 썼으면 해당 없음)
+# 5. 부품 목록: 아래 parts.json을 저장해 돌린다
+node "$VENDOR/scripts/drive.mjs" "$F/{name}.html" --actions "$F/shots/parts.json"
+# 6. kit/lathe.mjs나 kit/tube.mjs를 써서 A.recorder를 걸었으면 기하 감사 (k.cylinder만 썼으면 해당 없음)
 node "$F/build.mjs" --audit                                # audit passed
-# 6. 정지 이미지 (노트와 문서 임베드용)
+# 7. 정지 이미지 (노트와 문서 임베드용)
 node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}-still.png" --reduced
 ```
 
@@ -171,10 +179,23 @@ node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}
 |---|---|
 | 리드아웃 대조 | `eval` 결과의 두 문자열과 모델 출력이 모두 같다. 셸 인용이 깨지면 actions를 JSON 파일로 저장해 `--actions`로 넘긴다 |
 | 라인 검사 | 두 테마 모두 `line ends: 0`. 첫 화면 말고도 entry와 마지막 상태에서 한 번씩 (`drive.mjs`의 `["lines", "out.png"]` 액션) |
+| 부품 목록 | 묶음마다 `[id, true, true]`(고른 노드가 모두 그 묶음이고 설명 줄이 있다). 실제 호버 뒤 3초 동안 리드아웃이 그대로다(`true`, 투어가 멈췄다). 묶음마다 `pick` 후 두 테마로 찍어 고른 부품만 밝은지 본다 |
 | 캡션 | 브리프 캡션에서 백틱을 걷어 낸 문장이 두 HTML에 그대로 있다 (`grep -F`). ②-2의 대상 버전과 ②-6의 생략 범위가 그 안에 들어 있다 |
 | self-contained | `grep -Eo 'https?://[^"'"'"' )]+' "$F/{name}.html" \| grep -v 'www.w3.org'` 결과 0건 |
 | 고지 | HTML에 kit 버전과 MIT 고지 주석이 있다 |
 | 사람 눈 | 데스크톱, 폰 폭(390), 4배 확대 이미지를 Read로 열어 본다. 움직이는 부품마다 대응표의 개념을 짚을 수 있고, 빈 면이나 빈 모서리가 없어야 한다(`$VENDOR/references/verify.md`의 체크리스트) |
+
+`parts.json`의 `move` 대상은 지금 화면에 보이는 정지 부품의 묶음이어야 한다. 숨겨진 노드로 가면 커서가 엉뚱한 곳에 놓인다.
+
+```json
+[["wait", 600],
+ ["eval", "[...document.querySelectorAll('[data-pick]')].map((b) => { const id = b.dataset.pick; const note = mechanism.pick(id); const g = [...document.querySelectorAll('svg [data-picked]')]; return [id, g.length > 0 && g.every((n) => n.dataset.sel === id), note.length > 0]; })"],
+ ["eval", "mechanism.pick(null)"],
+ ["move", "[data-sel=\"{정지한 묶음 id}\"]", 0.5, 0.5],
+ ["eval", "window.__r = mechanism.readout(); document.querySelector('.iso-stage').dataset.focus"],
+ ["wait", 3000],
+ ["eval", "window.__r === mechanism.readout()"]]
+```
 
 임베드 주의: Obsidian의 `![[x.svg]]`나 이미지 임베드는 스크립트를 실행하지 않는다. 노트에는 정지 PNG를 넣고, 인터랙티브 HTML은 링크로 건다.
 
