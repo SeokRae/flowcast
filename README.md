@@ -75,6 +75,14 @@ flowcast:state-loop     {알고리즘/프로토콜/상태 전이 — STATE→STE
 flowcast:mechanism      {OS, 런타임 메커니즘 하나: 진실 모델을 고정한 뒤 아이소메트릭 기계 일러스트로 빌드}
 ```
 
+**이해용 출력 사다리**: 무언가를 이해시키는 출력을 Karpathy의 4단계(쉬운 글, 다이어그램, HTML, 설명 영상)에서 골라 만든다. 글은 ASD-STE100식 규칙(한국어 적응판 포함)으로 쓰고, 2, 3단계는 위 스킬에 위임한다. 설명 영상은 Manim 장면과 TTS 내레이션으로 mp4까지 렌더한다.
+
+```
+flowcast:explain        {설명할 주제와 원하는 단계: 글 | 다이어그램 | HTML | 영상}
+```
+
+4단계 영상은 Manim CE, ffmpeg, TTS(macOS `say` 기본, ElevenLabs 선택)가 필요한 선택적 의존성이다. 설치 명령과 절차는 `skills/explain/references/video.md`에 있다.
+
 `flowcast:mechanism`의 렌더 kit와 검증 스크립트는 [anatomy](https://github.com/wheresryan22/anatomy)(MIT) v1.1.0에서 2D 범위만 `skills/mechanism/vendor/anatomy/`로 이관한 것이라 따로 설치할 것이 없습니다. Node 20.10 이상이 필요하고, 검증 단계에서 Chrome을 씁니다. 출처와 포함, 제외 목록은 `skills/mechanism/vendor/anatomy/VENDOR.md`에 있어요.
 
 아래 `python3 scripts/…` 명령은 **레포를 체크아웃한 기준**이다. 플러그인으로 설치해 쓰는 경우 스크립트는 설치 캐시 안에 있다 — 경로는 `~/.claude/plugins/installed_plugins.json`의 `installPath`로 확인한다(설치 경로는 마켓플레이스마다 다르므로 고정 경로를 가정하지 않는다). 스킬·에이전트는 이 해석을 자동으로 한다.
