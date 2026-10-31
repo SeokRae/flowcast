@@ -114,7 +114,7 @@ record: {out_dir}/{name}/model-review.md
 round: 1
 ```
 
-회신은 `SendMessage`로 오고 첫 줄이 회차 판정이다.
+회신은 `SendMessage`로 오고 첫 줄이 회차 판정이다. 에이전트가 끝났는데 회신이 오지 않으면 `model-review.md` 마지막 회차 절의 `판정:` 줄과 표를 판정 근거로 읽는다.
 
 | 판정 | 리드가 할 일 |
 |---|---|
