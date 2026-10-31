@@ -83,7 +83,7 @@ flowcast:explain        {설명할 주제와 원하는 단계: 글 | 다이어�
 
 4단계 영상은 Manim CE, ffmpeg, TTS(macOS `say` 기본, ElevenLabs 선택)가 필요한 선택적 의존성이다. 설치 명령과 절차는 `skills/explain/references/video.md`에 있다.
 
-`flowcast:mechanism`의 렌더 kit와 검증 스크립트는 [anatomy](https://github.com/wheresryan22/anatomy)(MIT) v1.1.0에서 2D 범위만 `skills/mechanism/vendor/anatomy/`로 이관한 것이라 따로 설치할 것이 없습니다. Node 20.10 이상이 필요하고, 검증 단계에서 Chrome을 씁니다. 출처와 포함, 제외 목록은 `skills/mechanism/vendor/anatomy/VENDOR.md`에 있어요.
+`flowcast:mechanism`의 렌더 kit와 검증 스크립트는 [anatomy](https://github.com/wheresryan22/anatomy)(MIT) v1.1.0에서 2D 범위만 `skills/mechanism/vendor/anatomy/`로 이관한 것이라 따로 설치할 것이 없습니다. Node 20.10 이상이 필요하고, 검증 단계에서 Chrome을 씁니다. 출처와 포함, 제외 목록은 `skills/mechanism/vendor/anatomy/VENDOR.md`에 있어요. 진실 모델(`model.mjs`)을 쓰고 나면 `mechanism-verifier` 에이전트가 작성 맥락 없이 1차 출처와 대조해 `model-review.md`를 남깁니다.
 
 아래 `python3 scripts/…` 명령은 **레포를 체크아웃한 기준**이다. 플러그인으로 설치해 쓰는 경우 스크립트는 설치 캐시 안에 있다 — 경로는 `~/.claude/plugins/installed_plugins.json`의 `installPath`로 확인한다(설치 경로는 마켓플레이스마다 다르므로 고정 경로를 가정하지 않는다). 스킬·에이전트는 이 해석을 자동으로 한다.
 

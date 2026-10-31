@@ -18,7 +18,10 @@ METADATA_DIRECTORY = ".claude-plugin"
 AGENTS_DIRECTORY = "agents"
 # skills/flowcast/SKILL.md 가 이 이름들로 리터럴 dispatch 한다 — 유일 출처인
 # agents/*.md 의 frontmatter name 이 파일명과 어긋나면 dispatch 가 조용히 깨진다.
-REQUIRED_AGENT_NAMES = frozenset(("diagram-router", "diagram-drawer"))
+# mechanism-verifier 는 skills/mechanism/SKILL.md ③a 가 같은 방식으로 부른다(#154).
+REQUIRED_AGENT_NAMES = frozenset(
+    ("diagram-router", "diagram-drawer", "mechanism-verifier")
+)
 PLUGIN_FILENAME = "plugin.json"
 MARKETPLACE_FILENAME = "marketplace.json"
 MARKETPLACE_FIELDS = frozenset(("name", "owner", "metadata", "plugins"))
