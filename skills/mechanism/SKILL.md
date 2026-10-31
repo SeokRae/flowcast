@@ -1,7 +1,7 @@
 ---
 name: mechanism
-description: 운영체제, 런타임, 프로토콜 내부의 메커니즘 하나(주소 변환, 바이트코드 실행, GC 회수, 스케줄링 등)를 "동작 자체가 개념인 물리 기계"로 옮긴 인터랙티브 아이소메트릭 일러스트 1건으로 만든다. 적합성 판정, 큰 주제 분해, 대상 버전 고정, 진실 모델(model.mjs) 작성, 기계 설계와 빌드, 리드아웃 대조와 라인 검사까지 이 스킬 안에서 끝낸다. 렌더 kit와 검증 스크립트는 anatomy(MIT, v1.1.0)에서 이관한 vendor/anatomy를 쓰므로 따로 설치할 것이 없다. "리눅스/JVM 동작 방식을 그림으로", "메커니즘 일러스트", "기계로 설명해줘", "아이소메트릭 설명도" 요청 시 사용한다. 사용자 직접 호출 전용이며 /flowcast 팬아웃 대상이 아니다. 구조 지도는 flowcast:component, 시간순 요청/응답은 flowcast:sequence, 인프라 배치는 flowcast:topology, 추상 상태가 계속 바뀌는 루프는 flowcast:state-loop로 라우팅한다. English triggers: mechanism illustration, isometric explainer, how Linux works, how the JVM works, machine metaphor.
-allowed-tools: Bash, Read, Write, Edit
+description: 운영체제, 런타임, 프로토콜 내부의 메커니즘 하나(주소 변환, 바이트코드 실행, GC 회수, 스케줄링 등)를 "동작 자체가 개념인 물리 기계"로 옮긴 인터랙티브 아이소메트릭 일러스트 1건으로 만든다. 적합성 판정, 큰 주제 분해, 대상 버전 고정, 진실 모델(model.mjs) 작성과 독립 에이전트의 출처 대조, 기계 설계와 빌드, 리드아웃 대조와 라인 검사까지 이 스킬 안에서 끝낸다. 렌더 kit와 검증 스크립트는 anatomy(MIT, v1.1.0)에서 이관한 vendor/anatomy를 쓰므로 따로 설치할 것이 없다. "리눅스/JVM 동작 방식을 그림으로", "메커니즘 일러스트", "기계로 설명해줘", "아이소메트릭 설명도" 요청 시 사용한다. 사용자 직접 호출 전용이며 /flowcast 팬아웃 대상이 아니다. 구조 지도는 flowcast:component, 시간순 요청/응답은 flowcast:sequence, 인프라 배치는 flowcast:topology, 추상 상태가 계속 바뀌는 루프는 flowcast:state-loop로 라우팅한다. English triggers: mechanism illustration, isometric explainer, how Linux works, how the JVM works, machine metaphor.
+allowed-tools: Agent, SendMessage, Bash, Read, Write, Edit
 ---
 
 # flowcast:mechanism (메커니즘 일러스트)
@@ -29,10 +29,13 @@ allowed-tools: Bash, Read, Write, Edit
 | ① 적합성 판정과 분해 | 이 스킬로 그릴 단위 1개 | 움직이는 부품마다 개념이 1:1로 대응 |
 | ② 질의 대본 | 대상 버전, 진실 출처, 기계 매핑, 생략 범위 | 1, 2, 8번 확정 |
 | ③ 진실 모델 | `model.mjs`, `check.mjs`, `truth/` | `node check.mjs` exit 0 |
+| ③a 독립 대조 | `model-review.md` (`mechanism-verifier` 에이전트가 씀) | 마지막 회차 판정이 `통과` 또는 `통과, 확인 불가 n건` |
 | ④ 브리프 | `brief.md` (부품표, 부품 목록 포함) | 빈 칸 없음 |
 | ⑤ 기계 설계와 빌드 | `build.mjs`, `{name}.html`, `{name}-light.html` | 두 테마 빌드 성공 |
-| ⑥ 검증 | 리드아웃 대조, 라인 검사, 부품 목록 검사, 캡션 검사, 정지 이미지 | 아래 표 전부 통과 |
+| ⑥ 검증 | 리드아웃 대조, 라인 검사, 부품 목록 검사, 캡션 검사, 대조 기록 해시, 정지 이미지 | 아래 표 전부 통과 |
 | ⑦ 파일링과 보고 | `{out_dir}/{name}/`, 상태 | |
+
+에이전트를 띄우는 단계는 ③a 하나다. 모델을 쓴 리드가 자기 모델을 다시 검사하면 같은 오독을 되풀이하므로 출처 대조만 떼어 냈습니다. ⑤ 빌드와 ⑥ 검사는 스크립트가 판정하는 결정적 단계라 리드가 그대로 돌아요.
 
 ## ⓪ 전제 확인
 
@@ -92,8 +95,36 @@ ls "/Applications/Google Chrome.app" 2>/dev/null || command -v google-chrome chr
 - **라이선스가 다른 소스의 원문은 커밋하지 않는다.** OpenJDK(GPLv2 + Classpath Exception)나 리눅스 커널(GPLv2) 소스는 `truth/*-refs.md`에 고정 태그 URL과 줄 범위, 함수명, 그 줄이 하는 일을 우리 말로 쓴 요약만 둔다. 원문 대조는 그 파일을 내려받는 스크립트와 `check-source.mjs`로 나누고, `check.mjs`는 오프라인으로 통과하게 한다. 실행 출력(`javap`, `-Xlog`)과 직접 쓴 프로브 소스는 원본 그대로 둔다.
 
 ```bash
-node {out_dir}/{name}/check.mjs    # exit 0 전에는 ④로 넘어가지 않는다
+node {out_dir}/{name}/check.mjs    # exit 0 전에는 ③a로 넘어가지 않는다
 ```
+
+## ③a 독립 대조 (`mechanism-verifier`)
+
+`check.mjs`는 모델을 쓴 리드가 쓴 검사라서, 모델이 출처를 잘못 읽었으면 검사도 같이 틀린다. 그래서 출처 대조는 작성 맥락을 받지 않은 에이전트(`agents/mechanism-verifier.md`)에게 맡깁니다. `node check.mjs`가 exit 0이면 띄운다. 프롬프트는 아래 블록뿐이고, `check.mjs`, 조사 메모, 작성 의도, 대화 내용은 넣지 않아요.
+
+```text
+Agent(name: "mechanism-verifier", subagent_type: "flowcast:mechanism-verifier", prompt: 아래 블록)
+
+name: {name}
+target: {②-2 확정값 원문}
+sources:
+  - {②-3 확정 출처마다 한 줄: truth/ 파일, 고정 태그 URL과 줄 범위, 명세 절}
+model: {out_dir}/{name}/model.mjs
+record: {out_dir}/{name}/model-review.md
+round: 1
+```
+
+회신은 `SendMessage`로 오고 첫 줄이 회차 판정이다. 에이전트가 끝났는데 회신이 오지 않으면 `model-review.md` 마지막 회차 절의 `판정:` 줄과 표를 판정 근거로 읽는다.
+
+| 판정 | 리드가 할 일 |
+|---|---|
+| `통과` | ④로 간다 |
+| `통과, 확인 불가 n건` | 출처를 더 댈 수 있으면 `sources`를 보태 재확인을 요청한다. 댈 수 없으면 ④로 가고, ⑦ 상태를 `partial`로 두고 그 항목을 보고에 적는다 |
+| `불일치 n건` | 항목마다 `model.mjs`를 고치거나(필요하면 `truth/`, `check.mjs`도) 출처 위치를 들어 반박한다. `node check.mjs` exit 0을 다시 확인한 뒤 재확인을 요청한다 |
+| `대조 불가` | 모델 import나 출처 읽기가 실패했다. 오류 원문대로 경로나 환경을 고친 뒤 재확인을 요청한다 |
+| `상향` | 재확인 2회 뒤에도 불일치가 남았다. 남은 항목을 사용자에게 보여 주고 결정을 받는다. 그 전에는 ④로 가지 않는다 |
+
+재확인은 `SendMessage(to: "mechanism-verifier", message: "회차 {n} 재확인 요청: 고친 항목 {ID 목록}, 반박 항목 {ID: 출처 위치}")`로 보낸다. 고친 이유는 적지 않는다. 끝난 에이전트도 이름으로 다시 깨므로 새로 띄우지 않습니다. 재확인은 2회(회차 3)까지예요. `Agent`를 쓸 수 없는 환경이면 ③a를 하지 못한 것이니 ④로 가되 ⑦ 상태는 `partial`이다.
 
 ## ④ 브리프 (`brief.md`)
 
@@ -108,7 +139,7 @@ node {out_dir}/{name}/check.mjs    # exit 0 전에는 ④로 넘어가지 않는
 anatomy 워크플로를 따르되, 이 스킬에서는 아래처럼 바뀐다.
 
 1. **크기**는 ②-7에서 정했다. 시작할 때와 단계마다 `date`를 찍고, 한 단계가 몫의 두 배를 넘기면 어디까지 왔는지 알린다. 첫 1시간 안에 브라우저에서 열리는 페이지를 만들고 거기서 깊게 만든다.
-2. **진실**은 ③의 `model.mjs`로 확정됐다. 수치를 바꾸거나 모델 밖의 숫자를 그림에 쓰지 않는다. 매핑이 기계로 성립하지 않으면 그리기 전에 ②-5로 돌아가 사용자와 다시 정한다.
+2. **진실**은 ③에서 쓰고 ③a에서 대조한 `model.mjs`로 확정됐다. 수치를 바꾸거나 모델 밖의 숫자를 그림에 쓰지 않는다. 모델을 고쳐야 하면 ③으로 돌아가 ③a 재확인까지 받는다. 매핑이 기계로 성립하지 않으면 그리기 전에 ②-5로 돌아가 사용자와 다시 정한다.
 3. **기계**는 ④의 매핑과 부품표대로 만든다. 참고 이미지의 사물을 베끼지 않는다. 마감만 가져온다.
 4. **월드**: 단위는 실물 약 1px, x와 y가 바닥, z가 위. 평면은 둥근 사각형 `{x, y, w, d, r}`과 원으로 배치한다. 카메라 방위각 기본 45°(긴 면을 보이려면 35~60°), 고도 30°. `k.fitProjection(points, width, height, { pad, azimuth })`로 맞춘다.
 5. **기하는 한 번만** 만든다: `slabOf`, `cylinder`, `extrude`, `planOutline`, `topTicks`, `knurl`, `coil`, `radialTicks`. 회전체는 `kit/lathe.mjs`, 파이프와 케이블은 `kit/tube.mjs`. 움직이는 부품은 정지 위치에서 한 번 만들고 `translateAlong`으로 옮긴다. 모양이 바뀌는 부품만 프레임마다 다시 만든다.
@@ -174,6 +205,8 @@ node "$VENDOR/scripts/drive.mjs" "$F/{name}.html" --actions "$F/shots/parts.json
 node "$F/build.mjs" --audit                                # audit passed
 # 7. 정지 이미지 (노트와 문서 임베드용)
 node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}-still.png" --reduced
+# 8. 대조 기록이 지금 모델을 가리키는지: 마지막 회차가 통과이고 sha256이 같으면 exit 0
+node -e 'const fs=require("node:fs"),f=process.argv[1];const h=require("node:crypto").createHash("sha256").update(fs.readFileSync(f+"/model.mjs")).digest("hex");const last=fs.readFileSync(f+"/model-review.md","utf8").split(/^## 회차 /m).at(-1);process.exit(/^- 판정: 통과/m.test(last)&&last.includes("sha256: "+h)?0:1)' "$F"
 ```
 
 | 검사 | 통과 기준 |
@@ -184,6 +217,7 @@ node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}
 | 캡션 | 브리프 캡션에서 백틱을 걷어 낸 문장이 두 HTML에 그대로 있다 (`grep -F`). ②-2의 대상 버전과 ②-6의 생략 범위가 그 안에 들어 있다 |
 | self-contained | `grep -Eo 'https?://[^"'"'"' )]+' "$F/{name}.html" \| grep -v 'www.w3.org'` 결과 0건 |
 | 고지 | HTML에 kit 버전과 MIT 고지 주석이 있다 |
+| 대조 기록 | 8번이 exit 0. ⑤에서 `model.mjs`를 고쳤으면 해시가 달라지므로 ③a 재확인을 다시 받는다 |
 | 사람 눈 | 데스크톱, 폰 폭(390), 4배 확대 이미지를 Read로 열어 본다. 움직이는 부품마다 대응표의 개념을 짚을 수 있고, 빈 면이나 빈 모서리가 없어야 한다(`$VENDOR/references/verify.md`의 체크리스트) |
 
 `parts.json`의 `move` 대상은 지금 화면에 보이는 정지 부품의 묶음이어야 한다. 숨겨진 노드로 가면 커서가 엉뚱한 곳에 놓인다.
@@ -208,6 +242,7 @@ node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}
 ├─ truth/              1차 출처 원본 (실행 출력, 소스 발췌)
 ├─ model.mjs           진실 모델
 ├─ check.mjs           모델 자체 검사
+├─ model-review.md     독립 대조 기록 (회차별 판정과 대조 표, ③a 에이전트가 씀)
 ├─ build.mjs           빌드 (부품 모듈이 더 있을 수 있다)
 ├─ {name}.html         dark
 ├─ {name}-light.html   light
@@ -217,7 +252,7 @@ node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}
 | 상태 | 뜻 |
 |---|---|
 | `done` | ⑥ 전부 통과 |
-| `partial` | 그림은 있으나 일부 검사를 못 했다 (Chrome 없음 등). 못 한 검사와 이유를 적는다 |
+| `partial` | 그림은 있으나 일부 검사를 못 했다 (Chrome 없음, ③a 확인 불가나 미실행 등). 못 한 검사와 이유를 적는다 |
 | `blocked` | 그림을 만들 수 없다 (vendor kit 없음, Node 버전, ① 판정 결과 다른 뷰가 맞음) |
 
 ## 이 스킬이 하지 않는 것
@@ -231,6 +266,6 @@ node "$VENDOR/scripts/capture.mjs" "$F/{name}-light.html" --out "$F/shots/{name}
 
 ## 예제
 
-`skills/mechanism/examples/jvm-bytecode/` (합성): `static int calc(int a, int b) { return (a + b) * 2; }`를 javac 21.0.1로 컴파일한 바이트코드 6개(`1a 1b 60 05 68 ac`)를 실행하는 기계. 진실은 `truth/`의 `javap -c -v` 출력(`stack=2, locals=2`)과 `java` 실측값이고, `node check.mjs`가 모델을 그 값과 대조한다. 스택 튜브가 두 칸뿐인 이유가 `max_stack=2`다. 빌드 결과 `jvm-bytecode.html`, `jvm-bytecode-light.html`을 브라우저로 바로 열 수 있다.
+`skills/mechanism/examples/jvm-bytecode/` (합성): `static int calc(int a, int b) { return (a + b) * 2; }`를 javac 21.0.1로 컴파일한 바이트코드 6개(`1a 1b 60 05 68 ac`)를 실행하는 기계. 진실은 `truth/`의 `javap -c -v` 출력(`stack=2, locals=2`)과 `java` 실측값이고, `node check.mjs`가 모델을 그 값과 대조한다. 스택 튜브가 두 칸뿐인 이유가 `max_stack=2`다. `model-review.md`는 ③a 에이전트가 같은 javac로 다시 컴파일하고 JVMS 6.5절을 읽어 남긴 대조 기록이다(28항목, 회차 1 통과). 빌드 결과 `jvm-bytecode.html`, `jvm-bytecode-light.html`을 브라우저로 바로 열 수 있다.
 
 저장소 예제에는 `shots/`를 커밋하지 않는다. PNG 바이너리의 임의 바이트가 `scripts/scan-sensitive.sh` 블록리스트에 우연히 걸려 push가 막힌 적이 있다. 정지 이미지는 ⑥-6 명령으로 언제든 다시 찍는다.

@@ -1,7 +1,7 @@
 {
   "name": "flowcast",
   "description": "IF/서비스 흐름도 작업 하네스 — /flowcast 오케스트레이터가 데이터·.pptx를 다이어그램 단위로 쪼개 검증하고, drawer 서브에이전트를 병렬 팬아웃해 flowcast:sequence·flowcast:topology·flowcast:component로 렌더·파일링하며, 요청 시 PDF·편집가능 .pptx·PlantUML .puml(B-out)로 출력. flowcast:state-loop는 무한 루프로 도는 알고리즘/상태 시각화를 만드는 독립 스킬. flowcast:mechanism은 OS, 런타임 메커니즘을 움직이는 기계 일러스트로 그리는 독립 스킬로, 진실 모델 고정부터 빌드와 검증까지 스킬 안에서 끝내며 렌더 kit는 anatomy(MIT)에서 이관한 vendor를 쓴다 flowcast:explain은 Karpathy의 4단계 사다리(쉬운 글, 다이어그램, HTML, 내레이션 설명 영상)에서 이해용 출력 형식을 골라 만드는 독립 스킬로, 영상은 Manim 장면과 TTS 내레이션으로 mp4까지 렌더한다",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "author": {
     "name": "SeokRae",
     "email": "kslbsh@gmail.com"

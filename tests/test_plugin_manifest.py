@@ -23,7 +23,7 @@ SKILL_PATHS = (
     "./skills/topology",
     "./skills/component",
 )
-AGENT_NAMES = ("diagram-router", "diagram-drawer")
+AGENT_NAMES = ("diagram-router", "diagram-drawer", "mechanism-verifier")
 
 
 def _plugin():
@@ -360,13 +360,14 @@ def test_cli_rejects_agent_name_not_matching_stem(tmp_path):
     assert "does not match file stem" in result.stderr
 
 
-def test_cli_rejects_missing_required_agent(tmp_path):
-    repository = _write_repository(tmp_path, missing_agent="diagram-drawer")
+@pytest.mark.parametrize("missing", AGENT_NAMES)
+def test_cli_rejects_missing_required_agent(tmp_path, missing):
+    repository = _write_repository(tmp_path, missing_agent=missing)
 
     result = _run_cli(repository)
 
     assert result.returncode == 1
-    assert "required agent(s) missing or misnamed: ['diagram-drawer']" in result.stderr
+    assert "required agent(s) missing or misnamed: [{!r}]".format(missing) in result.stderr
 
 
 @pytest.mark.parametrize(
