@@ -813,3 +813,20 @@ def test_component_via_becomes_polyline_in_pptx(tmp_path):
     conns = [sh for sl in Presentation(str(out)).slides for sh in sl.shapes
              if sh.shape_type == MSO_SHAPE_TYPE.LINE]
     assert len(conns) == 2                          # 2구간 폴리라인
+
+
+def test_topology_via_elbow_is_drawn(tmp_path):
+    """via 꺾임점이 pptx 에도 같은 꼭짓점으로 그려진다. 좌표는 _t_seg_geom 단일 진실 (#156)."""
+    data = {"view": "topology", "system": "T", "nodes": [
+        {"id": "a", "name": "A", "x": 0, "y": 0},
+        {"id": "b", "name": "B", "x": 400, "y": 200}],
+        "scenarios": [{"title": "S", "segments": [
+            {"n": 1, "from": "a", "to": "b", "label": "L자", "via": [77, 225]},
+            {"n": 2, "from": "a", "to": "b", "label": "U자", "via": [[40, 320], [440, 320]],
+             "tag": {"text": "HTML 전용", "tone": "ok"}, "dashed": True}]}]}
+    assert _R.validate_topology(data)[0] == []
+    out = tmp_path / "via.pptx"
+    export_topology(data, out)
+    conns = [sh for sl in Presentation(str(out)).slides for sh in sl.shapes
+             if sh.shape_type == MSO_SHAPE_TYPE.LINE]
+    assert len(conns) == 5        # L자 2구간 + U자 3구간 (tag와 dashed 는 무시)

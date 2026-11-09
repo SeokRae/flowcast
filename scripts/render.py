@@ -26,6 +26,19 @@
                     scenarios[].segments[]: { n?, from, to|self, label?, meta?, rail? } — 번호 구간 오버레이
                         label=업무 흐름(주), meta=기술 상세(프로토콜·포트·FW, 범례 흐린 부라인)
                     segments 없는 시나리오 = 순수 인프라 구성도
+                    segments[].via=[x,y] 또는 [[x,y], …] 꺾임점(rail 과 배타, HTML과 pptx 공용 좌표)
+                        꺾임점이 노드 가로 폭 안이면 위나 아래 변에, 세로 폭 안이면 왼쪽이나 오른쪽 변에 수직으로 붙는다
+                    HTML 전용(#156, pptx와 PlantUML 은 무시):
+                      tabs: true            시나리오를 탭으로 전환, 다른 시나리오 구간은 흐린 배경선
+                      labels: "inline"      구간 label/meta 를 선 옆에(흐름 설명 표 생략), lx/ly 로 위치 덮어쓰기
+                      legend: { dashed?, tags?: [{text, tone?}] }  범례 줄
+                      segments[].dashed     점선(확인 전 등)
+                      segments[].tag        { text, tone? } 상태 칩. tone: ok|warn|danger|info|muted
+                      scenarios[].tab       탭 버튼 짧은 이름(기본 title)
+                      scenarios[].tag       { text, tone? } 시나리오 칩
+                      scenarios[].detail    { facts?: [{k, v|[v]}], tags?: [{k, text, tone?}],
+                                              lists?: [{title, items[]}], note? }: 그림 아래 상세 패널,
+                                              값 안의 `백틱`은 코드 글꼴
     [component 전용] 노드/존/엣지를 시나리오별로 선언(각 다이어그램 독립)
                     scenarios[].nodes[]: { id, name, port?, zone?, col/row 또는 x/y, kind? }
                         kind: comp(기본, 내부 컴포넌트) | ext(외부 액터·시스템) | db(데이터베이스, 원통)
@@ -92,6 +105,12 @@ T_LEG_HDR_H = 22      # 흐름 설명 표 헤더 행 높이
 T_LEG_ROW_LH = 17     # 흐름 설명 표 설명/메타 줄 높이
 T_LEG_ROW_PAD = 9     # 흐름 설명 표 행 상하 여백
 T_LEG_BADGE_W = 30    # 흐름 설명 표 '#' 열 폭
+# 구간과 시나리오 상태 칩 색(#156). HTML 전용이라 pptx와 PlantUML 은 무시한다.
+TAG_TONES = {"ok", "warn", "danger", "info", "muted"}
+# 구간 라벨 자리. table = 번호 배지 + 아래 흐름 설명 표(기본), inline = 선 옆(HTML 전용)
+LABEL_MODES = {"table", "inline"}
+T_ILB_LH = 13         # 선 옆 라벨 줄 높이
+T_TAG_H = 20          # 구간 상태 칩 높이
 
 # ── 컴포넌트 뷰 상수 ──────────────────────────────────────────
 C_MARGIN = 30
@@ -348,6 +367,49 @@ def _append_step_n(seen, n, scope, message, warnings):
     prev.append(scope)
 
 
+def _validate_tag(tag, errors, where):
+    """상태 칩 { text, tone? } 검사 (#156)."""
+    if not isinstance(tag, dict):
+        errors.append(f"{where}는 object여야 함")
+        return
+    if not _is_nonempty_text(tag.get("text")):
+        errors.append(f"{where}.text는 비어 있지 않은 문자열이어야 함")
+    tone = tag.get("tone", "muted")
+    if not isinstance(tone, str) or tone not in TAG_TONES:
+        errors.append(f"{where}: 잘못된 tone '{tone}' (허용: {sorted(TAG_TONES)})")
+
+
+def _validate_detail(detail, errors, where):
+    """시나리오 상세 패널 { facts?, tags?, lists?, note? } 검사 (#156)."""
+    if not isinstance(detail, dict):
+        errors.append(f"{where}는 object여야 함")
+        return
+    for fi, fact in enumerate(_list_field(detail, "facts", errors, where)):
+        fw = f"{where}.facts[{fi}]"
+        if not isinstance(fact, dict) or not _is_nonempty_text(fact.get("k")):
+            errors.append(f"{fw}: k(항목명)가 필요함")
+            continue
+        v = fact.get("v")
+        ok = isinstance(v, str) or (
+            isinstance(v, list) and bool(v) and all(isinstance(x, str) for x in v))
+        if not ok:
+            errors.append(f"{fw}.v는 문자열이나 비어 있지 않은 문자열 list여야 함")
+    for ti, tag in enumerate(_list_field(detail, "tags", errors, where)):
+        tw = f"{where}.tags[{ti}]"
+        _validate_tag(tag, errors, tw)
+        if isinstance(tag, dict) and not _is_nonempty_text(tag.get("k")):
+            errors.append(f"{tw}: k(항목명)가 필요함")
+    for li, block in enumerate(_list_field(detail, "lists", errors, where)):
+        lw = f"{where}.lists[{li}]"
+        if not isinstance(block, dict) or not _is_nonempty_text(block.get("title")):
+            errors.append(f"{lw}: title이 필요함")
+            continue
+        items = _list_field(block, "items", errors, lw, required=True)
+        if any(not isinstance(x, str) for x in items):
+            errors.append(f"{lw}.items는 문자열 list여야 함")
+    _validate_text_fields(detail, ("note",), errors, where)
+
+
 def validate_topology(data):
     """구성도 뷰(view: topology) 검증 — 존·노드(그리드 좌표)·구간 오버레이."""
     data, scenarios, errors, warnings = _validation_root(data)
@@ -355,6 +417,22 @@ def validate_topology(data):
         return errors, warnings
 
     _validate_text_fields(data, ("source",), errors, "최상위")
+    if "tabs" in data and not isinstance(data["tabs"], bool):
+        errors.append("최상위.tabs는 true 또는 false여야 함")
+    elif data.get("tabs") is True and len(scenarios) < 2:
+        warnings.append("tabs: 시나리오가 2개 미만이라 탭 없이 시트로 그림")
+    if "labels" in data:
+        mode = data["labels"]
+        if not isinstance(mode, str) or mode not in LABEL_MODES:
+            errors.append(f"최상위.labels '{mode}' 허용 안 됨 (허용: {sorted(LABEL_MODES)})")
+    if "legend" in data:
+        legend = data["legend"]
+        if not isinstance(legend, dict):
+            errors.append("최상위.legend는 object여야 함")
+        else:
+            _validate_text_fields(legend, ("dashed",), errors, "최상위.legend")
+            for ti, tag in enumerate(_list_field(legend, "tags", errors, "최상위.legend")):
+                _validate_tag(tag, errors, f"최상위.legend.tags[{ti}]")
     _, zones = _validated_zones(data, errors, "최상위")
     nodes = _list_field(data, "nodes", errors, "최상위", required=True)
     if not nodes:
@@ -402,6 +480,11 @@ def validate_topology(data):
             continue
         if not _is_nonempty_text(sc.get("title")):
             errors.append(f"scenario[{si}]에 title 누락")
+        _validate_text_fields(sc, ("tab",), errors, f"scenario[{si}]")
+        if "tag" in sc:
+            _validate_tag(sc["tag"], errors, f"scenario[{si}].tag")
+        if "detail" in sc:
+            _validate_detail(sc["detail"], errors, f"scenario[{si}].detail")
         segments = _list_field(sc, "segments", errors, f"scenario[{si}]")
         seen_n = {}
         for gi, sg in enumerate(segments):
@@ -416,6 +499,18 @@ def validate_topology(data):
                 errors.append(f"{where}: 미정의 node 참조 to='{sg.get('to')}'")
             if sg.get("rail") is not None and not _is_finite_number(sg["rail"]):
                 errors.append(f"{where}.rail은 유한한 숫자여야 함")
+            if "via" in sg:
+                if _t_via_points(sg.get("via")) is None:
+                    errors.append(f"{where}.via는 [x, y] 또는 [[x, y], …] 형태의 유한한 숫자여야 함")
+                if sg.get("rail") is not None:
+                    errors.append(f"{where}: via와 rail은 함께 쓸 수 없음")
+                if sg.get("self"):
+                    errors.append(f"{where}: self 구간에는 via를 쓸 수 없음")
+            if "dashed" in sg and not isinstance(sg["dashed"], bool):
+                errors.append(f"{where}.dashed는 true 또는 false여야 함")
+            if "tag" in sg:
+                _validate_tag(sg["tag"], errors, f"{where}.tag")
+            _validate_finite_fields(sg, ("lx", "ly"), errors, where)
             n = sg.get("n")
             if n is not None:
                 _append_duplicate_warning(
@@ -981,6 +1076,44 @@ def _c_edge_geoms(edges, rects):
     return out
 
 
+def _t_via_points(via):
+    """via → [(x, y), …]. [x, y] 하나 또는 [[x, y], …] 여러 개. 형식이 틀리면 None (#156)."""
+    def point(p):
+        return (isinstance(p, list) and len(p) == 2
+                and all(_is_finite_number(v) for v in p))
+    if point(via):
+        return [(float(via[0]), float(via[1]))]
+    if isinstance(via, list) and via and all(point(p) for p in via):
+        return [(float(p[0]), float(p[1])) for p in via]
+    return None
+
+
+def _t_port(rect, tx, ty):
+    """꺾임점 (tx, ty) 쪽 노드 경계 점 (#156).
+
+    꺾임점이 노드 가로 폭 안에 있으면 위나 아래 변에 수직으로, 세로 폭 안에 있으면 왼쪽이나
+    오른쪽 변에 수평으로 붙는다. 한 변에 선이 여럿 붙어도 중심 한 점으로 겹치지 않게 하려는 것이다.
+    둘 다 아니면 중심 방향(`_edge_pt`)으로 붙는다.
+    """
+    x, y, w, h = rect
+    in_x, in_y = x <= tx <= x + w, y <= ty <= y + h
+    if in_x and not in_y:
+        return tx, (y if ty < y else y + h)
+    if in_y and not in_x:
+        return (x if tx < x else x + w), ty
+    return _edge_pt(rect, tx, ty)
+
+
+def _t_longest_leg(pts):
+    """폴리라인에서 가장 긴 구간 (p, q). via 배지와 선 옆 라벨은 이 구간 가운데에 붙는다."""
+    best, best_len = (pts[0], pts[-1]), -1.0
+    for p, q in zip(pts, pts[1:]):
+        d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2
+        if d > best_len:
+            best, best_len = (p, q), d
+    return best
+
+
 def _t_seg_geom(sg, rects):
     """세그먼트 1개의 경로 꼭짓점 — render(SVG path)·pptx(커넥터) 공용 단일 진실.
 
@@ -988,6 +1121,7 @@ def _t_seg_geom(sg, rects):
       - `"self"` : 자기호출 루프. pts = 베지어 4점(시작·제어2·끝) — SVG 는 `C`,
                    pptx 는 연속 꼭짓점을 잇는 폴리라인으로 근사한다.
       - `"rail"` : 지정 y 로 올라갔다 내려오는 3구간 엘보. pts = 4점.
+      - `"via"`  : 꺾임점을 차례로 지나는 엘보. pts = 꺾임점 수 + 2 (#156).
       - `"line"` : 직선. pts = 2점.
     pptx 는 pts 를 연속 쌍으로 이어 그리고 마지막 구간에만 화살촉을 단다.
     """
@@ -1003,6 +1137,9 @@ def _t_seg_geom(sg, rects):
         p1 = _edge_pt(a, ac[0], rail)
         p2 = _edge_pt(b, bc[0], rail)
         return "rail", [p1, (p1[0], rail), (p2[0], rail), p2]
+    if sg.get("via") is not None:
+        vs = _t_via_points(sg["via"])
+        return "via", [_t_port(a, *vs[0]), *vs, _t_port(b, *vs[-1])]
     p1 = _edge_pt(a, bc[0], bc[1])
     p2 = _edge_pt(b, ac[0], ac[1])
     return "line", [p1, p2]
@@ -1020,13 +1157,19 @@ def _t_seg_path(sg, rects):
 def _t_badge_geom(sg, rects):
     """세그먼트 1개의 배지 위치 + 엣지 단위방향 (bx, by, ux, uy) — render·pptx 공용.
 
-    normal은 앵커의 0.45/0.55 보간, rail은 rail 중점, self·대상없음은 노드 위(-34).
+    normal은 앵커의 0.45/0.55 보간, rail은 rail 중점, via는 가장 긴 구간 중점,
+    self와 대상 없음은 노드 위(-34).
     ux,uy 는 충돌 spread 때 배지를 밀어낼 방향(자기 엣지 방향, self는 수평).
     """
     a = rects[sg["from"]]
     to = sg.get("to")
     if sg.get("self") or not to or to not in rects:
         return a[0] + a[2] / 2, a[1] - 34, 1.0, 0.0
+    if sg.get("via") is not None:
+        (x1, y1), (x2, y2) = _t_longest_leg(_t_seg_geom(sg, rects)[1])
+        dx, dy = x2 - x1, y2 - y1
+        n = (dx * dx + dy * dy) ** 0.5 or 1.0
+        return (x1 + x2) / 2, (y1 + y2) / 2, dx / n, dy / n
     b = rects[to]
     ac = (a[0] + a[2] / 2, a[1] + a[3] / 2)
     bc = (b[0] + b[2] / 2, b[1] + b[3] / 2)
@@ -1083,11 +1226,108 @@ def _t_spread_badges(geoms, r=11, gap=2, iters=8):
     return [(p[0], p[1]) for p in pts]
 
 
+def _topo_tabs(data):
+    """탭 모드 여부 (#156). 시나리오가 2개 이상일 때만 켠다."""
+    return data.get("tabs") is True and len(data.get("scenarios") or []) >= 2
+
+
+def _t_seg_key(sg):
+    """같은 선인지 가르는 키. 끝점과 꼭짓점 옵션이 같으면 같은 선이다."""
+    via = _t_via_points(sg.get("via"))
+    return (sg.get("from"), None if sg.get("self") else sg.get("to"), bool(sg.get("self")),
+            sg.get("rail"), tuple(via) if via else None)
+
+
+def _t_context_segments(data, scenario, rects):
+    """탭 모드에서 흐린 배경선으로 그릴 이 시나리오 밖 구간 (#156). 같은 선은 먼저 나온 것 한 번만."""
+    seen = {_t_seg_key(sg) for sg in scenario.get("segments") or []}
+    out = []
+    for other in data.get("scenarios") or []:
+        if other is scenario:
+            continue
+        for sg in other.get("segments") or []:
+            key = _t_seg_key(sg)
+            if key in seen:
+                continue
+            if not sg.get("self") and sg.get("to") not in rects:
+                continue
+            seen.add(key)
+            out.append(sg)
+    return out
+
+
+def _t_leg_anchor(sg, rects):
+    """선 옆 라벨과 상태 칩의 기준점 (mx, my, horizontal, below) (#156).
+
+    기준 구간 = 가장 긴 구간. horizontal = 그 구간이 가로에 가까움.
+    below = rail 이 노드보다 아래를 지나 라벨을 선 아래에 둠. self 는 루프 꼭대기 가운데.
+    """
+    kind, pts = _t_seg_geom(sg, rects)
+    if kind == "self":
+        return (pts[1][0] + pts[2][0]) / 2, pts[1][1], True, False
+    (x1, y1), (x2, y2) = _t_longest_leg(pts)
+    horiz = abs(x2 - x1) >= abs(y2 - y1)
+    # U자(rail, via)처럼 가로 구간이 양 끝보다 아래로 지나면 라벨을 선 아래에 둔다
+    below = horiz and y1 > pts[0][1] + 1 and y1 > pts[-1][1] + 1
+    return (x1 + x2) / 2, (y1 + y2) / 2, horiz, below
+
+
+def _t_inline_label(sg, rects, rows, crowded, tag_w=0.0):
+    """선 옆 라벨 배치. 반환 ([(x, y)] 줄별 baseline, anchor, bbox) (#156).
+
+    rows = [(text, is_meta)]. crowded = 같은 자리에 번호 배지나 상태 칩이 있어 한 칸 더 띄움.
+    tag_w = 세로 구간 선 위에 앉은 칩 폭(라벨을 칩 오른쪽으로 민다). lx/ly 는 첫 줄 기준 덮어쓰기.
+    SVG 는 렌더 전에 글자 폭을 잴 수 없어 bbox 는 `_text_width`, `_mono_width` 어림이다.
+    """
+    lh, n = T_ILB_LH, len(rows)
+    mx, my, horiz, below = _t_leg_anchor(sg, rects)
+    if sg.get("self"):
+        anchor, x = "middle", mx
+        y0 = my - (26 if crowded else 6) - (n - 1) * lh
+    elif horiz:
+        anchor, x = "middle", mx
+        off = 17 if crowded else 7
+        y0 = my + off + 9 if below else my - off - (n - 1) * lh
+    else:
+        anchor = "start"
+        x = mx + (max(18.0, tag_w / 2 + 8) if crowded else 9)
+        y0 = my + 4 - (n - 1) * lh / 2
+    if sg.get("lx") is not None:
+        x, anchor = float(sg["lx"]), "middle"
+    if sg.get("ly") is not None:
+        y0 = float(sg["ly"])
+    pos = [(x, y0 + i * lh) for i in range(n)]
+    w = max(_mono_width(t, 10) if meta else _text_width(t, 11) for t, meta in rows)
+    x1 = x - w / 2 if anchor == "middle" else x
+    return pos, anchor, (x1, y0 - 11, x1 + w, y0 + (n - 1) * lh + 4)
+
+
+def _t_tag_center(sg, rects, w, badge):
+    """구간 상태 칩 가운데 (#156). 번호 배지가 없으면 선 위, 있으면 배지 아래(가로) 또는 왼쪽(세로)."""
+    mx, my, horiz, _ = _t_leg_anchor(sg, rects)
+    if badge is None:
+        return (mx, my - 12) if sg.get("self") else (mx, my)
+    bx, by = badge
+    return (bx, by + 24) if horiz else (bx - 16 - w / 2, by)
+
+
+def _seg_attr(sg):
+    if sg.get("self"):
+        return f'data-self="{esc(sg["from"])}"'
+    return f'data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"'
+
+
 def render_svg_topology(data, scenario):
     nodes = data["nodes"]
     zones = data.get("zones") or []
     segments = scenario.get("segments") or []
     rects = {n["id"]: _t_rect(n) for n in nodes}
+    tabs = _topo_tabs(data)
+    inline = data.get("labels") == "inline"
+    # 탭 모드는 숨긴 시트의 <defs> 를 다른 시트가 참조하면 화살촉과 벽돌이 사라진다
+    # (display:none 안의 paint server 는 렌더되지 않음). 시트마다 id 를 따로 단다.
+    idx = next((i for i, s in enumerate(data.get("scenarios") or []) if s is scenario), 0)
+    sfx = f"-{idx}" if tabs else ""
 
     # 이번 시나리오 경로에 포함된 노드 = 강조, 나머지 = 문맥(흐림)
     on = set()
@@ -1155,6 +1395,8 @@ def render_svg_topology(data, scenario):
         else:
             if kind == "db":
                 node_body.extend(_cyl_paths(x, y, w, h, cls))
+            elif kind == "fw" and sfx:
+                node_body.append(f'<rect class="{cls}" style="fill:url(#fw-brick{sfx})" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
             else:
                 node_body.append(f'<rect class="{cls}" x="{x}" y="{y}" width="{w}" height="{h}" rx="9"/>')
             if kind == "l4":
@@ -1192,15 +1434,27 @@ def render_svg_topology(data, scenario):
 
     # 구간 오버레이 (화살표 + 번호 배지 — 배지는 _t_badge_geom/_t_spread_badges 로 겹침 회피)
     seg_paths, badges, badge_sgs = [], [], []
+    # 탭 모드: 선택한 경로는 accent(sel), 다른 시나리오 구간은 흐린 배경선(ctx) (#156)
+    seg_cls = "topo-seg sel" if tabs else "topo-seg"
+    seg_mk = f"mk-topo-sel{sfx}" if tabs else "mk-topo"
+    ctx_sgs = _t_context_segments(data, scenario, rects) if tabs else []
+    ctx_paths = [f'<path class="topo-seg ctx" {_seg_attr(sg)} d="{_t_seg_path(sg, rects)}" marker-end="url(#mk-topo-ctx{sfx})"/>'
+                 for sg in ctx_sgs]
     for sg in segments:
         d = _t_seg_path(sg, rects)
+        cls = seg_cls + (" dashed" if sg.get("dashed") else "")
         if sg.get("self"):
-            seg_paths.append(f'<path class="topo-seg" data-self="{esc(sg["from"])}" d="{d}" marker-end="url(#mk-topo)"/>')
+            seg_paths.append(f'<path class="{cls}" data-self="{esc(sg["from"])}" d="{d}" marker-end="url(#{seg_mk})"/>')
         else:
-            seg_paths.append(f'<path class="topo-seg" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#mk-topo)"/>')
+            seg_paths.append(f'<path class="{cls}" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#{seg_mk})"/>')
         if sg.get("n") is not None:
             badge_sgs.append(sg)
+    for sg in segments + ctx_sgs:          # 꺾임점이 캔버스 밖으로 나가지 않게
+        for vx, vy in _t_via_points(sg.get("via")) or []:
+            xs.append(vx)
+            ys.append(vy)
     spread = _t_spread_badges([_t_badge_geom(sg, rects) for sg in badge_sgs])
+    badge_pos = {id(sg): xy for sg, xy in zip(badge_sgs, spread)}
     for sg, (bx, by) in zip(badge_sgs, spread):
         dattr = f'data-self="{esc(sg["from"])}"' if sg.get("self") else f'data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"'
         badges.append(f'<g class="iff-badge" {dattr}>')
@@ -1208,10 +1462,50 @@ def render_svg_topology(data, scenario):
         badges.append(f'<text class="topo-badge-tx" x="{bx}" y="{by + 4}" text-anchor="middle">{esc(sg["n"])}</text>')
         badges.append('</g>')
 
+    # 구간 상태 칩 (#156, HTML 전용): 배지가 없으면 선 위, 있으면 배지 옆
+    tag_body, tag_w_on_line = [], {}
+    for sg in segments:
+        tg = sg.get("tag")
+        if not tg:
+            continue
+        text = str(tg["text"])
+        w = _text_width(text, 10.5) + 20
+        badge = badge_pos.get(id(sg))
+        tcx, tcy = _t_tag_center(sg, rects, w, badge)
+        if badge is None and not sg.get("self"):
+            tag_w_on_line[id(sg)] = w
+        x1, y1 = tcx - w / 2, tcy - T_TAG_H / 2
+        xs += [x1, x1 + w]
+        ys += [y1, y1 + T_TAG_H]
+        tag_body.append(f'<g class="topo-tag t-{esc(tg.get("tone", "muted"))}" {_seg_attr(sg)}>')
+        for rc in ("topo-tag-bg", "topo-tag-fill"):
+            tag_body.append(f'<rect class="{rc}" x="{x1:.1f}" y="{y1:.1f}" width="{w:.1f}" height="{T_TAG_H}" rx="{T_TAG_H / 2}"/>')
+        tag_body.append(f'<text class="topo-tag-tx" x="{tcx:.1f}" y="{tcy + 3.8:.1f}" text-anchor="middle">{esc(text)}</text>')
+        tag_body.append('</g>')
+
+    # 선 옆 라벨 (#156, labels: inline): 이 시나리오 구간은 진하게, 배경선 라벨은 흐리게
+    label_body = []
+    if inline:
+        for sg, ctx in [(s, False) for s in segments] + [(s, True) for s in ctx_sgs]:
+            rows = [(ln, False) for ln in str(sg.get("label") or "").split("\n") if ln.strip()]
+            rows += [(ln, True) for ln in str(sg.get("meta") or "").split("\n") if ln.strip()]
+            if not rows:
+                continue
+            crowded = not ctx and (id(sg) in badge_pos or bool(sg.get("tag")))
+            tw = 0.0 if ctx else tag_w_on_line.get(id(sg), 0.0)
+            pos, anchor, (lx1, ly1, lx2, ly2) = _t_inline_label(sg, rects, rows, crowded, tw)
+            xs += [lx1, lx2]
+            ys += [ly1, ly2]
+            label_body.append(f'<g class="topo-ilbl{" ctx" if ctx else ""}" {_seg_attr(sg)}>')
+            for (tx, meta), (px, py) in zip(rows, pos):
+                cls = "topo-imeta" if meta else "topo-ilb"
+                label_body.append(f'<text class="{cls}" x="{px:.1f}" y="{py:.1f}" text-anchor="{anchor}">{esc(tx)}</text>')
+            label_body.append('</g>')
+
     # 흐름 설명 legend — [번호 배지 | 단계 | 설명 | meta] 열 정렬 표 (토폴로지 하단, 공용 레이아웃)
     leg_x = min(xs) if xs else T_MARGIN
     leg_lines, leg_max_x = [], leg_x
-    labelled = [sg for sg in segments if sg.get("label")]
+    labelled = [] if inline else [sg for sg in segments if sg.get("label")]
     if labelled:
         leg_y = max(ys) + 30
         leg_lines.append(f'<text class="topo-legend-h" x="{leg_x}" y="{leg_y}">흐름 설명</text>')
@@ -1263,17 +1557,22 @@ def render_svg_topology(data, scenario):
     vb_w = (maxx - minx) + 2 * pad
     vb_h = (maxy - miny) + 2 * pad
 
-    marker = ('<marker id="mk-topo" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto">'
+    marker = (f'<marker id="mk-topo{sfx}" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto">'
               '<path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker>')
+    if tabs:
+        for mk in ("mk-topo-sel", "mk-topo-ctx"):
+            marker += (f'<marker id="{mk}{sfx}" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto">'
+                       f'<path class="{mk}" d="M0,0 L8,3 L0,6z"/></marker>')
     # fw(방화벽) 노드용 벽돌 패턴 — running bond
-    brick = ('<pattern id="fw-brick" width="16" height="12" patternUnits="userSpaceOnUse">'
+    brick = (f'<pattern id="fw-brick{sfx}" width="16" height="12" patternUnits="userSpaceOnUse">'
              '<rect class="fw-brick-bg" width="16" height="12"/>'
              '<path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/>'
              '</pattern>')
     svg = (f'<svg viewBox="{vb_x} {vb_y} {vb_w} {vb_h}" style="width:100%;display:block;" '
            f'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{esc(scenario["title"])}">'
            f'<defs>{marker}{brick}</defs>'
-           f'{"".join(zone_body)}{"".join(link_body)}{"".join(seg_paths)}{"".join(node_body)}{"".join(badges)}{"".join(leg_lines)}</svg>')
+           f'{"".join(zone_body)}{"".join(link_body)}{"".join(ctx_paths)}{"".join(seg_paths)}{"".join(node_body)}'
+           f'{"".join(badges)}{"".join(tag_body)}{"".join(label_body)}{"".join(leg_lines)}</svg>')
     return svg, vb_w, vb_h
 
 
@@ -1673,6 +1972,184 @@ DRAG_JS = """
 """
 
 
+# topology 경로 탭, 선 옆 라벨, 상태 칩, 상세 패널 (#156). 이 필드를 쓸 때만 붙여
+# 기존 산출물은 바이트 단위로 그대로 둔다(골든 회귀).
+TOPO_EXT_CSS = """
+    :root{--tone-ok:#4ade80;--tone-muted:#98abc9;}
+    :root[data-theme="light"]{--tone-ok:#15803d;--tone-muted:#54667e;}
+    .topo-seg.sel{stroke:var(--accent);stroke-width:2.4;}
+    .mk-topo-sel{fill:var(--accent);}
+    .topo-seg.ctx{stroke:var(--line-soft);stroke-width:1.3;opacity:0.42;}
+    .mk-topo-ctx{fill:var(--line-soft);}
+    .topo-seg.dashed{stroke-dasharray:7,5;}
+    .topo-ilb{fill:var(--text);font-size:11px;font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;}
+    .topo-imeta{fill:var(--muted);font-size:10px;font-family:var(--mono);paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;}
+    .topo-ilbl.ctx{opacity:0.45;}
+    .topo-tag-bg{fill:var(--surface);}
+    .topo-tag-fill{stroke-width:1.2;fill-opacity:0.16;}
+    .topo-tag-tx{font-size:10.5px;font-weight:700;}
+    .topo-tag.t-ok .topo-tag-fill{fill:var(--tone-ok);stroke:var(--tone-ok);} .topo-tag.t-ok .topo-tag-tx{fill:var(--tone-ok);}
+    .topo-tag.t-warn .topo-tag-fill{fill:var(--tone-warn);stroke:var(--tone-warn);} .topo-tag.t-warn .topo-tag-tx{fill:var(--tone-warn);}
+    .topo-tag.t-danger .topo-tag-fill{fill:var(--tone-danger);stroke:var(--tone-danger);} .topo-tag.t-danger .topo-tag-tx{fill:var(--tone-danger);}
+    .topo-tag.t-info .topo-tag-fill{fill:var(--tone-info);stroke:var(--tone-info);} .topo-tag.t-info .topo-tag-tx{fill:var(--tone-info);}
+    .topo-tag.t-muted .topo-tag-fill{fill:var(--tone-muted);stroke:var(--tone-muted);} .topo-tag.t-muted .topo-tag-tx{fill:var(--tone-muted);}
+    .fc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:600;line-height:1.3;letter-spacing:0;vertical-align:middle;white-space:nowrap;}
+    .fc-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+    .fc-chip.t-ok{color:var(--tone-ok);} .fc-chip.t-warn{color:var(--tone-warn);} .fc-chip.t-danger{color:var(--tone-danger);}
+    .fc-chip.t-info{color:var(--tone-info);} .fc-chip.t-muted{color:var(--tone-muted);}
+    h1 .fc-chip{margin-left:10px;}
+    .fc-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;}
+    .fc-tab{font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text);}
+    .fc-tab:hover{border-color:var(--accent);}
+    .fc-tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+    .fc-tab[aria-pressed="true"] .fc-chip{color:var(--bg);}
+    .fc-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+    .fc-legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--muted);}
+    .fc-lg{display:inline-flex;align-items:center;gap:8px;}
+    .fc-ln{display:inline-block;width:26px;height:0;border-top:2.4px solid var(--line);}
+    .fc-ln.sel{border-top-color:var(--accent);}
+    .fc-ln.dashed{border-top-style:dashed;border-top-width:2px;}
+    .fc-ln.ctx{border-top:1.4px solid var(--line-soft);opacity:0.6;}
+    .fc-detail{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);margin-top:14px;border:1px solid var(--border);border-radius:12px;}
+    .fc-detail.one{grid-template-columns:minmax(0,1fr);}
+    .fc-col{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+    .fc-col + .fc-col{border-left:1px solid var(--border);}
+    .fc-facts{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 16px;font-size:13.5px;line-height:1.55;}
+    .fc-facts dt{color:var(--muted);font-size:12.5px;}
+    .fc-facts dd{margin:0;min-width:0;overflow-wrap:anywhere;}
+    .fc-facts ul,.fc-list ul{margin:0;padding-left:18px;}
+    .fc-detail code{font-family:var(--mono);font-size:0.88em;padding:0 4px;border-radius:4px;border:1px solid var(--border);background:var(--zone-bg);overflow-wrap:anywhere;}
+    .fc-tagrows{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 12px;align-items:center;font-size:13.5px;}
+    .fc-tagrows .k,.fc-sub{color:var(--muted);font-size:12.5px;font-weight:600;}
+    .fc-list{display:flex;flex-direction:column;gap:4px;font-size:13.5px;line-height:1.55;}
+    .fc-none{margin:0;color:var(--muted);font-size:12.5px;}
+    .fc-note{margin:0;font-size:13.5px;line-height:1.6;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--zone-bg);}
+    @media screen and (max-width:760px){ .fc-detail{grid-template-columns:minmax(0,1fr);} .fc-col + .fc-col{border-left:0;border-top:1px solid var(--border);} }
+    @media print {
+      :root, :root[data-theme="dark"] {--tone-ok:#15803d;--tone-muted:#54667e;}
+      .fc-tabs{display:none;}
+      .sheet[data-tab][hidden]{display:block !important;}
+    }
+"""
+
+# 탭 전환: 시트를 시나리오마다 그대로 두고 보이는 시트만 바꾼다. 그래서 DRAG_JS(시트 단위)와
+# 인쇄(전 시트 출력)를 건드리지 않는다. 저장소가 막힌 환경(아티팩트 미리보기 등)도 견딘다.
+TAB_JS = """
+(function () {
+  var sheets = Array.prototype.slice.call(document.querySelectorAll('.sheet[data-tab]'));
+  if (sheets.length < 2) return;
+  var KEY = 'flowcast-tab:' + document.title;
+  function show(i, focus) {
+    if (!(i >= 0 && i < sheets.length)) i = 0;
+    sheets.forEach(function (s, j) { s.hidden = j !== i; });
+    if (focus) {
+      var b = sheets[i].querySelector('.fc-tab[data-tab="' + i + '"]');
+      if (b) b.focus();
+    }
+    try { localStorage.setItem(KEY, String(i)); } catch (e) {}
+  }
+  document.addEventListener('click', function (evt) {
+    var b = evt.target && evt.target.closest ? evt.target.closest('.fc-tab') : null;
+    if (b) show(+b.getAttribute('data-tab'), true);
+  });
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if (saved !== null) show(+saved, false);
+})();
+"""
+
+
+def _topo_ext_used(data):
+    """확장 CSS 가 필요한 필드를 쓰는지 (#156). 안 쓰면 기존 산출물을 그대로 낸다."""
+    if data.get("view") != "topology":
+        return False
+    if data.get("tabs") is True or data.get("labels") == "inline" or data.get("legend"):
+        return True
+    for sc in data.get("scenarios") or []:
+        if sc.get("tag") or sc.get("detail"):
+            return True
+        if any(sg.get("dashed") or sg.get("tag") for sg in sc.get("segments") or []):
+            return True
+    return False
+
+
+def _rich(text):
+    """상세 패널 글자. 이스케이프 뒤 `백틱` 구간만 <code> 로."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", esc(text))
+
+
+def _chip(tag):
+    return f'<span class="fc-chip t-{esc(tag.get("tone", "muted"))}">{esc(tag["text"])}</span>'
+
+
+def _tabs_html(data, cur):
+    btns = []
+    for j, sc in enumerate(data["scenarios"]):
+        label = sc.get("tab") or sc["title"]
+        chip = f" {_chip(sc['tag'])}" if sc.get("tag") else ""
+        pressed = "true" if j == cur else "false"
+        btns.append(f'<button type="button" class="fc-tab" data-tab="{j}" aria-pressed="{pressed}">{esc(label)}{chip}</button>')
+    return f'\n    <nav class="fc-tabs" aria-label="시나리오 선택">{"".join(btns)}</nav>'
+
+
+def _legend_html(data, tabs):
+    legend = data.get("legend") or {}
+    items = []
+    if tabs:
+        items.append('<span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span>')
+    if legend.get("dashed"):
+        sel = " sel" if tabs else ""
+        items.append(f'<span class="fc-lg"><i class="fc-ln dashed{sel}"></i>{esc(legend["dashed"])}</span>')
+    if tabs:
+        items.append('<span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span>')
+    items += [_chip(t) for t in legend.get("tags") or []]
+    if not items:
+        return ""
+    return f'\n    <div class="fc-legend">{"".join(items)}</div>'
+
+
+def _detail_html(detail):
+    left, right = [], []
+    facts = detail.get("facts") or []
+    if facts:
+        rows = []
+        for f in facts:
+            v = f["v"]
+            dd = (f'<ul>{"".join(f"<li>{_rich(x)}</li>" for x in v)}</ul>'
+                  if isinstance(v, list) else _rich(v))
+            rows.append(f'<dt>{esc(f["k"])}</dt><dd>{dd}</dd>')
+        left.append(f'<dl class="fc-facts">{"".join(rows)}</dl>')
+    tags = detail.get("tags") or []
+    if tags:
+        right.append('<div class="fc-tagrows">' + "".join(
+            f'<span class="k">{esc(t["k"])}</span><span>{_chip(t)}</span>' for t in tags) + '</div>')
+    for block in detail.get("lists") or []:
+        items = block.get("items") or []
+        body = (f'<ul>{"".join(f"<li>{_rich(x)}</li>" for x in items)}</ul>'
+                if items else '<p class="fc-none">없음</p>')
+        right.append(f'<div class="fc-list"><div class="fc-sub">{esc(block["title"])}</div>{body}</div>')
+    if detail.get("note"):
+        right.append(f'<p class="fc-note">{_rich(detail["note"])}</p>')
+    cols = [c for c in (left, right) if c]
+    if not cols:
+        return ""
+    one = " one" if len(cols) == 1 else ""
+    inner = "".join(f'<div class="fc-col">{"".join(c)}</div>' for c in cols)
+    return f'\n    <div class="fc-detail{one}">{inner}</div>'
+
+
+def _detail_h_estimate(detail):
+    """인쇄용 @page 높이 여유. 상세 패널 높이 어림(넉넉하게)."""
+    if not detail:
+        return 0
+    left = sum(30 * (len(f["v"]) if isinstance(f.get("v"), list) else 1 + len(str(f.get("v", ""))) // 70)
+               for f in detail.get("facts") or [])
+    right = 30 * len(detail.get("tags") or [])
+    right += sum(24 * (len(b.get("items") or []) + 1) for b in detail.get("lists") or [])
+    right += 24 * (1 + len(str(detail.get("note", ""))) // 45) if detail.get("note") else 0
+    return max(left, right) + 60
+
+
 def build_html(data, rendered):
     view = data.get("view", "sequence")
     draggable = view in ("topology", "component")
@@ -1685,19 +2162,31 @@ def build_html(data, rendered):
     css += f"\n    @page {{ size: {page_w}px {page_h}px; margin: 0; }}\n"
     if draggable:
         css += DRAG_CSS
+    ext = _topo_ext_used(data)
+    tabs = view == "topology" and _topo_tabs(data)
+    if ext:
+        css += TOPO_EXT_CSS
+        extra_h = 44 + max(_detail_h_estimate(sc.get("detail")) for sc in data["scenarios"])
+        css = css.replace(f"@page {{ size: {page_w}px {page_h}px;",
+                          f"@page {{ size: {page_w}px {page_h + extra_h}px;")
 
     tools = '<button class="iff-export" type="button">📋 좌표 복사</button>' if draggable else ""
+    legend = _legend_html(data, tabs) if ext else ""
     sheets = []
-    for (svg, _, _), sc in zip(rendered, data["scenarios"]):
+    for i, ((svg, _, _), sc) in enumerate(zip(rendered, data["scenarios"])):
         src = f'<p class="sub">{esc(data["source"])}</p>' if data.get("source") else ""
-        sheets.append(f"""  <section class="sheet">
+        attrs = (f' data-tab="{i}"' + (" hidden" if i else "")) if tabs else ""
+        h1_tag = f" {_chip(sc['tag'])}" if ext and sc.get("tag") else ""
+        nav = _tabs_html(data, i) if tabs else ""
+        after = legend + (_detail_html(sc["detail"]) if ext and sc.get("detail") else "")
+        sheets.append(f"""  <section class="sheet"{attrs}>
     <header class="hero">
       <span class="eyebrow">{esc(data["system"])} · IF 흐름도</span>
-      <h1>{esc(sc["title"])}</h1>
+      <h1>{esc(sc["title"])}{h1_tag}</h1>
       {src}
-    </header>
+    </header>{nav}
     {tools}
-    <div class="diagram-wrap">{svg}</div>
+    <div class="diagram-wrap">{svg}</div>{after}
   </section>""")
 
     title = esc(f'{data["system"]} IF 흐름도')
@@ -1727,7 +2216,7 @@ def build_html(data, rendered):
   }});
 }})();
 </script>
-<script>{DRAG_JS if draggable else ""}</script>
+<script>{DRAG_JS if draggable else ""}</script>{f"{chr(10)}<script>{TAB_JS}</script>" if tabs else ""}
 </body>
 </html>
 """

@@ -25,7 +25,7 @@ flowcast는 흐름도를 "생성"만 하는 도구가 아니라, IF/서비스 �
 | 뷰 | 언제 | 스킬 |
 |----|------|------|
 | **sequence** | 행위자 간 시간순 요청/응답 (스윔레인) | `flowcast:sequence` |
-| **topology** | 인프라/존 공간 배치 + 번호 구간 오버레이 | `flowcast:topology` |
+| **topology** | 인프라/존 공간 배치 + 번호 구간 오버레이. `tabs`로 경로 여러 개를 탭으로 바꿔 보는 경로 지도(선 옆 라벨, 꺾임점, 상태 칩, 상세 패널) | `flowcast:topology` |
 | **component** | 포트 달린 컴포넌트 박스 + 프로토콜 방향 엣지 | `flowcast:component` |
 
 ## 설치

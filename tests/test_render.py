@@ -742,6 +742,208 @@ def test_topology_build_html_end_to_end():
     assert "인프라 구성도" in out and "승인 흐름" in out
 
 
+
+# ── topology 경로 탭, 선 옆 라벨, 꺾임점, 상태 칩, 상세 패널 (#156) ────────
+
+def _route(**over):
+    """노드를 공유하는 경로 3개. 탭 모드 픽스처."""
+    data = {
+        "system": "경로망",
+        "source": "docs/test-route.md",
+        "view": "topology",
+        "tabs": True,
+        "labels": "inline",
+        "legend": {"dashed": "확인 전", "tags": [{"text": "실림", "tone": "ok"}]},
+        "zones": [{"id": "z", "name": "내부"}],
+        "nodes": [
+            {"id": "c", "name": "호출자", "x": 0, "y": 100, "kind": "ext"},
+            {"id": "api", "name": "API", "x": 240, "y": 100, "zone": "z"},
+            {"id": "ui", "name": "UI", "x": 480, "y": 100, "zone": "z", "kind": "fw"},
+            {"id": "ap", "name": "AP", "x": 720, "y": 100, "zone": "z"},
+        ],
+        "scenarios": [
+            {"title": "승인", "tab": "승인 탭", "segments": [
+                {"from": "c", "to": "api", "label": "요청", "meta": "HTTPS"},
+                {"from": "api", "to": "ui", "label": "중계", "tag": {"text": "값 교체", "tone": "ok"}},
+                {"from": "ui", "to": "ap", "label": "전달", "dashed": True},
+            ], "detail": {
+                "facts": [{"k": "엔드포인트", "v": ["`POST /v1/a`"]}, {"k": "빌더", "v": "`approve` <x>"}],
+                "tags": [{"k": "지금", "text": "실림", "tone": "ok"}],
+                "lists": [{"title": "확인", "items": []}],
+                "note": "메모 `code`",
+            }},
+            {"title": "취소", "tag": {"text": "가맹 전용", "tone": "warn"}, "segments": [
+                {"from": "c", "to": "api", "label": "요청", "meta": "HTTPS"},
+                {"from": "api", "to": "ap", "via": [[300, 220], [760, 220]], "label": "직결"},
+            ]},
+            {"title": "조회", "segments": [
+                {"from": "c", "to": "api", "label": "요청", "meta": "HTTPS"},
+            ]},
+        ],
+    }
+    data.update(over)
+    return data
+
+
+def test_route_fixture_validates():
+    errors, warnings = validate_topology(_route())
+    assert errors == [] and warnings == []
+
+
+@pytest.mark.parametrize("over, needle", [
+    ({"tabs": "yes"}, "tabs는 true 또는 false"),
+    ({"labels": "side"}, "labels 'side' 허용 안 됨"),
+    ({"labels": ["inline"]}, "허용 안 됨"),
+    ({"legend": []}, "legend는 object"),
+    ({"legend": {"tags": [{"text": "x", "tone": "pink"}]}}, "잘못된 tone 'pink'"),
+])
+def test_route_rejects_bad_top_level(over, needle):
+    errors, _ = validate_topology(_route(**over))
+    assert any(needle in e for e in errors), errors
+
+
+def test_route_tabs_with_one_scenario_warns():
+    data = _route()
+    data["scenarios"] = data["scenarios"][:1]
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert any("탭 없이 시트로" in w for w in warnings)
+
+
+@pytest.mark.parametrize("patch, needle", [
+    ({"via": [1, 2, 3]}, "via는 [x, y]"),
+    ({"via": [[1, 2], [3]]}, "via는 [x, y]"),
+    ({"via": []}, "via는 [x, y]"),
+    ({"via": [10, 10], "rail": 40}, "via와 rail은 함께 쓸 수 없음"),
+    ({"dashed": "y"}, "dashed는 true 또는 false"),
+    ({"tag": "실림"}, "tag는 object"),
+    ({"tag": {"tone": "ok"}}, "tag.text는"),
+    ({"lx": "왼쪽"}, "lx는 유한한 숫자"),
+])
+def test_route_rejects_bad_segment(patch, needle):
+    data = _route()
+    data["scenarios"][0]["segments"][0].update(patch)
+    errors, _ = validate_topology(data)
+    assert any(needle in e for e in errors), errors
+
+
+def test_route_rejects_via_on_self():
+    data = _route()
+    data["scenarios"][0]["segments"].append({"from": "api", "self": True, "via": [1, 2]})
+    errors, _ = validate_topology(data)
+    assert any("self 구간에는 via" in e for e in errors)
+
+
+@pytest.mark.parametrize("detail, needle", [
+    ("상세", "detail는 object"),
+    ({"facts": [{"v": "x"}]}, "k(항목명)가 필요함"),
+    ({"facts": [{"k": "a", "v": []}]}, "v는 문자열이나"),
+    ({"facts": [{"k": "a", "v": [1]}]}, "v는 문자열이나"),
+    ({"tags": [{"text": "x"}]}, "k(항목명)가 필요함"),
+    ({"lists": [{"items": ["a"]}]}, "title이 필요함"),
+    ({"lists": [{"title": "t"}]}, "items는 list"),
+    ({"lists": [{"title": "t", "items": [1]}]}, "items는 문자열 list"),
+    ({"note": 3}, "note는 문자열"),
+])
+def test_route_rejects_bad_detail(detail, needle):
+    data = _route()
+    data["scenarios"][0]["detail"] = detail
+    errors, _ = validate_topology(data)
+    assert any(needle in e for e in errors), errors
+
+
+def test_via_single_point_makes_orthogonal_l():
+    """꺾임점이 출발 노드 세로 폭 안, 도착 노드 가로 폭 안이면 두 변에 수직으로 붙는다."""
+    rects = {"a": (0, 0, 100, 50), "b": (300, 200, 100, 50)}
+    kind, pts = _mod._t_seg_geom({"from": "a", "to": "b", "via": [350, 25]}, rects)
+    assert kind == "via"
+    assert pts == [(100, 25.0), (350.0, 25.0), (350.0, 200)]
+
+
+def test_via_multi_point_makes_u_and_badge_on_longest_leg():
+    rects = {"a": (0, 0, 100, 50), "b": (300, 0, 100, 50)}
+    sg = {"from": "a", "to": "b", "via": [[30, 120], [360, 120]], "n": 1}
+    kind, pts = _mod._t_seg_geom(sg, rects)
+    assert pts == [(30.0, 50), (30.0, 120.0), (360.0, 120.0), (360.0, 50)]
+    bx, by, ux, uy = _mod._t_badge_geom(sg, rects)
+    assert (bx, by) == (195.0, 120.0) and (ux, uy) == (1.0, 0.0)
+
+
+def test_via_outside_both_spans_falls_back_to_center_direction():
+    rects = {"a": (0, 0, 100, 50), "b": (300, 200, 100, 50)}
+    _, pts = _mod._t_seg_geom({"from": "a", "to": "b", "via": [200, 120]}, rects)
+    assert pts[0] == _mod._edge_pt(rects["a"], 200, 120)
+
+
+def test_route_tabs_render_selected_and_context_segments():
+    data = _route()
+    svg, _, _ = render_svg_topology(data, data["scenarios"][2])   # 조회: 구간 1개
+    assert svg.count('class="topo-seg sel"') == 1
+    # 다른 시나리오 구간 3개(api→ui, ui→ap, api→ap via) = 흐린 배경선. c→api 는 이미 내 구간이라 제외
+    assert svg.count('class="topo-seg ctx"') == 3
+    assert 'marker-end="url(#mk-topo-sel-2)"' in svg and 'id="mk-topo-ctx-2"' in svg
+    assert 'style="fill:url(#fw-brick-2)"' in svg                 # 숨긴 시트의 defs 를 참조하지 않음
+
+
+def test_route_inline_labels_replace_legend_table():
+    data = _route()
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    assert "흐름 설명" not in svg
+    assert 'class="topo-ilb"' in svg and ">요청<" in svg
+    assert 'class="topo-imeta"' in svg and ">HTTPS<" in svg
+    assert 'class="topo-ilbl ctx"' in svg and ">직결<" in svg     # 배경선 라벨은 흐리게
+    assert 'class="topo-seg sel dashed"' in svg
+    assert 'class="topo-tag t-ok"' in svg and ">값 교체<" in svg
+
+
+def test_route_tag_moves_beside_number_badge():
+    data = _route(tabs=False, labels="table")
+    sg = data["scenarios"][0]["segments"][1]
+    sg["n"] = 7
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    rects = {n["id"]: _mod._t_rect(n) for n in data["nodes"]}
+    bx, by, _, _ = _mod._t_badge_geom(sg, rects)
+    assert f'y="{by + 24 + 3.8:.1f}"' in svg                         # 가로 구간: 배지 아래
+    assert 'class="topo-seg"' in svg and "sel" not in svg           # 탭이 아니면 강조 없음
+    assert "흐름 설명" in svg                                        # table 모드는 표 유지
+
+
+def test_route_build_html_tabs_and_detail():
+    data = _route()
+    rendered = [render_svg_topology(data, sc) for sc in data["scenarios"]]
+    out = build_html(data, rendered)
+    assert '<section class="sheet" data-tab="0">' in out
+    assert '<section class="sheet" data-tab="1" hidden>' in out
+    assert out.count('<nav class="fc-tabs"') == 3
+    assert '>승인 탭</button>' in out                                # tab 이름 우선
+    assert 'aria-pressed="true">취소 <span class="fc-chip t-warn">가맹 전용</span>' in out
+    assert "flowcast-tab:" in out and "localStorage.setItem(KEY" in out
+    assert out.count('class="fc-legend"') == 3 and "이 경로에 없음" in out
+    assert "<code>POST /v1/a</code>" in out and "<code>approve</code> &lt;x&gt;" in out
+    assert '<p class="fc-none">없음</p>' in out and '<p class="fc-note">메모 <code>code</code></p>' in out
+    assert out.count('class="fc-detail"') == 1                      # 상세는 첫 시나리오만
+
+
+def test_route_ext_css_only_when_used():
+    plain = _topo()
+    out = build_html(plain, [render_svg_topology(plain, sc) for sc in plain["scenarios"]])
+    assert ".fc-tab" not in out and "flowcast-tab:" not in out
+    one = _topo()
+    one["scenarios"][1]["segments"][0]["dashed"] = True
+    out = build_html(one, [render_svg_topology(one, sc) for sc in one["scenarios"]])
+    assert ".topo-seg.dashed" in out and "flowcast-tab:" not in out  # 탭 없이 점선만
+    assert "data-tab=" not in out
+
+
+def test_route_example_validates_and_renders():
+    data = json.loads((EX / "trace-route-tabs-topology.json").read_text(encoding="utf-8"))
+    errors, warnings = validate_topology(data)
+    assert errors == [] and warnings == []
+    rendered = [render_svg_topology(data, sc) for sc in data["scenarios"]]
+    out = build_html(data, rendered)
+    assert out.count('<section class="sheet" data-tab=') == len(data["scenarios"]) == 6
+
+
 # ── validate/render_component (컴포넌트 뷰) ────────────────────
 
 def _comp(**over):
