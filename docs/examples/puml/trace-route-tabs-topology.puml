@@ -1,0 +1,291 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 정기 청구 승인
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+partner --> relay : 요청
+relay --> api : 추적 헤더\n( for=<파트너 IP> )
+api --> ui : HTTP 호출
+ui --> ap : 중계
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 취소
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+partner --> relay : 요청
+relay --> api : 추적 헤더\n( for=<파트너 IP> )
+api --> ap : TX 직결\n( TCP :9100 )
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 구독 만료
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+partner --> relay : 요청
+relay --> api : 추적 헤더\n( for=<파트너 IP> )
+relay --> hook : 추적 헤더
+hook --> api : 헤더 그대로 옮김
+api --> ui : HTTP 호출
+ui --> ap : 중계
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 조회
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+partner --> relay : 요청
+relay --> api : 추적 헤더\n( for=<파트너 IP> )
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 가맹 직접 취소
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+direct --> api : 직접 호출 (허용 목록 밖)
+api --> ui : HTTP 호출
+ui --> ap : 중계
+@enduml
+
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title 주문 플랫폼 추적 헤더 — 카드 등록
+' flowcast source: docs/trace-header-routes.md (합성 예제)
+package "외부 호출자" {
+  rectangle "고객\n브라우저" as browser <<ext>>
+  rectangle "가맹 서버\n직접 호출" as direct <<ext>>
+}
+package "파트너 영역" {
+  rectangle "파트너\n정기 청구 요청" as partner <<ext>>
+}
+package "중계 영역" {
+  rectangle "중계 서버\nrelay-api" as relay
+}
+package "주문 서비스 영역" {
+  rectangle "결제 화면\norder-web" as web
+  rectangle "주문 API\norder-api" as api
+  rectangle "웹훅 수신기\norder-hook" as hook
+}
+package "결제 코어 영역" {
+  rectangle "코어 UI\ncore-ui" as ui
+  rectangle "코어 AP\ncore-ap" as ap
+}
+
+
+browser --> web : 결제창 인증 (브라우저)
+web --> api : 카드 등록 요청
+api --> ui : HTTP 호출
+ui --> ap : 중계
+@enduml

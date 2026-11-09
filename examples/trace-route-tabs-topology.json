@@ -1,0 +1,161 @@
+{
+  "system": "주문 플랫폼 추적 헤더",
+  "source": "docs/trace-header-routes.md (합성 예제)",
+  "view": "topology",
+  "tabs": true,
+  "labels": "inline",
+  "legend": {
+    "dashed": "UI 경유 여부 확인 전",
+    "tags": [
+      {"text": "실림", "tone": "ok"},
+      {"text": "추가", "tone": "warn"},
+      {"text": "해당 없음", "tone": "muted"}
+    ]
+  },
+  "zones": [
+    {"id": "caller", "name": "외부 호출자"},
+    {"id": "partner", "name": "파트너 영역"},
+    {"id": "relay", "name": "중계 영역"},
+    {"id": "order", "name": "주문 서비스 영역"},
+    {"id": "core", "name": "결제 코어 영역"}
+  ],
+  "nodes": [
+    {"id": "browser", "name": "고객\n브라우저", "zone": "caller", "x": 20, "y": 60, "kind": "ext"},
+    {"id": "direct", "name": "가맹 서버\n직접 호출", "zone": "caller", "x": 20, "y": 150, "kind": "ext"},
+    {"id": "partner", "name": "파트너\n정기 청구 요청", "zone": "partner", "x": 220, "y": 240, "kind": "ext"},
+    {"id": "relay", "name": "중계 서버\nrelay-api", "zone": "relay", "x": 430, "y": 240},
+    {"id": "web", "name": "결제 화면\norder-web", "zone": "order", "x": 680, "y": 60},
+    {"id": "api", "name": "주문 API\norder-api", "zone": "order", "x": 680, "y": 240},
+    {"id": "hook", "name": "웹훅 수신기\norder-hook", "zone": "order", "x": 680, "y": 420},
+    {"id": "ui", "name": "코어 UI\ncore-ui", "zone": "core", "x": 960, "y": 240},
+    {"id": "ap", "name": "코어 AP\ncore-ap", "zone": "core", "x": 1200, "y": 240}
+  ],
+  "scenarios": [
+    {
+      "title": "정기 청구 승인",
+      "tab": "정기 승인",
+      "segments": [
+        {"from": "partner", "to": "relay", "label": "요청"},
+        {"from": "relay", "to": "api", "label": "추적 헤더", "meta": "for=<파트너 IP>"},
+        {"from": "api", "to": "ui", "label": "HTTP 호출", "tag": {"text": "추적 값 교체", "tone": "ok"}},
+        {"from": "ui", "to": "ap", "label": "중계"}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`POST /v1/subscriptions/{id}/charges`"]},
+          {"k": "호출 위치", "v": "`ChargeClient.java:54`"},
+          {"k": "주문 API 진입", "v": "`ChargeController.java:198`"},
+          {"k": "전문 빌더", "v": "`approveParam` 외 2종"},
+          {"k": "코어 목적지", "v": "코어 UI를 거쳐 코어 AP"}
+        ],
+        "tags": [
+          {"k": "지금", "text": "실림, 값은 중계 서버 IP", "tone": "ok"},
+          {"k": "변경 후", "text": "실림, 값은 for 값", "tone": "ok"}
+        ],
+        "lists": [{"title": "걸리는 확인", "items": []}],
+        "note": "이미 실리고 있어서 값만 바뀝니다."
+      }
+    },
+    {
+      "title": "취소",
+      "segments": [
+        {"from": "partner", "to": "relay", "label": "요청"},
+        {"from": "relay", "to": "api", "label": "추적 헤더", "meta": "for=<파트너 IP>"},
+        {"from": "api", "to": "ap", "via": [[800, 365], [1240, 365]], "label": "TX 직결", "meta": "TCP :9100",
+         "tag": {"text": "추적 값 추가", "tone": "warn"}}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`POST /v1/orders/{id}/cancel`", "`POST /v1/orders/net-cancel`"]},
+          {"k": "전문 빌더", "v": "`cancelParam`, TX 모듈 경유"},
+          {"k": "코어 목적지", "v": "코어 AP 직결"}
+        ],
+        "tags": [
+          {"k": "지금", "text": "안 실림", "tone": "muted"},
+          {"k": "변경 후", "text": "추가, 값은 for 값", "tone": "warn"}
+        ],
+        "lists": [{"title": "걸리는 확인", "items": ["TX 모듈이 모르는 파라미터를 AP 전문에 싣는지"]}],
+        "note": "UI를 거치지 않고 TX 모듈이 코어 AP로 바로 보냅니다."
+      }
+    },
+    {
+      "title": "구독 만료",
+      "tab": "구독 만료",
+      "segments": [
+        {"from": "partner", "to": "relay", "label": "요청"},
+        {"from": "relay", "to": "api", "label": "추적 헤더", "meta": "for=<파트너 IP>"},
+        {"from": "relay", "to": "hook", "via": [507, 445], "label": "추적 헤더"},
+        {"from": "hook", "to": "api", "label": "헤더 그대로 옮김", "lx": 712, "ly": 352},
+        {"from": "api", "to": "ui", "label": "HTTP 호출", "tag": {"text": "추적 값 추가", "tone": "warn"}},
+        {"from": "ui", "to": "ap", "label": "중계"}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`POST /v1/subscriptions/{id}/expire`"]},
+          {"k": "호출 위치", "v": "중계 서버 직접, 웹훅 수신기 경유"},
+          {"k": "코어 목적지", "v": "코어 UI를 거쳐 코어 AP"}
+        ],
+        "tags": [
+          {"k": "지금", "text": "안 실림", "tone": "muted"},
+          {"k": "변경 후", "text": "추가, 값은 for 값", "tone": "warn"}
+        ],
+        "lists": [{"title": "걸리는 확인", "items": ["코어가 만료 전문에서 이 필드를 받는지"]}],
+        "note": "웹훅 경유는 받은 헤더를 새로 쓰지 않고 그대로 옮겨야 합니다."
+      }
+    },
+    {
+      "title": "조회",
+      "tag": {"text": "해당 없음", "tone": "muted"},
+      "segments": [
+        {"from": "partner", "to": "relay", "label": "요청"},
+        {"from": "relay", "to": "api", "label": "추적 헤더", "meta": "for=<파트너 IP>"}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`GET /v1/orders/{id}`"]},
+          {"k": "코어 목적지", "v": "없음. DB 조회만 합니다"}
+        ],
+        "note": "헤더는 오지만 쓸 곳이 없습니다."
+      }
+    },
+    {
+      "title": "가맹 직접 취소",
+      "tab": "가맹 직접 취소",
+      "tag": {"text": "가맹 전용", "tone": "warn"},
+      "segments": [
+        {"from": "direct", "to": "api", "via": [720, 175], "label": "직접 호출 (허용 목록 밖)"},
+        {"from": "api", "to": "ui", "label": "HTTP 호출", "tag": {"text": "추적 값 추가", "tone": "warn"}},
+        {"from": "ui", "to": "ap", "label": "중계", "dashed": true}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`POST /v1/orders/{id}/cancel` (망취소)"]},
+          {"k": "코어 목적지", "v": "UI를 거쳐 AP로 가는지, AP로 바로 가는지 확인 전"}
+        ],
+        "tags": [
+          {"k": "지금", "text": "안 실림", "tone": "muted"},
+          {"k": "변경 후", "text": "추가, 값은 직접 접속 주소", "tone": "warn"}
+        ],
+        "lists": [{"title": "걸리는 확인", "items": ["코어가 망취소 전문에서 이 필드를 받는지"]}],
+        "note": "가맹 서버는 허용 목록 밖이라 헤더를 보내도 무시됩니다."
+      }
+    },
+    {
+      "title": "카드 등록",
+      "tag": {"text": "범위 밖", "tone": "muted"},
+      "segments": [
+        {"from": "browser", "to": "web", "label": "결제창 인증 (브라우저)"},
+        {"from": "web", "to": "api", "label": "카드 등록 요청"},
+        {"from": "api", "to": "ui", "label": "HTTP 호출", "tag": {"text": "추적 값 없음", "tone": "muted"}},
+        {"from": "ui", "to": "ap", "label": "중계"}
+      ],
+      "detail": {
+        "facts": [
+          {"k": "엔드포인트", "v": ["`POST /v1/cards/register/{sessionId}`"]},
+          {"k": "호출 위치", "v": "결제 화면 서버"}
+        ],
+        "note": "중계 서버가 아니라 결제 화면이 부르는 경로라 추적 헤더가 닿지 않습니다."
+      }
+    }
+  ]
+}

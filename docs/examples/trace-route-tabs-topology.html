@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>주문 플랫폼 추적 헤더 IF 흐름도</title>
+<style>
+    :root {
+      --bg:#07101b; --surface:rgba(12,21,36,0.92); --border:rgba(153,186,255,0.14);
+      --text:#edf3ff; --muted:#98abc9; --accent:#68b6ff; --warn:#ffd072;
+      --tone-danger:#f87171; --tone-warn:#fbbf24; --tone-info:#38bdf8;
+      --atone-slate:#64748b; --atone-violet:#7c74ff; --atone-deep:#2a2170; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.72);
+      --line:#c3cedd; --line-soft:#76839a;
+      --note-bg:rgba(255,208,114,0.06); --note-bd:rgba(255,208,114,0.38);
+      --act-bg:rgba(104,182,255,0.15); --act-bd:rgba(104,182,255,0.32);
+      --zone-bg:rgba(104,182,255,0.08); --zone-bd:rgba(104,182,255,0.32);
+      --comp-bg:rgba(78,205,190,0.14); --comp-bd:rgba(78,205,190,0.44);
+      --shadow:0 24px 72px rgba(0,0,0,0.34);
+      --font:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+    }
+    :root[data-theme="light"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .page{width:min(1438.0px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;display:grid;gap:18px;}
+    .sheet{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);border-radius:20px;padding:20px 24px;}
+    .hero{margin-bottom:14px;}
+    .eyebrow{display:inline-flex;padding:6px 12px;border-radius:999px;border:1px solid var(--zone-bd);background:var(--zone-bg);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.07em;}
+    h1{margin:10px 0 4px;font-size:clamp(1.3rem,2.2vw,1.7rem);letter-spacing:-0.02em;}
+    p.sub{margin:0;color:var(--muted);font-size:12.5px;}
+    .diagram-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+    .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;box-shadow:var(--shadow);}
+    /* ── SVG ── */
+    .zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .zone-tx{fill:var(--accent);font-family:var(--font);font-size:11px;font-weight:700;}
+    .actor{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.5;}
+    .actor-tx{fill:var(--accent);font-family:var(--font);font-size:11.5px;font-weight:700;}
+    .actor-sub{fill:var(--muted);font-family:var(--mono);font-size:9px;}
+    .lifeline{stroke:var(--line-soft);stroke-opacity:0.4;stroke-width:1;stroke-dasharray:5,5;}
+    .act-bar{fill:var(--act-bg);stroke:var(--act-bd);stroke-width:1;}
+    .ar{fill:none;}
+    .ar-req{stroke:var(--line);stroke-width:1.8;}
+    .ar-res{stroke:var(--line-soft);stroke-width:1.5;stroke-dasharray:6,4;}
+    .ar-relay{stroke:var(--line-soft);stroke-width:1.4;}
+    .ar-self{stroke:var(--line);stroke-width:1.6;}
+    .mk-req,.mk-self{fill:var(--line);}
+    .mk-res,.mk-relay{fill:var(--line-soft);}
+    text{font-family:var(--font);}
+    .lb-req,.lb-self{fill:var(--text);font-size:10.5px;font-weight:600;}
+    .lb-res{fill:var(--muted);font-size:10.5px;}
+    .lb-relay{fill:var(--muted);font-size:10.5px;font-style:italic;}
+    .lb-sub{fill:var(--muted);font-size:10px;font-weight:400;font-family:var(--mono);}
+    .lb-proto{fill:var(--muted);font-size:9.5px;font-family:var(--mono);}
+    .note-rule{stroke:var(--zone-bd);stroke-width:1;stroke-dasharray:4,4;}
+    .note{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1;}
+    .note-tx{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag{fill:none;stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-tag{fill:var(--surface);stroke:var(--line-soft);stroke-width:1.2;}
+    .frag-kind{fill:var(--text);font-family:var(--mono);font-size:10px;font-weight:700;}
+    .frag-guard{fill:var(--accent);font-size:10.5px;font-weight:600;}
+    .frag-guard-bg{fill:var(--surface);}
+    .frag-else{stroke:var(--line-soft);stroke-width:1.2;stroke-dasharray:6,4;}
+    .tone-danger{stroke:var(--tone-danger);} text.tone-danger{fill:var(--tone-danger);stroke:none;}
+    .tone-warn{stroke:var(--tone-warn);}     text.tone-warn{fill:var(--tone-warn);stroke:none;}
+    .tone-info{stroke:var(--tone-info);}     text.tone-info{fill:var(--tone-info);stroke:none;}
+    .mk-tone-danger{fill:var(--tone-danger);}
+    .mk-tone-warn{fill:var(--tone-warn);}
+    .mk-tone-info{fill:var(--tone-info);}
+    .actor.atone-slate{fill:var(--atone-slate);stroke:var(--atone-slate);}
+    .actor.atone-violet{fill:var(--atone-violet);stroke:var(--atone-violet);}
+    .actor.atone-deep{fill:var(--atone-deep);stroke:var(--atone-deep);}
+    .actor-tx.atone-slate,.actor-tx.atone-violet,.actor-tx.atone-deep{fill:var(--atone-tx);}
+    .actor-sub.atone-slate,.actor-sub.atone-violet,.actor-sub.atone-deep{fill:var(--atone-sub);}
+    /* ── 토폴로지(구성도) 뷰 ── */
+    .topo-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:5,4;}
+    .topo-zone-tx{fill:var(--accent);font-size:11.5px;font-weight:700;}
+    .topo-node{fill:var(--surface);stroke:var(--border);stroke-width:1.4;}
+    .topo-dualgrp{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.2;stroke-dasharray:4,3;}
+    .topo-dual{opacity:0.6;}
+    .topo-node.dim{opacity:0.5;}
+    .topo-node.on{fill:var(--zone-bg);stroke:var(--accent);stroke-width:1.9;}
+    .topo-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .topo-gear{fill:var(--surface);stroke:var(--line-soft);stroke-dasharray:4,3;}
+    .topo-fw{fill:url(#fw-brick);stroke:var(--warn);stroke-width:1.6;}
+    .topo-fw.on{fill:url(#fw-brick);stroke:var(--accent);stroke-width:1.9;}
+    .fw-brick-bg{fill:var(--surface);}
+    .fw-mortar{stroke:var(--warn);stroke-width:1;opacity:0.6;fill:none;}
+    .topo-l4{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:4,3;}
+    .l4-ico{fill:var(--accent);}
+    .l4-ico-l{stroke:var(--accent);stroke-width:1.2;fill:none;}
+    .topo-tx{fill:var(--muted);font-size:11px;font-weight:600;}
+    .topo-tx.on{fill:var(--accent);}
+    .topo-link{stroke:var(--line-soft);stroke-width:1.3;fill:none;opacity:0.55;}
+    .topo-seg{fill:none;stroke:var(--line);stroke-width:2;}
+    .mk-topo{fill:var(--line);}
+    .topo-badge{fill:var(--accent);stroke:var(--surface);stroke-width:1.6;}
+    .topo-badge-tx{fill:#fff;font-size:11px;font-weight:700;}
+    .topo-legtbl{fill:none;stroke:var(--border);stroke-width:1;}
+    .topo-legtbl-hdr{fill:var(--zone-bg);stroke:none;}
+    .topo-legnum{fill:var(--accent);font-size:11px;font-weight:700;}
+    .topo-legend-h{fill:var(--muted);font-size:11px;font-weight:700;}
+    .topo-legend-hdr{fill:var(--muted);font-size:10.5px;font-weight:700;}
+    .topo-leggrid{stroke:var(--border);stroke-width:0.7;}
+    .topo-legend-step{fill:var(--text);font-size:11.5px;font-weight:700;}
+    .topo-legend-tx{fill:var(--text);font-size:11.5px;}
+    .topo-legend-meta{fill:var(--muted);font-size:10px;}
+    /* ── 컴포넌트 뷰 ── */
+    .comp-zone{fill:var(--zone-bg);stroke:var(--zone-bd);stroke-width:1.4;stroke-dasharray:6,4;}
+    .comp-zone-tx{fill:var(--accent);font-size:12px;font-weight:700;}
+    .comp-node{fill:var(--comp-bg);stroke:var(--comp-bd);stroke-width:1.6;}
+    .comp-ext{fill:var(--note-bg);stroke:var(--note-bd);}
+    .comp-db{fill:var(--note-bg);stroke:var(--note-bd);}
+    .cyl-rim{fill:none;}
+    .comp-name{fill:var(--text);font-size:12px;font-weight:700;}
+    .comp-port{fill:var(--muted);font-size:10px;font-family:var(--mono);font-weight:700;}
+    .comp-edge{fill:none;stroke:var(--line);stroke-width:1.7;}
+    .comp-lb{fill:var(--text);font-size:11px;font-weight:600;}
+    .comp-proto{fill:var(--muted);font-size:10px;font-family:var(--mono);}
+    .mk-comp{fill:var(--line);}
+    @media print {
+      :root, :root[data-theme="dark"] { 
+      --bg:#f4f7fc; --surface:#ffffff; --border:rgba(28,60,110,0.16);
+      --text:#1b2635; --muted:#54667e; --accent:#1f6fd0; --warn:#8a6210;
+      --tone-danger:#dc2626; --tone-warn:#d97706; --tone-info:#0ea5e9;
+      --atone-slate:#475569; --atone-violet:#635bff; --atone-deep:#1a1552; --atone-tx:#ffffff; --atone-sub:rgba(255,255,255,0.78);
+      --line:#3f4b5c; --line-soft:#93a1b3;
+      --note-bg:rgba(181,126,10,0.07); --note-bd:rgba(181,126,10,0.42);
+      --act-bg:rgba(31,111,208,0.12); --act-bd:rgba(31,111,208,0.32);
+      --zone-bg:rgba(31,111,208,0.07); --zone-bd:rgba(31,111,208,0.30);
+      --comp-bg:rgba(35,170,155,0.13); --comp-bd:rgba(20,130,120,0.55);
+      --shadow:0 10px 32px rgba(23,48,88,0.10);
+ }
+      .theme-toggle{display:none;}
+      body{background:#fff;}
+      .page{width:1438.0px;padding:0;gap:0;}
+      .sheet{border:none;box-shadow:none;border-radius:0;page-break-after:always;page-break-inside:avoid;}
+      .diagram-wrap{overflow:visible;border:none;}
+      .hero{height:96px;overflow:hidden;}
+    }
+
+    @page { size: 1438.0px 912.0px; margin: 0; }
+
+    .iff-node{cursor:grab;}
+    .iff-node:active{cursor:grabbing;}
+    .iff-zone{cursor:grab;}
+    .iff-zone:active{cursor:grabbing;}
+    .iff-export{margin:0 0 10px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;}
+    @media print{ .iff-export{display:none;} }
+
+    :root{--tone-ok:#4ade80;--tone-muted:#98abc9;}
+    :root[data-theme="light"]{--tone-ok:#15803d;--tone-muted:#54667e;}
+    .topo-seg.sel{stroke:var(--accent);stroke-width:2.4;}
+    .mk-topo-sel{fill:var(--accent);}
+    .topo-seg.ctx{stroke:var(--line-soft);stroke-width:1.3;opacity:0.42;}
+    .mk-topo-ctx{fill:var(--line-soft);}
+    .topo-seg.dashed{stroke-dasharray:7,5;}
+    .topo-ilb{fill:var(--text);font-size:11px;font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;}
+    .topo-imeta{fill:var(--muted);font-size:10px;font-family:var(--mono);paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;}
+    .topo-ilbl.ctx{opacity:0.45;}
+    .topo-tag-bg{fill:var(--surface);}
+    .topo-tag-fill{stroke-width:1.2;fill-opacity:0.16;}
+    .topo-tag-tx{font-size:10.5px;font-weight:700;}
+    .topo-tag.t-ok .topo-tag-fill{fill:var(--tone-ok);stroke:var(--tone-ok);} .topo-tag.t-ok .topo-tag-tx{fill:var(--tone-ok);}
+    .topo-tag.t-warn .topo-tag-fill{fill:var(--tone-warn);stroke:var(--tone-warn);} .topo-tag.t-warn .topo-tag-tx{fill:var(--tone-warn);}
+    .topo-tag.t-danger .topo-tag-fill{fill:var(--tone-danger);stroke:var(--tone-danger);} .topo-tag.t-danger .topo-tag-tx{fill:var(--tone-danger);}
+    .topo-tag.t-info .topo-tag-fill{fill:var(--tone-info);stroke:var(--tone-info);} .topo-tag.t-info .topo-tag-tx{fill:var(--tone-info);}
+    .topo-tag.t-muted .topo-tag-fill{fill:var(--tone-muted);stroke:var(--tone-muted);} .topo-tag.t-muted .topo-tag-tx{fill:var(--tone-muted);}
+    .fc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:600;line-height:1.3;letter-spacing:0;vertical-align:middle;white-space:nowrap;}
+    .fc-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+    .fc-chip.t-ok{color:var(--tone-ok);} .fc-chip.t-warn{color:var(--tone-warn);} .fc-chip.t-danger{color:var(--tone-danger);}
+    .fc-chip.t-info{color:var(--tone-info);} .fc-chip.t-muted{color:var(--tone-muted);}
+    h1 .fc-chip{margin-left:10px;}
+    .fc-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;}
+    .fc-tab{font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text);}
+    .fc-tab:hover{border-color:var(--accent);}
+    .fc-tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+    .fc-tab[aria-pressed="true"] .fc-chip{color:var(--bg);}
+    .fc-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+    .fc-legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--muted);}
+    .fc-lg{display:inline-flex;align-items:center;gap:8px;}
+    .fc-ln{display:inline-block;width:26px;height:0;border-top:2.4px solid var(--line);}
+    .fc-ln.sel{border-top-color:var(--accent);}
+    .fc-ln.dashed{border-top-style:dashed;border-top-width:2px;}
+    .fc-ln.ctx{border-top:1.4px solid var(--line-soft);opacity:0.6;}
+    .fc-detail{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);margin-top:14px;border:1px solid var(--border);border-radius:12px;}
+    .fc-detail.one{grid-template-columns:minmax(0,1fr);}
+    .fc-col{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+    .fc-col + .fc-col{border-left:1px solid var(--border);}
+    .fc-facts{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 16px;font-size:13.5px;line-height:1.55;}
+    .fc-facts dt{color:var(--muted);font-size:12.5px;}
+    .fc-facts dd{margin:0;min-width:0;overflow-wrap:anywhere;}
+    .fc-facts ul,.fc-list ul{margin:0;padding-left:18px;}
+    .fc-detail code{font-family:var(--mono);font-size:0.88em;padding:0 4px;border-radius:4px;border:1px solid var(--border);background:var(--zone-bg);overflow-wrap:anywhere;}
+    .fc-tagrows{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 12px;align-items:center;font-size:13.5px;}
+    .fc-tagrows .k,.fc-sub{color:var(--muted);font-size:12.5px;font-weight:600;}
+    .fc-list{display:flex;flex-direction:column;gap:4px;font-size:13.5px;line-height:1.55;}
+    .fc-none{margin:0;color:var(--muted);font-size:12.5px;}
+    .fc-note{margin:0;font-size:13.5px;line-height:1.6;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--zone-bg);}
+    @media screen and (max-width:760px){ .fc-detail{grid-template-columns:minmax(0,1fr);} .fc-col + .fc-col{border-left:0;border-top:1px solid var(--border);} }
+    @media print {
+      :root, :root[data-theme="dark"] {--tone-ok:#15803d;--tone-muted:#54667e;}
+      .fc-tabs{display:none;}
+      .sheet[data-tab][hidden]{display:block !important;}
+    }
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button">🌓 테마</button>
+<main class="page">
+  <section class="sheet" data-tab="0">
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>정기 청구 승인</h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="true">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="false">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="false">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="false">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="false">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="false">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="정기 청구 승인"><defs><marker id="mk-topo-0" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-0" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-0" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-0" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg ctx" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg ctx" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg ctx" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg ctx" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg ctx" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-ctx-0)"/><path class="topo-seg sel" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-sel-0)"/><path class="topo-seg sel" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-sel-0)"/><path class="topo-seg sel" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-sel-0)"/><path class="topo-seg sel" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-sel-0)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx on" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx on" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx on" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx on" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-tag t-ok" data-from="api" data-to="ui"><rect class="topo-tag-bg" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><rect class="topo-tag-fill" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><text class="topo-tag-tx" x="897.0" y="268.8" text-anchor="middle">추적 값 교체</text></g><g class="topo-ilbl" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="248.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="381.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="394.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl ctx" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl ctx" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g><g class="topo-ilbl ctx" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl ctx" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>POST /v1/subscriptions/{id}/charges</code></li></ul></dd><dt>호출 위치</dt><dd><code>ChargeClient.java:54</code></dd><dt>주문 API 진입</dt><dd><code>ChargeController.java:198</code></dd><dt>전문 빌더</dt><dd><code>approveParam</code> 외 2종</dd><dt>코어 목적지</dt><dd>코어 UI를 거쳐 코어 AP</dd></dl></div><div class="fc-col"><div class="fc-tagrows"><span class="k">지금</span><span><span class="fc-chip t-ok">실림, 값은 중계 서버 IP</span></span><span class="k">변경 후</span><span><span class="fc-chip t-ok">실림, 값은 for 값</span></span></div><div class="fc-list"><div class="fc-sub">걸리는 확인</div><p class="fc-none">없음</p></div><p class="fc-note">이미 실리고 있어서 값만 바뀝니다.</p></div></div>
+  </section>
+  <section class="sheet" data-tab="1" hidden>
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>취소</h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="false">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="true">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="false">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="false">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="false">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="false">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="취소"><defs><marker id="mk-topo-1" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-1" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-1" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-1" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg ctx" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-ctx-1)"/><path class="topo-seg sel" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-sel-1)"/><path class="topo-seg sel" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-sel-1)"/><path class="topo-seg sel" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-sel-1)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx on" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx on" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node dim" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx on" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-tag t-warn" data-from="api" data-to="ap"><rect class="topo-tag-bg" x="978.0" y="355.0" width="84.0" height="20" rx="10.0"/><rect class="topo-tag-fill" x="978.0" y="355.0" width="84.0" height="20" rx="10.0"/><text class="topo-tag-tx" x="1020.0" y="368.8" text-anchor="middle">추적 값 추가</text></g><g class="topo-ilbl" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="391.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="404.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="258.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl ctx" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl ctx" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl ctx" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g><g class="topo-ilbl ctx" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl ctx" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>POST /v1/orders/{id}/cancel</code></li><li><code>POST /v1/orders/net-cancel</code></li></ul></dd><dt>전문 빌더</dt><dd><code>cancelParam</code>, TX 모듈 경유</dd><dt>코어 목적지</dt><dd>코어 AP 직결</dd></dl></div><div class="fc-col"><div class="fc-tagrows"><span class="k">지금</span><span><span class="fc-chip t-muted">안 실림</span></span><span class="k">변경 후</span><span><span class="fc-chip t-warn">추가, 값은 for 값</span></span></div><div class="fc-list"><div class="fc-sub">걸리는 확인</div><ul><li>TX 모듈이 모르는 파라미터를 AP 전문에 싣는지</li></ul></div><p class="fc-note">UI를 거치지 않고 TX 모듈이 코어 AP로 바로 보냅니다.</p></div></div>
+  </section>
+  <section class="sheet" data-tab="2" hidden>
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>구독 만료</h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="false">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="false">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="true">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="false">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="false">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="false">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="구독 만료"><defs><marker id="mk-topo-2" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-2" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-2" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-2" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-ctx-2)"/><path class="topo-seg ctx" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-ctx-2)"/><path class="topo-seg ctx" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-ctx-2)"/><path class="topo-seg ctx" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-ctx-2)"/><path class="topo-seg sel" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-sel-2)"/><path class="topo-seg sel" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-sel-2)"/><path class="topo-seg sel" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-sel-2)"/><path class="topo-seg sel" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-sel-2)"/><path class="topo-seg sel" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-sel-2)"/><path class="topo-seg sel" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-sel-2)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx on" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx on" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx on" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx on" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx on" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-tag t-warn" data-from="api" data-to="ui"><rect class="topo-tag-bg" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><rect class="topo-tag-fill" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><text class="topo-tag-tx" x="897.0" y="268.8" text-anchor="middle">추적 값 추가</text></g><g class="topo-ilbl" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="248.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="381.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="394.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g><g class="topo-ilbl ctx" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl ctx" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>POST /v1/subscriptions/{id}/expire</code></li></ul></dd><dt>호출 위치</dt><dd>중계 서버 직접, 웹훅 수신기 경유</dd><dt>코어 목적지</dt><dd>코어 UI를 거쳐 코어 AP</dd></dl></div><div class="fc-col"><div class="fc-tagrows"><span class="k">지금</span><span><span class="fc-chip t-muted">안 실림</span></span><span class="k">변경 후</span><span><span class="fc-chip t-warn">추가, 값은 for 값</span></span></div><div class="fc-list"><div class="fc-sub">걸리는 확인</div><ul><li>코어가 만료 전문에서 이 필드를 받는지</li></ul></div><p class="fc-note">웹훅 경유는 받은 헤더를 새로 쓰지 않고 그대로 옮겨야 합니다.</p></div></div>
+  </section>
+  <section class="sheet" data-tab="3" hidden>
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>조회 <span class="fc-chip t-muted">해당 없음</span></h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="false">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="false">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="false">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="true">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="false">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="false">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="조회"><defs><marker id="mk-topo-3" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-3" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-3" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-3" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg ctx" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-ctx-3)"/><path class="topo-seg sel" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-sel-3)"/><path class="topo-seg sel" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-sel-3)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx on" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx on" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node dim" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node dim" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-ilbl" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="258.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl ctx" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="381.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="394.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl ctx" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl ctx" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g><g class="topo-ilbl ctx" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl ctx" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>GET /v1/orders/{id}</code></li></ul></dd><dt>코어 목적지</dt><dd>없음. DB 조회만 합니다</dd></dl></div><div class="fc-col"><p class="fc-note">헤더는 오지만 쓸 곳이 없습니다.</p></div></div>
+  </section>
+  <section class="sheet" data-tab="4" hidden>
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="false">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="false">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="false">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="false">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="true">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="false">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="가맹 직접 취소"><defs><marker id="mk-topo-4" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-4" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-4" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-4" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg ctx" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-ctx-4)"/><path class="topo-seg sel" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-sel-4)"/><path class="topo-seg sel" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-sel-4)"/><path class="topo-seg sel dashed" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-sel-4)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx on" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node dim" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx on" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx on" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-tag t-warn" data-from="api" data-to="ui"><rect class="topo-tag-bg" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><rect class="topo-tag-fill" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><text class="topo-tag-tx" x="897.0" y="268.8" text-anchor="middle">추적 값 추가</text></g><g class="topo-ilbl" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g><g class="topo-ilbl" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="248.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="381.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="394.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl ctx" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl ctx" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl ctx" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>POST /v1/orders/{id}/cancel</code> (망취소)</li></ul></dd><dt>코어 목적지</dt><dd>UI를 거쳐 AP로 가는지, AP로 바로 가는지 확인 전</dd></dl></div><div class="fc-col"><div class="fc-tagrows"><span class="k">지금</span><span><span class="fc-chip t-muted">안 실림</span></span><span class="k">변경 후</span><span><span class="fc-chip t-warn">추가, 값은 직접 접속 주소</span></span></div><div class="fc-list"><div class="fc-sub">걸리는 확인</div><ul><li>코어가 망취소 전문에서 이 필드를 받는지</li></ul></div><p class="fc-note">가맹 서버는 허용 목록 밖이라 헤더를 보내도 무시됩니다.</p></div></div>
+  </section>
+  <section class="sheet" data-tab="5" hidden>
+    <header class="hero">
+      <span class="eyebrow">주문 플랫폼 추적 헤더 · IF 흐름도</span>
+      <h1>카드 등록 <span class="fc-chip t-muted">범위 밖</span></h1>
+      <p class="sub">docs/trace-header-routes.md (합성 예제)</p>
+    </header>
+    <nav class="fc-tabs" aria-label="시나리오 선택"><button type="button" class="fc-tab" data-tab="0" aria-pressed="false">정기 승인</button><button type="button" class="fc-tab" data-tab="1" aria-pressed="false">취소</button><button type="button" class="fc-tab" data-tab="2" aria-pressed="false">구독 만료</button><button type="button" class="fc-tab" data-tab="3" aria-pressed="false">조회 <span class="fc-chip t-muted">해당 없음</span></button><button type="button" class="fc-tab" data-tab="4" aria-pressed="false">가맹 직접 취소 <span class="fc-chip t-warn">가맹 전용</span></button><button type="button" class="fc-tab" data-tab="5" aria-pressed="true">카드 등록 <span class="fc-chip t-muted">범위 밖</span></button></nav>
+    <button class="iff-export" type="button">📋 좌표 복사</button>
+    <div class="diagram-wrap"><svg viewBox="-8.0 14.0 1390.0 484.0" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="카드 등록"><defs><marker id="mk-topo-5" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-sel-5" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-sel" d="M0,0 L8,3 L0,6z"/></marker><marker id="mk-topo-ctx-5" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path class="mk-topo-ctx" d="M0,0 L8,3 L0,6z"/></marker><pattern id="fw-brick-5" width="16" height="12" patternUnits="userSpaceOnUse"><rect class="fw-brick-bg" width="16" height="12"/><path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/></pattern></defs><g class="iff-zone" data-zone="caller" data-members="browser,direct" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="6.0" y="28.0" width="182.0" height="186.0" rx="10"/><text class="topo-zone-tx" x="16.0" y="41.0">외부 호출자</text></g><g class="iff-zone" data-zone="partner" data-members="partner" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="206.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="216.0" y="221.0">파트너 영역</text></g><g class="iff-zone" data-zone="relay" data-members="relay" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="416.0" y="208.0" width="182.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="426.0" y="221.0">중계 영역</text></g><g class="iff-zone" data-zone="order" data-members="web,api,hook" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="666.0" y="28.0" width="182.0" height="456.0" rx="10"/><text class="topo-zone-tx" x="676.0" y="41.0">주문 서비스 영역</text></g><g class="iff-zone" data-zone="core" data-members="ui,ap" data-pad="14" data-lbl="18" data-lblpos="tl"><rect class="topo-zone" x="946.0" y="208.0" width="422.0" height="96.0" rx="10"/><text class="topo-zone-tx" x="956.0" y="221.0">결제 코어 영역</text></g><path class="topo-seg ctx" data-from="partner" data-to="relay" d="M374.0,265.0 L430.0,265.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg ctx" data-from="relay" data-to="api" d="M584.0,265.0 L680.0,265.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg ctx" data-from="api" data-to="ap" d="M800.0,290.0 L800.0,365.0 L1240.0,365.0 L1240.0,290.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg ctx" data-from="relay" data-to="hook" d="M507.0,290.0 L507.0,445.0 L680.0,445.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg ctx" data-from="hook" data-to="api" d="M757.0,420.0 L757.0,290.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg ctx" data-from="direct" data-to="api" d="M174.0,175.0 L720.0,175.0 L720.0,240.0" marker-end="url(#mk-topo-ctx-5)"/><path class="topo-seg sel" data-from="browser" data-to="web" d="M174.0,85.0 L680.0,85.0" marker-end="url(#mk-topo-sel-5)"/><path class="topo-seg sel" data-from="web" data-to="api" d="M757.0,110.0 L757.0,240.0" marker-end="url(#mk-topo-sel-5)"/><path class="topo-seg sel" data-from="api" data-to="ui" d="M834.0,265.0 L960.0,265.0" marker-end="url(#mk-topo-sel-5)"/><path class="topo-seg sel" data-from="ui" data-to="ap" d="M1114.0,265.0 L1200.0,265.0" marker-end="url(#mk-topo-sel-5)"/><g class="iff-node" data-id="browser" data-cx="97.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node topo-ext on" x="20.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="97.0" y="83.0" text-anchor="middle">고객</text><text class="topo-tx on" x="97.0" y="95.0" text-anchor="middle">브라우저</text></g><g class="iff-node" data-id="direct" data-cx="97.0" data-cy="175.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="20.0" y="150.0" width="154" height="50" rx="9"/><text class="topo-tx" x="97.0" y="173.0" text-anchor="middle">가맹 서버</text><text class="topo-tx" x="97.0" y="185.0" text-anchor="middle">직접 호출</text></g><g class="iff-node" data-id="partner" data-cx="297.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node topo-ext dim" x="220.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="297.0" y="263.0" text-anchor="middle">파트너</text><text class="topo-tx" x="297.0" y="275.0" text-anchor="middle">정기 청구 요청</text></g><g class="iff-node" data-id="relay" data-cx="507.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node dim" x="430.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx" x="507.0" y="263.0" text-anchor="middle">중계 서버</text><text class="topo-tx" x="507.0" y="275.0" text-anchor="middle">relay-api</text></g><g class="iff-node" data-id="web" data-cx="757.0" data-cy="85.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="60.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="83.0" text-anchor="middle">결제 화면</text><text class="topo-tx on" x="757.0" y="95.0" text-anchor="middle">order-web</text></g><g class="iff-node" data-id="api" data-cx="757.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="680.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="757.0" y="263.0" text-anchor="middle">주문 API</text><text class="topo-tx on" x="757.0" y="275.0" text-anchor="middle">order-api</text></g><g class="iff-node" data-id="hook" data-cx="757.0" data-cy="445.0" data-w="154" data-h="50"><rect class="topo-node dim" x="680.0" y="420.0" width="154" height="50" rx="9"/><text class="topo-tx" x="757.0" y="443.0" text-anchor="middle">웹훅 수신기</text><text class="topo-tx" x="757.0" y="455.0" text-anchor="middle">order-hook</text></g><g class="iff-node" data-id="ui" data-cx="1037.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="960.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1037.0" y="263.0" text-anchor="middle">코어 UI</text><text class="topo-tx on" x="1037.0" y="275.0" text-anchor="middle">core-ui</text></g><g class="iff-node" data-id="ap" data-cx="1277.0" data-cy="265.0" data-w="154" data-h="50"><rect class="topo-node on" x="1200.0" y="240.0" width="154" height="50" rx="9"/><text class="topo-tx on" x="1277.0" y="263.0" text-anchor="middle">코어 AP</text><text class="topo-tx on" x="1277.0" y="275.0" text-anchor="middle">core-ap</text></g><g class="topo-tag t-muted" data-from="api" data-to="ui"><rect class="topo-tag-bg" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><rect class="topo-tag-fill" x="855.0" y="255.0" width="84.0" height="20" rx="10.0"/><text class="topo-tag-tx" x="897.0" y="268.8" text-anchor="middle">추적 값 없음</text></g><g class="topo-ilbl" data-from="browser" data-to="web"><text class="topo-ilb" x="427.0" y="78.0" text-anchor="middle">결제창 인증 (브라우저)</text></g><g class="topo-ilbl" data-from="web" data-to="api"><text class="topo-ilb" x="766.0" y="179.0" text-anchor="start">카드 등록 요청</text></g><g class="topo-ilbl" data-from="api" data-to="ui"><text class="topo-ilb" x="897.0" y="248.0" text-anchor="middle">HTTP 호출</text></g><g class="topo-ilbl" data-from="ui" data-to="ap"><text class="topo-ilb" x="1157.0" y="258.0" text-anchor="middle">중계</text></g><g class="topo-ilbl ctx" data-from="partner" data-to="relay"><text class="topo-ilb" x="402.0" y="258.0" text-anchor="middle">요청</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="api"><text class="topo-ilb" x="632.0" y="245.0" text-anchor="middle">추적 헤더</text><text class="topo-imeta" x="632.0" y="258.0" text-anchor="middle">for=&lt;파트너 IP&gt;</text></g><g class="topo-ilbl ctx" data-from="api" data-to="ap"><text class="topo-ilb" x="1020.0" y="381.0" text-anchor="middle">TX 직결</text><text class="topo-imeta" x="1020.0" y="394.0" text-anchor="middle">TCP :9100</text></g><g class="topo-ilbl ctx" data-from="relay" data-to="hook"><text class="topo-ilb" x="593.5" y="438.0" text-anchor="middle">추적 헤더</text></g><g class="topo-ilbl ctx" data-from="hook" data-to="api"><text class="topo-ilb" x="712.0" y="352.0" text-anchor="middle">헤더 그대로 옮김</text></g><g class="topo-ilbl ctx" data-from="direct" data-to="api"><text class="topo-ilb" x="447.0" y="168.0" text-anchor="middle">직접 호출 (허용 목록 밖)</text></g></svg></div>
+    <div class="fc-legend"><span class="fc-lg"><i class="fc-ln sel"></i>선택한 경로</span><span class="fc-lg"><i class="fc-ln dashed sel"></i>UI 경유 여부 확인 전</span><span class="fc-lg"><i class="fc-ln ctx"></i>이 경로에 없음</span><span class="fc-chip t-ok">실림</span><span class="fc-chip t-warn">추가</span><span class="fc-chip t-muted">해당 없음</span></div>
+    <div class="fc-detail"><div class="fc-col"><dl class="fc-facts"><dt>엔드포인트</dt><dd><ul><li><code>POST /v1/cards/register/{sessionId}</code></li></ul></dd><dt>호출 위치</dt><dd>결제 화면 서버</dd></dl></div><div class="fc-col"><p class="fc-note">중계 서버가 아니라 결제 화면이 부르는 경로라 추적 헤더가 닿지 않습니다.</p></div></div>
+  </section>
+</main>
+<script>
+(function () {
+  var KEY = 'flowcast-theme';
+  var root = document.documentElement;
+  var saved = localStorage.getItem(KEY);
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+  });
+})();
+</script>
+<script>
+(function () {
+  function edgePt(n, tx, ty) {
+    var cx = n.cx + n.tx, cy = n.cy + n.ty, dx = tx - cx, dy = ty - cy;
+    if (!dx && !dy) return [cx, cy];
+    var sx = dx ? (n.w / 2) / Math.abs(dx) : 1e9, sy = dy ? (n.h / 2) / Math.abs(dy) : 1e9;
+    var s = Math.min(sx, sy);
+    return [cx + dx * s, cy + dy * s];
+  }
+  function initSvg(svg) {
+    var nodes = {};
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      nodes[g.getAttribute('data-id')] = {
+        g: g, cx: +g.getAttribute('data-cx'), cy: +g.getAttribute('data-cy'),
+        w: +g.getAttribute('data-w'), h: +g.getAttribute('data-h'), tx: 0, ty: 0
+      };
+    });
+    function refresh(id) {
+      svg.querySelectorAll('[data-self="' + id + '"]').forEach(function (el) {
+        var n = nodes[id]; el.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+      });
+      svg.querySelectorAll('[data-from],[data-to]').forEach(function (el) {
+        if (el.getAttribute('data-self')) return;
+        var f = el.getAttribute('data-from'), t = el.getAttribute('data-to');
+        if (f !== id && t !== id) return;
+        var a = nodes[f], b = nodes[t]; if (!a || !b) return;
+        var ca = [a.cx + a.tx, a.cy + a.ty], cb = [b.cx + b.tx, b.cy + b.ty];
+        if (el.tagName === 'path') {
+          var p1 = edgePt(a, cb[0], cb[1]), p2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('d', 'M' + p1[0] + ',' + p1[1] + ' L' + p2[0] + ',' + p2[1]);
+        } else if (el.tagName === 'line') {
+          var q1 = edgePt(a, cb[0], cb[1]), q2 = edgePt(b, ca[0], ca[1]);
+          el.setAttribute('x1', q1[0]); el.setAttribute('y1', q1[1]);
+          el.setAttribute('x2', q2[0]); el.setAttribute('y2', q2[1]);
+        } else {
+          el.setAttribute('transform', 'translate(' + ((a.tx + b.tx) / 2) + ',' + ((a.ty + b.ty) / 2) + ')');
+        }
+      });
+    }
+    function nodeRect(id) { var n = nodes[id]; return { x: n.cx + n.tx - n.w / 2, y: n.cy + n.ty - n.h / 2, w: n.w, h: n.h }; }
+    function zoneRecompute(zg) {
+      var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+      if (!mem.length) return;
+      var pad = +zg.getAttribute('data-pad'), lbl = +zg.getAttribute('data-lbl'), lp = zg.getAttribute('data-lblpos');
+      var rs = mem.map(nodeRect);
+      var zx1 = Math.min.apply(null, rs.map(function (r) { return r.x; })) - pad;
+      var zy1 = Math.min.apply(null, rs.map(function (r) { return r.y; })) - pad - lbl;
+      var zx2 = Math.max.apply(null, rs.map(function (r) { return r.x + r.w; })) + pad;
+      var zy2 = Math.max.apply(null, rs.map(function (r) { return r.y + r.h; })) + pad;
+      var rect = zg.querySelector('rect'), txt = zg.querySelector('text');
+      rect.setAttribute('x', zx1); rect.setAttribute('y', zy1);
+      rect.setAttribute('width', zx2 - zx1); rect.setAttribute('height', zy2 - zy1);
+      if (lp === 'tr') { txt.setAttribute('x', zx2 - 12); txt.setAttribute('y', zy1 + 15); }
+      else { txt.setAttribute('x', zx1 + 10); txt.setAttribute('y', zy1 + 13); }
+    }
+    function recomputeZones() { svg.querySelectorAll('.iff-zone').forEach(zoneRecompute); }
+    var active = null, start = null;
+    function toSvg(evt) {
+      var pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    svg.querySelectorAll('.iff-node').forEach(function (g) {
+      g.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        active = nodes[g.getAttribute('data-id')];
+        var p = toSvg(evt); start = { x: p.x, y: p.y, tx: active.tx, ty: active.ty };
+        g.setPointerCapture(evt.pointerId);
+      });
+      g.addEventListener('pointermove', function (evt) {
+        if (!active) return;
+        var p = toSvg(evt);
+        active.tx = start.tx + (p.x - start.x); active.ty = start.ty + (p.y - start.y);
+        active.g.setAttribute('transform', 'translate(' + active.tx + ',' + active.ty + ')');
+        refresh(active.g.getAttribute('data-id'));
+        recomputeZones();
+      });
+      g.addEventListener('pointerup', function () { active = null; });
+      g.addEventListener('pointercancel', function () { active = null; });
+    });
+    var zdrag = null;
+    svg.querySelectorAll('.iff-zone').forEach(function (zg) {
+      zg.addEventListener('pointerdown', function (evt) {
+        evt.preventDefault();
+        var mem = (zg.getAttribute('data-members') || '').split(',').filter(Boolean);
+        var p = toSvg(evt);
+        zdrag = { x: p.x, y: p.y, base: mem.map(function (id) { return { id: id, tx: nodes[id].tx, ty: nodes[id].ty }; }) };
+        zg.setPointerCapture(evt.pointerId);
+      });
+      zg.addEventListener('pointermove', function (evt) {
+        if (!zdrag) return;
+        var p = toSvg(evt), ddx = p.x - zdrag.x, ddy = p.y - zdrag.y;
+        zdrag.base.forEach(function (b) {
+          var n = nodes[b.id]; n.tx = b.tx + ddx; n.ty = b.ty + ddy;
+          n.g.setAttribute('transform', 'translate(' + n.tx + ',' + n.ty + ')');
+          refresh(b.id);
+        });
+        recomputeZones();
+      });
+      zg.addEventListener('pointerup', function () { zdrag = null; });
+      zg.addEventListener('pointercancel', function () { zdrag = null; });
+    });
+    return function () {
+      var out = {};
+      Object.keys(nodes).forEach(function (id) {
+        var n = nodes[id];
+        out[id] = { x: Math.round(n.cx + n.tx - n.w / 2), y: Math.round(n.cy + n.ty - n.h / 2) };
+      });
+      return out;
+    };
+  }
+  document.querySelectorAll('.sheet').forEach(function (sheet) {
+    var svg = sheet.querySelector('svg'); if (!svg) return;
+    var exporter = initSvg(svg);
+    var btn = sheet.querySelector('.iff-export');
+    if (btn) btn.addEventListener('click', function () {
+      var json = JSON.stringify(exporter(), null, 2);
+      window.__iffExport = json;
+      if (navigator.clipboard) navigator.clipboard.writeText(json);
+      btn.textContent = '✅ 좌표 복사됨 (JSON nodes의 x/y에 반영)';
+      setTimeout(function () { btn.textContent = '📋 좌표 복사'; }, 1800);
+    });
+  });
+})();
+</script>
+<script>
+(function () {
+  var sheets = Array.prototype.slice.call(document.querySelectorAll('.sheet[data-tab]'));
+  if (sheets.length < 2) return;
+  var KEY = 'flowcast-tab:' + document.title;
+  function show(i, focus) {
+    if (!(i >= 0 && i < sheets.length)) i = 0;
+    sheets.forEach(function (s, j) { s.hidden = j !== i; });
+    if (focus) {
+      var b = sheets[i].querySelector('.fc-tab[data-tab="' + i + '"]');
+      if (b) b.focus();
+    }
+    try { localStorage.setItem(KEY, String(i)); } catch (e) {}
+  }
+  document.addEventListener('click', function (evt) {
+    var b = evt.target && evt.target.closest ? evt.target.closest('.fc-tab') : null;
+    if (b) show(+b.getAttribute('data-tab'), true);
+  });
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if (saved !== null) show(+saved, false);
+})();
+</script>
+</body>
+</html>
