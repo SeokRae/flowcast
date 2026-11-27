@@ -87,6 +87,7 @@ python3 scripts/plantuml_export.py {json} -o out.puml  # B-out → PlantUML .pum
 - **탭 모드는 시트마다 `<defs>` id를 따로 단다**: 숨긴 시트(`display:none`) 안의 marker와 pattern은 다른 시트가 `url(#…)`로 참조해도 그려지지 않는다. 같은 id를 공유하면 첫 시트가 숨는 순간 다른 탭의 화살촉과 방화벽 벽돌이 사라진다. 그래서 `mk-topo-{i}`, `fw-brick-{i}`처럼 붙이고, fw 노드는 CSS 대신 인라인 `style`로 참조한다 (#156).
 - **탭 모드의 선택 경로만 accent로 칠한다**: 위 "선은 중립색" 결정의 예외다. 탭 모드는 다른 경로를 흐린 배경선으로 함께 깔기 때문에, 고른 경로를 색으로 가르지 않으면 어느 선이 이 탭 것인지 읽히지 않는다 (#156).
 - **확장 CSS와 탭 스크립트는 새 필드를 쓸 때만 붙인다**(`_topo_ext_used`): 기존 예제 산출물이 바이트 단위로 그대로여야 골든 회귀가 회귀를 잡는다. 확장 필드(`tabs`, `labels`, `legend`, `dashed`, `tag`, `detail`)는 HTML 전용이고 pptx와 PlantUML은 무시한다 (#156).
+- **단계 보기는 숨기는 규칙을 전부 `@media screen`에 둔다**(`STEP_CSS`): `stepper: true`는 구간, 흐름 설명 표, 상세 패널을 숨기는데, 이 규칙이 화면 밖에 있으면 `#3`으로 연 채 인쇄한 결과에서 다른 구간이 사라진다. 그래서 인쇄와 `--pdf`는 항상 0단계 전체 보기이고, 표를 접으려고 줄인 SVG `viewBox`는 `beforeprint`에서 되돌린다. 구간이 있는 시나리오가 둘 이상이면 `tabs: true`가 있어야 켠다(`_topo_stepper`). 시트가 쌓이면 ←/→가 어느 시트를 움직일지 정할 수 없어서다. 이 CSS와 스크립트는 `_topo_ext_used`와 따로 붙이므로 `stepper`만 쓴 그림에는 경로 지도 CSS가 들어가지 않는다 (#160).
 - **`via` 끝점은 직교 포트다**(`_t_port`): 꺾임점이 노드 가로 폭 안이면 위나 아래 변에, 세로 폭 안이면 좌우 변에 수직으로 붙는다. 중심 방향(`_edge_pt`)으로 붙이면 한 변에 선이 여럿 붙을 때 한 점으로 겹치고 마지막 구간이 대각선이 된다. `via`는 `_t_seg_geom`에 있어 pptx도 같은 꼭짓점을 쓴다. `rail`은 기존대로 중심 x에서 나간다 (#156).
 - **PlantUML SVG 재생성은 `-nometadata` 필수** — 없으면 압축 소스 블롭이 blocklist 토큰을 우연히 포함해 `scan-sensitive.sh`가 오탐한다 (#73).
 

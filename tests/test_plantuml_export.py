@@ -218,6 +218,35 @@ def test_component_bidir_edge(tmp_path):
 
 
 # ── 별칭 정규화 (하이픈 든 id 가 화살표 `a --> b` 파싱을 깨뜨리던 버그) ──
+def test_topology_stepper_field_is_ignored(tmp_path):
+    """stepper 는 HTML 전용(#160) — 켜도 끄도 같은 .puml 을 낸다."""
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    assert "stepper" not in data
+    a, b = tmp_path / "a.puml", tmp_path / "b.puml"
+    export_topology(data, a)
+    export_topology(dict(data, stepper=True), b)
+    assert a.read_text(encoding="utf-8") == b.read_text(encoding="utf-8")
+
+
+def test_cli_stepper_example_exports(tmp_path):
+    dst = tmp_path / "s.json"
+    dst.write_text((EX / "request-steps-topology.json").read_text(encoding="utf-8"), encoding="utf-8")
+    r = _run([str(dst)])
+    assert r.returncode == 0 and "error" not in r.stderr
+    assert "주문 요청" in (tmp_path / "s.puml").read_text(encoding="utf-8")
+
+
+def test_cli_stepper_warning_does_not_stop_export(tmp_path):
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    data["stepper"] = True
+    data["scenarios"][0]["segments"] = [{"from": "client", "to": "lb", "label": "요청"}]
+    dst = tmp_path / "t.json"
+    dst.write_text(json.dumps(data), encoding="utf-8")
+    r = _run([str(dst)])
+    assert r.returncode == 0 and "tabs: true와 함께" in r.stderr
+    assert (tmp_path / "t.puml").exists()
+
+
 def test_topology_hyphenated_ids_sanitized(tmp_path):
     """`fw-edge` 같은 하이픈 든 id 는 PlantUML 화살표 문법을 깨뜨린다 —
     선언(`as`)·정적 링크·번호 세그먼트 모두 `_` 로 정규화해 매칭을 유지한다."""

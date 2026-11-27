@@ -1062,6 +1062,236 @@ def test_route_example_validates_and_renders():
     assert out.count('<section class="sheet" data-tab=') == len(data["scenarios"]) == 6
 
 
+# ── topology 구간 단계 보기 (#160) ───────────────────────────────
+
+def _step_data(**over):
+    """단계 보기 픽스처. 구간이 있는 시나리오 하나 + 순수 구성도 하나."""
+    data = {
+        "system": "단계망",
+        "source": "docs/test-stepper.md",
+        "view": "topology",
+        "stepper": True,
+        "nodes": [
+            {"id": "c", "name": "고객\n브라우저", "x": 0, "y": 100, "kind": "ext"},
+            {"id": "api", "name": "API", "x": 240, "y": 100},
+            {"id": "db", "name": "DB", "x": 480, "y": 100, "kind": "db"},
+        ],
+        "links": [{"from": "c", "to": "api"}, {"from": "api", "to": "db"}],
+        "scenarios": [
+            {"title": "구성도"},
+            {"title": "요청", "segments": [
+                {"n": 10, "from": "c", "to": "api", "label": "요청\n접수", "meta": "HTTPS 443"},
+                {"n": 3, "from": "api", "self": True, "label": "검증 <x>"},
+                {"n": 4, "from": "api", "to": "db", "label": "저장"},
+            ]},
+        ],
+    }
+    data.update(over)
+    return data
+
+
+def _step_html(data):
+    return build_html(data, [render_svg_topology(data, sc) for sc in data["scenarios"]])
+
+
+def test_stepper_fixture_validates_clean():
+    errors, warnings = validate_topology(_step_data())
+    assert errors == [] and warnings == []
+
+
+@pytest.mark.parametrize("value", ["yes", 1, 0, None, ["true"]])
+def test_stepper_rejects_non_boolean(value):
+    errors, _ = validate_topology(_step_data(stepper=value))
+    assert any("stepper는 true 또는 false" in e for e in errors), errors
+
+
+def test_stepper_without_segments_warns_and_stays_off():
+    data = _step_data()
+    data["scenarios"] = [{"title": "구성도"}]
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert any("구간이 있는 시나리오가 없어" in w for w in warnings)
+    out = _step_html(data)
+    assert "fc-step" not in out and "data-fc-n" not in out
+
+
+def _two_flows(**over):
+    data = _step_data(**over)
+    data["scenarios"] = [
+        {"title": "승인", "segments": [{"from": "c", "to": "api", "label": "요청"}]},
+        {"title": "조회", "segments": [{"from": "api", "to": "db", "label": "조회"}]},
+    ]
+    return data
+
+
+def test_stepper_two_flows_without_tabs_warns_and_stays_off():
+    data = _two_flows()
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert any("tabs: true와 함께" in w for w in warnings)
+    out = _step_html(data)
+    assert "fc-step" not in out and "data-fc-n" not in out and "data-step=" not in out
+
+
+def test_stepper_two_flows_with_tabs_is_valid_and_marks_each_sheet():
+    data = _two_flows(tabs=True)
+    errors, warnings = validate_topology(data)
+    assert errors == [] and warnings == []
+    out = _step_html(data)
+    assert out.count('class="fc-step"') == 2
+    assert out.count('data-fc-n="1"') == 2
+    assert '<section class="sheet" data-tab="0" data-fc-n="1">' in out
+    assert '<section class="sheet" data-tab="1" hidden data-fc-n="1">' in out
+
+
+def test_stepper_with_tabs_keeps_context_lines_out_of_steps():
+    data = _two_flows(tabs=True)
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    assert svg.count('class="topo-seg sel"') == 1 and 'data-step="1"' in svg
+    ctx = [ln for ln in svg.split("<") if 'class="topo-seg ctx"' in ln]
+    assert len(ctx) == 1 and "data-step" not in ctx[0]
+
+
+def test_stepper_with_tabs_resets_arriving_sheet_to_step_zero():
+    js = _mod.STEP_JS
+    assert "t.closest('.fc-tab')" in js and "if (c) show(c, 0)" in js
+    out = _step_html(_two_flows(tabs=True))
+    assert out.index("flowcast-tab:") < out.index("data-fc-step")
+
+
+def test_stepper_with_tabs_and_one_flow_marks_only_that_sheet():
+    data = _step_data(tabs=True)
+    out = _step_html(data)
+    assert out.count("data-fc-n=") == 1 and out.count('class="fc-step"') == 1
+    assert out.count('<nav class="fc-tabs"') == 2
+    assert '<section class="sheet" data-tab="0">' in out
+    assert '<section class="sheet" data-tab="1" hidden data-fc-n="3">' in out
+
+
+def test_stepper_svg_marks_each_own_segment_by_array_order():
+    data = _step_data()
+    data["scenarios"][1]["segments"][2]["tag"] = {"text": "확인 전", "tone": "warn"}
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    for k in (1, 2, 3):
+        assert f'data-step="{k}"' in svg
+    assert svg.count('data-step="3"') == 3                       # 경로 + 번호 배지 + 상태 칩
+    assert svg.count('data-step="1"') == 2                       # 경로 + 번호 배지
+    assert '<g class="iff-badge" data-from="api" data-to="db" data-step="3">' in svg
+
+
+def test_stepper_step_number_ignores_segment_n():
+    data = _step_data()
+    out = _step_html(data)
+    assert '<b>1 / 3</b>' in out and '<b>3 / 3</b>' in out
+    assert 'data-step="1"' in out and 'data-step="10"' not in out
+
+
+def test_stepper_table_mode_wraps_legend_and_records_figure_viewbox():
+    data = _step_data()
+    svg, _, vb_h = render_svg_topology(data, data["scenarios"][1])
+    assert svg.count('<g class="fc-leg">') == 1 and "흐름 설명" in svg
+    head = svg[:svg.index(">")]
+    fig = head.split('data-fc-fig="')[1].split('"')[0].split()
+    full = head.split('viewBox="')[1].split('"')[0].split()
+    assert fig[:3] == full[:3] and float(fig[3]) < float(full[3])
+
+
+def test_stepper_inline_labels_have_no_legend_group_or_figure_viewbox():
+    data = _step_data(labels="inline")
+    svg, _, _ = render_svg_topology(data, data["scenarios"][1])
+    assert "fc-leg" not in svg and "data-fc-fig" not in svg
+    labels = [ln for ln in svg.split("<g ") if 'class="topo-ilbl"' in ln]
+    assert len(labels) == 3 and all("data-step=" in ln for ln in labels)
+
+
+def test_stepper_pure_diagram_sheet_has_no_bar_and_no_step_marks():
+    data = _step_data()
+    svg, _, _ = render_svg_topology(data, data["scenarios"][0])
+    assert "data-step" not in svg and "fc-leg" not in svg
+    out = _step_html(data)
+    assert out.count('<section class="sheet">') == 1               # 구성도 시트
+    assert out.count('<section class="sheet" data-fc-n="3">') == 1  # 단계 시트
+
+
+def test_stepper_html_markup_caption_and_controls():
+    out = _step_html(_step_data())
+    assert out.count('class="fc-step"') == 1
+    assert 'data-dir="-1" aria-label="이전 구간" disabled>' in out
+    assert 'data-dir="1" aria-label="다음 구간">' in out
+    assert '<span class="fc-cap" data-i="0">전체 3구간' in out
+    assert out.count('class="fc-cap" data-i=') == 4 and out.count(" hidden><b>") == 3
+    assert '<span class="fc-cap-route">고객 → API</span> 요청 접수' in out   # 이름은 첫 줄, label 개행은 공백
+    assert '<small class="fc-cap-meta">HTTPS 443</small>' in out
+    assert '<span class="fc-cap-route">API ↻</span> 검증 &lt;x&gt;' in out   # self, 이스케이프
+    assert out.count("<script>") == 3 and "fc-step-btn" in out.split("<script>")[-1]
+
+
+def test_stepper_css_hides_only_inside_screen_media():
+    css = _mod.STEP_CSS
+    before, after = css.split("@media screen", 1)
+    assert ".fc-one" not in before
+    assert ".fc-one" in after
+    assert "@media print" in after and ".fc-step{display:none;}" in after.split("@media print", 1)[1]
+    assert ".sheet.fc-one .fc-detail{display:none;}" in css
+
+
+def test_stepper_script_contract():
+    js = _mod.STEP_JS
+    assert "'ArrowRight'" in js and "'ArrowLeft'" in js
+    assert "e.altKey || e.ctrlKey || e.metaKey || e.shiftKey" in js
+    assert "(max-width: 760px), (pointer: coarse)" in js
+    assert "/^#([0-9]+)$/" in js and "hashchange" in js and "replaceState" in js
+    assert "beforeprint" in js and "afterprint" in js
+    assert "closest('button,a,input,select,textarea,label,.iff-node,.iff-zone,.fc-detail,.fc-legend')" in js
+
+
+def test_stepper_off_outputs_are_unchanged_and_carry_no_step_markup():
+    plain = _step_data()
+    del plain["stepper"]
+    off = _step_data(stepper=False)
+    assert _step_html(plain) == _step_html(off)
+    out = _step_html(plain)
+    for token in ("fc-step", "data-step", "data-fc-n", "data-fc-fig", "fc-leg", "fc-one", "fc-hit"):
+        assert token not in out, token
+
+
+def test_stepper_only_adds_to_the_unstepped_output():
+    plain = _step_data()
+    del plain["stepper"]
+    base = _step_html(plain)
+    stepped = _step_html(_step_data())
+    assert stepped != base
+    assert "<style>" in stepped and stepped.count("<style>") == base.count("<style>")
+    assert _mod.STEP_CSS in stepped and _mod.STEP_CSS not in base
+
+
+def test_stepper_does_not_pull_in_route_map_css():
+    out = _step_html(_step_data())
+    assert _mod.TOPO_EXT_CSS not in out and "flowcast-tab:" not in out
+
+
+def test_stepper_example_validates_and_renders():
+    data = json.loads((EX / "request-steps-topology.json").read_text(encoding="utf-8"))
+    errors, warnings = validate_topology(data)
+    assert errors == [] and warnings == []
+    out = _step_html(data)
+    assert data["stepper"] is True and out.count('class="fc-cap" data-i=') == 8
+
+
+def test_stepper_main_renders_and_warns_without_failing(tmp_path, capsys):
+    src = tmp_path / "s.json"
+    src.write_text(json.dumps(_two_flows()), encoding="utf-8")
+    out = tmp_path / "s.html"
+    argv = sys.argv
+    sys.argv = ["render.py", str(src), "-o", str(out)]
+    try:
+        _mod.main()
+    finally:
+        sys.argv = argv
+    assert "tabs: true와 함께" in capsys.readouterr().err
+    assert out.exists() and "fc-step" not in out.read_text(encoding="utf-8")
+
+
 # ── validate/render_component (컴포넌트 뷰) ────────────────────
 
 def _comp(**over):

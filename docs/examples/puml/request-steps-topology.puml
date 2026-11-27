@@ -1,0 +1,56 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F1F5F9
+  BackgroundColor<<ext>> #FDF3E7
+  BackgroundColor<<gear>> #F8FAFC
+  BackgroundColor<<fw>> #F8FAFC
+  BackgroundColor<<l4>> #F8FAFC
+  BorderColor #475569
+  BorderColor<<ext>> #B7791F
+  BorderColor<<gear>> #94A3B8
+  BorderColor<<fw>> #8A6210
+  BorderColor<<l4>> #1F6FD0
+  FontColor #1B2635
+}
+skinparam package {
+  BorderColor #94A3B8
+  BackgroundColor transparent
+  FontColor #475569
+}
+title Checkout Platform — 주문 요청 단계 보기
+' flowcast source: flowcast 합성 예제 (topology 구간 단계 보기)
+package "DMZ" {
+  rectangle "Ingress VIP" as lb <<l4>>
+}
+package "App Tier" {
+  rectangle "Order API" as api
+  rectangle "Notify Worker" as worker
+}
+package "Data Tier" {
+  rectangle "Stock Cache" as cache <<db>>
+  rectangle "Order DB" as db <<db>>
+}
+rectangle "Client" as client <<ext>>
+rectangle "Mail Gateway" as mail <<ext>>
+
+
+client --> lb : 1
+lb --> api : 2
+api --> cache : 3
+api --> api : 4
+api --> db : 5
+api --> worker : 6
+worker --> mail : 7
+
+legend
+|= # |= 설명 |
+| 1 | 주문 요청\n( HTTPS 443 ) |
+| 2 | 서버 선택\n( 라운드 로빈, HTTP 8080 ) |
+| 3 | 재고 조회\n( Redis GET ) |
+| 4 | 재고 검증 |
+| 5 | 주문 저장\n( TCP 5432 ) |
+| 6 | 발송 작업 등록\n( 큐 적재 ) |
+| 7 | 알림 메일 발송\n( SMTP 587 ) |
+end legend
+@enduml

@@ -151,6 +151,39 @@ def test_topology_connector_count(tmp_path):
     assert conns == expected
 
 
+def _slide_signature(prs):
+    sig = []
+    for slide in prs.slides:
+        shapes = []
+        for sh in slide.shapes:
+            text = sh.text_frame.text if sh.has_text_frame else ""
+            shapes.append((str(sh.shape_type), sh.left, sh.top, sh.width, sh.height, text))
+        sig.append(shapes)
+    return sig
+
+
+def test_topology_stepper_field_is_ignored(tmp_path):
+    """stepper 는 HTML 전용(#160) — 켜도 끄도 같은 슬라이드를 낸다."""
+    data = json.loads(TOPO.read_text(encoding="utf-8"))
+    assert "stepper" not in data
+    stepped = dict(data, stepper=True)
+    a, b = tmp_path / "a.pptx", tmp_path / "b.pptx"
+    export_topology(data, a)
+    export_topology(stepped, b)
+    sig_a, sig_b = _slide_signature(Presentation(str(a))), _slide_signature(Presentation(str(b)))
+    assert sig_a == sig_b and len(sig_a) == len(data["scenarios"])
+
+
+def test_topology_stepper_example_exports_one_slide_per_scenario(tmp_path):
+    data = json.loads((EX / "request-steps-topology.json").read_text(encoding="utf-8"))
+    assert data["stepper"] is True
+    out = tmp_path / "s.pptx"
+    n = export_topology(data, out)
+    assert n == len(data["scenarios"]) == 1
+    text = _all_text(Presentation(str(out)))
+    assert "주문 요청" in text and "알림 메일 발송" in text
+
+
 # ── sequence export ───────────────────────────────────────────
 
 def _export_seq(tmp_path):
