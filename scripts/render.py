@@ -23,6 +23,8 @@
     [topology 전용] nodes[]: { id, name, zone?, col/row(그리드) 또는 x/y(절대), kind? }
                     kind: srv(기본) | ext(외부) | gear(네트워크 장비) | fw(방화벽, 벽돌) | l4(L4/VIP 로드밸런서, fan-out) | db(데이터베이스, 원통)
                     links[]: { from, to } — 번호·화살촉 없는 정적 배선(토폴로지 공통)
+                        links 를 쓰면 구간(self 제외)의 from/to 쌍이 links 에 어느 방향으로도 없을 때 구간마다
+                        warning 을 낸다(오류 아님, 렌더 계속). links 가 없거나 비어 있으면 검사하지 않는다
                     scenarios[].segments[]: { n?, from, to|self, label?, meta?, rail? } — 번호 구간 오버레이
                         label=업무 흐름(주), meta=기술 상세(프로토콜·포트·FW, 범례 흐린 부라인)
                     segments 없는 시나리오 = 순수 인프라 구성도
@@ -467,13 +469,18 @@ def validate_topology(data):
             warnings.append(f"node '{n.get('id')}': 알 수 없는 kind '{kind}' (허용: {sorted(TOPO_KINDS)})")
     idset = set(ids)
     links = _list_field(data, "links", errors, "최상위")
+    linked_pairs = set()
     for li, lk in enumerate(links):
         if not isinstance(lk, dict):
             errors.append(f"links[{li}]: link는 object여야 함")
             continue
+        defined = True
         for key in ("from", "to"):
             if not _valid_id(lk.get(key)) or lk.get(key) not in idset:
                 errors.append(f"links[{li}]: 미정의 node 참조 {key}='{lk.get(key)}'")
+                defined = False
+        if defined:
+            linked_pairs.add(frozenset((lk["from"], lk["to"])))
     for si, sc in enumerate(scenarios):
         if not isinstance(sc, dict):
             errors.append(f"scenario[{si}]는 object여야 함")
@@ -493,10 +500,18 @@ def validate_topology(data):
                 errors.append(f"{where}: segment는 object여야 함")
                 continue
             _validate_text_fields(sg, ("label", "meta"), errors, where)
-            if not _valid_id(sg.get("from")) or sg.get("from") not in idset:
+            from_ok = _valid_id(sg.get("from")) and sg.get("from") in idset
+            to_ok = _valid_id(sg.get("to")) and sg.get("to") in idset
+            if not from_ok:
                 errors.append(f"{where}: 미정의 node 참조 from='{sg.get('from')}'")
-            if not sg.get("self") and (not _valid_id(sg.get("to")) or sg.get("to") not in idset):
+            if not sg.get("self") and not to_ok:
                 errors.append(f"{where}: 미정의 node 참조 to='{sg.get('to')}'")
+            elif (linked_pairs and from_ok and to_ok and not sg.get("self")
+                    and sg["from"] != sg["to"]
+                    and frozenset((sg["from"], sg["to"])) not in linked_pairs):
+                warnings.append(
+                    f"{where}: {sg['from']} → {sg['to']} 연결이 links에 없음 (양방향 모두 없음)."
+                    " links에 추가하거나 구간을 확인할 것")
             if sg.get("rail") is not None and not _is_finite_number(sg["rail"]):
                 errors.append(f"{where}.rail은 유한한 숫자여야 함")
             if "via" in sg:

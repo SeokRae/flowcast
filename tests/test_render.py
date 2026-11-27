@@ -559,6 +559,124 @@ def test_topology_links_unknown_ref():
     assert any("links[0]: 미정의 node 참조 to='ghost'" in e for e in errors)
 
 
+# ── 구간 연결 정합성 경고 (#158) ──────────────────────────────
+
+def _link_warnings(warnings):
+    return [w for w in warnings if "links에 없음" in w]
+
+
+def test_topology_warns_when_segment_pair_missing_from_links():
+    data = _topo(links=[{"from": "r1", "to": "r2"}])
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    (warning,) = _link_warnings(warnings)
+    assert warning.startswith("scenario[1].segments[0]:")
+    assert "m → r1" in warning and "양방향 모두 없음" in warning
+
+
+def test_topology_warns_once_per_missing_segment():
+    data = _topo(links=[{"from": "r1", "to": "r2"}])
+    data["scenarios"][1]["segments"].append({"n": 3, "from": "r1", "to": "m", "label": "응답"})
+    data["scenarios"][1]["segments"].append({"n": 4, "from": "r1", "to": "r2", "label": "전달"})
+    _, warnings = validate_topology(data)
+    found = _link_warnings(warnings)
+    assert [w.split(":")[0] for w in found] == [
+        "scenario[1].segments[0]", "scenario[1].segments[2]"]
+
+
+def test_topology_warns_in_every_scenario_that_uses_the_pair():
+    data = _topo(links=[{"from": "r1", "to": "r2"}])
+    data["scenarios"].append({"title": "재시도", "segments": [{"n": 1, "from": "m", "to": "r2"}]})
+    _, warnings = validate_topology(data)
+    assert [w.split(":")[0] for w in _link_warnings(warnings)] == [
+        "scenario[1].segments[0]", "scenario[2].segments[0]"]
+
+
+def test_topology_without_links_never_warns_about_segments():
+    errors, warnings = validate_topology(_topo())
+    assert errors == []
+    assert _link_warnings(warnings) == []
+
+
+def test_topology_empty_links_never_warns_about_segments():
+    errors, warnings = validate_topology(_topo(links=[]))
+    assert errors == []
+    assert _link_warnings(warnings) == []
+
+
+@pytest.mark.parametrize("link", [
+    {"from": "m", "to": "r1"},
+    {"from": "r1", "to": "m"},
+])
+def test_topology_one_direction_of_link_is_enough(link):
+    data = _topo(links=[link])
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert warnings == []
+
+
+def test_topology_response_segment_against_link_direction_does_not_warn():
+    data = _topo(links=[{"from": "m", "to": "r1"}])
+    data["scenarios"][1]["segments"].append({"n": 3, "from": "r1", "to": "m", "label": "응답"})
+    _, warnings = validate_topology(data)
+    assert _link_warnings(warnings) == []
+
+
+def test_topology_self_and_same_node_segments_are_not_checked_against_links():
+    data = _topo(links=[{"from": "r1", "to": "r2"}])
+    data["scenarios"][1]["segments"] = [
+        {"n": 1, "from": "r1", "self": True, "label": "중계"},
+        {"n": 2, "from": "r2", "to": "r2", "label": "자기 자신"},
+    ]
+    _, warnings = validate_topology(data)
+    assert _link_warnings(warnings) == []
+
+
+def test_topology_undefined_segment_ref_is_error_without_link_warning():
+    data = _topo(links=[{"from": "m", "to": "r1"}])
+    data["scenarios"][1]["segments"] = [
+        {"n": 1, "from": "m", "to": "ghost"},
+        {"n": 2, "from": ["m"], "to": "r1"},
+    ]
+    errors, warnings = validate_topology(data)
+    assert any("to='ghost'" in e for e in errors)
+    assert any("from=" in e for e in errors)
+    assert _link_warnings(warnings) == []
+
+
+def test_topology_invalid_links_do_not_enable_segment_check():
+    data = _topo(links=[{"from": "r1", "to": "ghost"}])
+    errors, warnings = validate_topology(data)
+    assert any("links[0]" in e for e in errors)
+    assert _link_warnings(warnings) == []
+
+
+@pytest.mark.parametrize("name", [
+    "three-tier-topology.json",
+    "firewall-boundary-topology.json",
+    "trace-route-tabs-topology.json",
+])
+def test_topology_examples_without_mismatch_have_no_link_warning(name):
+    data = json.loads((EX / name).read_text(encoding="utf-8"))
+    errors, warnings = validate_topology(data)
+    assert errors == []
+    assert _link_warnings(warnings) == []
+
+
+def test_main_link_warning_does_not_stop_render_or_change_exit(tmp_path, monkeypatch, capsys):
+    data_path = tmp_path / "topo.json"
+    out_path = tmp_path / "topo.html"
+    data_path.write_text(json.dumps(_topo(links=[{"from": "r1", "to": "r2"}])), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["render.py", str(data_path), "-o", str(out_path)])
+
+    _mod.main()
+
+    assert out_path.exists()
+    err = capsys.readouterr().err
+    assert "warning: scenario[1].segments[0]: m → r1 연결이 links에 없음" in err
+    assert "error:" not in err
+
+
 # ── render_svg / build_html ───────────────────────────────────
 
 def test_render_svg_contains_core_elements():
