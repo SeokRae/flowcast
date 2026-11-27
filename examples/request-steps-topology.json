@@ -1,0 +1,42 @@
+{
+  "system": "Checkout Platform",
+  "source": "flowcast 합성 예제 (topology 구간 단계 보기)",
+  "view": "topology",
+  "stepper": true,
+  "zones": [
+    { "id": "dmz", "name": "DMZ" },
+    { "id": "app", "name": "App Tier" },
+    { "id": "data", "name": "Data Tier" }
+  ],
+  "nodes": [
+    { "id": "client", "name": "Client", "kind": "ext", "col": 0, "row": 1 },
+    { "id": "lb", "name": "Ingress VIP", "kind": "l4", "zone": "dmz", "col": 1, "row": 1 },
+    { "id": "api", "name": "Order API", "zone": "app", "col": 2, "row": 1 },
+    { "id": "worker", "name": "Notify Worker", "zone": "app", "col": 2, "row": 2 },
+    { "id": "cache", "name": "Stock Cache", "kind": "db", "zone": "data", "col": 3, "row": 0 },
+    { "id": "db", "name": "Order DB", "kind": "db", "zone": "data", "col": 3, "row": 1 },
+    { "id": "mail", "name": "Mail Gateway", "kind": "ext", "col": 3, "row": 2 }
+  ],
+  "links": [
+    { "from": "client", "to": "lb" },
+    { "from": "lb", "to": "api" },
+    { "from": "api", "to": "cache" },
+    { "from": "api", "to": "db" },
+    { "from": "api", "to": "worker" },
+    { "from": "worker", "to": "mail" }
+  ],
+  "scenarios": [
+    {
+      "title": "주문 요청 단계 보기",
+      "segments": [
+        { "n": 1, "from": "client", "to": "lb", "label": "주문 요청", "meta": "HTTPS 443" },
+        { "n": 2, "from": "lb", "to": "api", "label": "서버 선택", "meta": "라운드 로빈, HTTP 8080" },
+        { "n": 3, "from": "api", "to": "cache", "label": "재고 조회", "meta": "Redis GET" },
+        { "n": 4, "from": "api", "self": true, "label": "재고 검증" },
+        { "n": 5, "from": "api", "to": "db", "label": "주문 저장", "meta": "TCP 5432" },
+        { "n": 6, "from": "api", "to": "worker", "label": "발송 작업 등록", "meta": "큐 적재" },
+        { "n": 7, "from": "worker", "to": "mail", "label": "알림 메일 발송", "meta": "SMTP 587" }
+      ]
+    }
+  ]
+}

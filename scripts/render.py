@@ -30,8 +30,12 @@
                     segments 없는 시나리오 = 순수 인프라 구성도
                     segments[].via=[x,y] 또는 [[x,y], …] 꺾임점(rail 과 배타, HTML과 pptx 공용 좌표)
                         꺾임점이 노드 가로 폭 안이면 위나 아래 변에, 세로 폭 안이면 왼쪽이나 오른쪽 변에 수직으로 붙는다
-                    HTML 전용(#156, pptx와 PlantUML 은 무시):
+                    HTML 전용(#156, #160, pptx와 PlantUML 은 무시):
                       tabs: true            시나리오를 탭으로 전환, 다른 시나리오 구간은 흐린 배경선
+                      stepper: true         구간을 한 번에 하나씩 보는 단계 보기(#160). 0단계 = 전체 보기,
+                                            ←/→ 키, 모바일 폭은 화면 좌우 탭, 주소 끝 #N 으로 N단계를 바로 연다.
+                                            단계 = segments 배열 순서(1부터, n 과 무관). 인쇄와 --pdf 는 전체 보기.
+                                            구간이 있는 시나리오가 2개 이상이면 tabs: true 가 필요(없으면 warning, 끔)
                       labels: "inline"      구간 label/meta 를 선 옆에(흐름 설명 표 생략), lx/ly 로 위치 덮어쓰기
                       legend: { dashed?, tags?: [{text, tone?}] }  범례 줄
                       segments[].dashed     점선(확인 전 등)
@@ -412,6 +416,10 @@ def _validate_detail(detail, errors, where):
     _validate_text_fields(detail, ("note",), errors, where)
 
 
+def _has_segments(sc):
+    return isinstance(sc, dict) and isinstance(sc.get("segments"), list) and bool(sc["segments"])
+
+
 def validate_topology(data):
     """구성도 뷰(view: topology) 검증 — 존·노드(그리드 좌표)·구간 오버레이."""
     data, scenarios, errors, warnings = _validation_root(data)
@@ -423,6 +431,15 @@ def validate_topology(data):
         errors.append("최상위.tabs는 true 또는 false여야 함")
     elif data.get("tabs") is True and len(scenarios) < 2:
         warnings.append("tabs: 시나리오가 2개 미만이라 탭 없이 시트로 그림")
+    if "stepper" in data and not isinstance(data["stepper"], bool):
+        errors.append("최상위.stepper는 true 또는 false여야 함")
+    elif data.get("stepper") is True:
+        capable = sum(1 for sc in scenarios if _has_segments(sc))
+        if capable == 0:
+            warnings.append("stepper: 구간이 있는 시나리오가 없어 단계 보기를 켜지 않음")
+        elif capable >= 2 and data.get("tabs") is not True:
+            warnings.append(
+                "stepper: 구간이 있는 시나리오가 2개 이상이면 tabs: true와 함께 써야 해서 단계 보기를 켜지 않음")
     if "labels" in data:
         mode = data["labels"]
         if not isinstance(mode, str) or mode not in LABEL_MODES:
@@ -1246,6 +1263,13 @@ def _topo_tabs(data):
     return data.get("tabs") is True and len(data.get("scenarios") or []) >= 2
 
 
+def _topo_stepper(data):
+    if data.get("stepper") is not True:
+        return False
+    capable = sum(1 for sc in data.get("scenarios") or [] if _has_segments(sc))
+    return capable == 1 or (capable >= 2 and _topo_tabs(data))
+
+
 def _t_seg_key(sg):
     """같은 선인지 가르는 키. 끝점과 꼭짓점 옵션이 같으면 같은 선이다."""
     via = _t_via_points(sg.get("via"))
@@ -1339,6 +1363,11 @@ def render_svg_topology(data, scenario):
     rects = {n["id"]: _t_rect(n) for n in nodes}
     tabs = _topo_tabs(data)
     inline = data.get("labels") == "inline"
+    step = _topo_stepper(data) and bool(segments)
+    step_no = {id(sg): k for k, sg in enumerate(segments, 1)} if step else {}
+
+    def sa(sg):
+        return f' data-step="{step_no[id(sg)]}"' if id(sg) in step_no else ""
     # 탭 모드는 숨긴 시트의 <defs> 를 다른 시트가 참조하면 화살촉과 벽돌이 사라진다
     # (display:none 안의 paint server 는 렌더되지 않음). 시트마다 id 를 따로 단다.
     idx = next((i for i, s in enumerate(data.get("scenarios") or []) if s is scenario), 0)
@@ -1459,9 +1488,9 @@ def render_svg_topology(data, scenario):
         d = _t_seg_path(sg, rects)
         cls = seg_cls + (" dashed" if sg.get("dashed") else "")
         if sg.get("self"):
-            seg_paths.append(f'<path class="{cls}" data-self="{esc(sg["from"])}" d="{d}" marker-end="url(#{seg_mk})"/>')
+            seg_paths.append(f'<path class="{cls}" data-self="{esc(sg["from"])}"{sa(sg)} d="{d}" marker-end="url(#{seg_mk})"/>')
         else:
-            seg_paths.append(f'<path class="{cls}" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}" d="{d}" marker-end="url(#{seg_mk})"/>')
+            seg_paths.append(f'<path class="{cls}" data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"{sa(sg)} d="{d}" marker-end="url(#{seg_mk})"/>')
         if sg.get("n") is not None:
             badge_sgs.append(sg)
     for sg in segments + ctx_sgs:          # 꺾임점이 캔버스 밖으로 나가지 않게
@@ -1472,7 +1501,7 @@ def render_svg_topology(data, scenario):
     badge_pos = {id(sg): xy for sg, xy in zip(badge_sgs, spread)}
     for sg, (bx, by) in zip(badge_sgs, spread):
         dattr = f'data-self="{esc(sg["from"])}"' if sg.get("self") else f'data-from="{esc(sg["from"])}" data-to="{esc(sg["to"])}"'
-        badges.append(f'<g class="iff-badge" {dattr}>')
+        badges.append(f'<g class="iff-badge" {dattr}{sa(sg)}>')
         badges.append(f'<circle class="topo-badge" cx="{bx}" cy="{by}" r="11"/>')
         badges.append(f'<text class="topo-badge-tx" x="{bx}" y="{by + 4}" text-anchor="middle">{esc(sg["n"])}</text>')
         badges.append('</g>')
@@ -1492,7 +1521,7 @@ def render_svg_topology(data, scenario):
         x1, y1 = tcx - w / 2, tcy - T_TAG_H / 2
         xs += [x1, x1 + w]
         ys += [y1, y1 + T_TAG_H]
-        tag_body.append(f'<g class="topo-tag t-{esc(tg.get("tone", "muted"))}" {_seg_attr(sg)}>')
+        tag_body.append(f'<g class="topo-tag t-{esc(tg.get("tone", "muted"))}" {_seg_attr(sg)}{sa(sg)}>')
         for rc in ("topo-tag-bg", "topo-tag-fill"):
             tag_body.append(f'<rect class="{rc}" x="{x1:.1f}" y="{y1:.1f}" width="{w:.1f}" height="{T_TAG_H}" rx="{T_TAG_H / 2}"/>')
         tag_body.append(f'<text class="topo-tag-tx" x="{tcx:.1f}" y="{tcy + 3.8:.1f}" text-anchor="middle">{esc(text)}</text>')
@@ -1511,7 +1540,7 @@ def render_svg_topology(data, scenario):
             pos, anchor, (lx1, ly1, lx2, ly2) = _t_inline_label(sg, rects, rows, crowded, tw)
             xs += [lx1, lx2]
             ys += [ly1, ly2]
-            label_body.append(f'<g class="topo-ilbl{" ctx" if ctx else ""}" {_seg_attr(sg)}>')
+            label_body.append(f'<g class="topo-ilbl{" ctx" if ctx else ""}" {_seg_attr(sg)}{sa(sg)}>')
             for (tx, meta), (px, py) in zip(rows, pos):
                 cls = "topo-imeta" if meta else "topo-ilb"
                 label_body.append(f'<text class="{cls}" x="{px:.1f}" y="{py:.1f}" text-anchor="{anchor}">{esc(tx)}</text>')
@@ -1519,6 +1548,7 @@ def render_svg_topology(data, scenario):
 
     # 흐름 설명 legend — [번호 배지 | 단계 | 설명 | meta] 열 정렬 표 (토폴로지 하단, 공용 레이아웃)
     leg_x = min(xs) if xs else T_MARGIN
+    fig_maxy = max(ys) if ys else T_MARGIN
     leg_lines, leg_max_x = [], leg_x
     labelled = [] if inline else [sg for sg in segments if sg.get("label")]
     if labelled:
@@ -1562,6 +1592,9 @@ def render_svg_topology(data, scenario):
                     leg_lines.append(f'<text class="topo-legend-meta" x="{desc_x}" y="{ly}">{esc(ln)}</text>')
                     ly += T_LEG_ROW_LH
                 ry += row["h"]
+        if step:
+            leg_lines.insert(0, '<g class="fc-leg">')
+            leg_lines.append('</g>')
     else:
         maxy = max(ys) if ys else T_MARGIN
 
@@ -1583,7 +1616,9 @@ def render_svg_topology(data, scenario):
              '<rect class="fw-brick-bg" width="16" height="12"/>'
              '<path class="fw-mortar" d="M0,0 H16 M0,6 H16 M8,0 V6 M0,6 V12 M16,6 V12"/>'
              '</pattern>')
-    svg = (f'<svg viewBox="{vb_x} {vb_y} {vb_w} {vb_h}" style="width:100%;display:block;" '
+    fig = (f' data-fc-fig="{vb_x} {vb_y} {vb_w} {(fig_maxy - miny) + 2 * pad}"'
+           if step and labelled else "")
+    svg = (f'<svg viewBox="{vb_x} {vb_y} {vb_w} {vb_h}"{fig} style="width:100%;display:block;" '
            f'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{esc(scenario["title"])}">'
            f'<defs>{marker}{brick}</defs>'
            f'{"".join(zone_body)}{"".join(link_body)}{"".join(ctx_paths)}{"".join(seg_paths)}{"".join(node_body)}'
@@ -2074,6 +2109,122 @@ TAB_JS = """
 """
 
 
+STEP_CSS = """
+    .fc-step{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--zone-bg);}
+    .fc-step-cap{flex:1;min-width:0;font-size:14px;line-height:1.5;overflow-wrap:anywhere;}
+    .fc-cap[hidden]{display:none;}
+    .fc-cap b{color:var(--accent);margin-right:10px;font-variant-numeric:tabular-nums;}
+    .fc-cap-route{font-weight:700;margin-right:8px;}
+    .fc-cap-meta{color:var(--muted);font-family:var(--mono);font-size:11.5px;margin-left:8px;}
+    .fc-step-btn{font:inherit;font-size:15px;line-height:1;min-width:38px;height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;}
+    .fc-step-btn:hover:not(:disabled){border-color:var(--accent);}
+    .fc-step-btn:disabled{opacity:0.35;cursor:default;}
+    .fc-step-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+    @media screen {
+      .sheet.fc-one .topo-seg,.sheet.fc-one .iff-badge,.sheet.fc-one .topo-tag,.sheet.fc-one .topo-ilbl,.sheet.fc-one .fc-leg,.sheet.fc-one .fc-detail{display:none;}
+      .sheet.fc-one .fc-on{display:inline;}
+      .sheet.fc-one .topo-seg.fc-on{stroke:var(--accent);stroke-width:3;}
+      .sheet.fc-one .mk-topo{fill:var(--accent);}
+      .sheet.fc-one .iff-node{opacity:0.22;}
+      .sheet.fc-one .iff-node.fc-hit{opacity:1;}
+      .sheet.fc-one .iff-node .topo-node.dim{opacity:1;}
+      .sheet.fc-one .iff-node.fc-hit .topo-node{stroke:var(--accent);stroke-width:2.6;}
+      .sheet.fc-one .iff-node.fc-hit .topo-tx{fill:var(--accent);}
+    }
+    @media print { .fc-step{display:none;} }
+"""
+
+STEP_JS = """
+(function () {
+  var sheets = Array.prototype.slice.call(document.querySelectorAll('.sheet[data-fc-n]'));
+  if (!sheets.length) return;
+  var COARSE = '(max-width: 760px), (pointer: coarse)';
+  function cur() {
+    for (var i = 0; i < sheets.length; i++) if (!sheets[i].hidden) return sheets[i];
+    return null;
+  }
+  function stepOf(s) { return +s.getAttribute('data-fc-step') || 0; }
+  function setHash(i) {
+    try { history.replaceState(null, '', i ? '#' + i : location.pathname + location.search); } catch (e) {}
+  }
+  function fit(s, full) {
+    var svg = s.querySelector('svg'), fig = svg && svg.getAttribute('data-fc-fig');
+    if (!fig) return;
+    if (!svg.hasAttribute('data-fc-vb')) svg.setAttribute('data-fc-vb', svg.getAttribute('viewBox'));
+    svg.setAttribute('viewBox', full ? svg.getAttribute('data-fc-vb') : fig);
+  }
+  function show(s, i, keepHash) {
+    var n = +s.getAttribute('data-fc-n');
+    i = Math.max(0, Math.min(n, Math.floor(+i) || 0));
+    s.setAttribute('data-fc-step', i);
+    s.classList.toggle('fc-one', i > 0);
+    s.querySelectorAll('.fc-on').forEach(function (e) { e.classList.remove('fc-on'); });
+    var ids = [];
+    if (i > 0) s.querySelectorAll('[data-step="' + i + '"]').forEach(function (e) {
+      e.classList.add('fc-on');
+      ['data-from', 'data-to', 'data-self'].forEach(function (a) {
+        var v = e.getAttribute(a);
+        if (v) ids.push(v);
+      });
+    });
+    s.querySelectorAll('.iff-node').forEach(function (g) {
+      g.classList.toggle('fc-hit', ids.indexOf(g.getAttribute('data-id')) >= 0);
+    });
+    s.querySelectorAll('.fc-cap').forEach(function (c) { c.hidden = +c.getAttribute('data-i') !== i; });
+    s.querySelector('.fc-step-btn[data-dir="-1"]').disabled = i === 0;
+    s.querySelector('.fc-step-btn[data-dir="1"]').disabled = i === n;
+    fit(s, i === 0);
+    if (!keepHash) setHash(i);
+  }
+  function hashStep() {
+    var m = /^#([0-9]+)$/.exec(location.hash);
+    return m ? +m[1] : null;
+  }
+  sheets.forEach(function (s) { show(s, 0, true); });
+  var first = cur(), h = hashStep();
+  if (first && h !== null) show(first, h);
+  window.addEventListener('hashchange', function () {
+    var s = cur(), v = hashStep();
+    if (s && v !== null) show(s, v, true);
+    else if (s && !location.hash) show(s, 0, true);
+  });
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var b = t.closest('.fc-step-btn');
+    if (b) {
+      var sh = b.closest('.sheet');
+      show(sh, stepOf(sh) + (+b.getAttribute('data-dir')));
+      return;
+    }
+    if (t.closest('.fc-tab')) {
+      var c = cur();
+      if (c) show(c, 0); else setHash(0);
+      return;
+    }
+    if (!window.matchMedia(COARSE).matches) return;
+    if (t.closest('button,a,input,select,textarea,label,.iff-node,.iff-zone,.fc-detail,.fc-legend')) return;
+    if (window.getSelection && String(window.getSelection())) return;
+    var s = cur();
+    if (s) show(s, stepOf(s) + (e.clientX < window.innerWidth / 2 ? -1 : 1));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return;
+    var t = e.target;
+    if (t && t.closest && t.closest('input,select,textarea,[contenteditable]')) return;
+    var s = cur();
+    if (!s) return;
+    e.preventDefault();
+    show(s, stepOf(s) + d);
+  });
+  window.addEventListener('beforeprint', function () { sheets.forEach(function (s) { fit(s, true); }); });
+  window.addEventListener('afterprint', function () { sheets.forEach(function (s) { fit(s, stepOf(s) === 0); }); });
+})();
+"""
+
+
 def _topo_ext_used(data):
     """확장 CSS 가 필요한 필드를 쓰는지 (#156). 안 쓰면 기존 산출물을 그대로 낸다."""
     if data.get("view") != "topology":
@@ -2165,6 +2316,32 @@ def _detail_h_estimate(detail):
     return max(left, right) + 60
 
 
+def _flat(text):
+    return " ".join(ln.strip() for ln in str(text).split("\n") if ln.strip())
+
+
+def _step_name(node):
+    return next((ln.strip() for ln in str(node["name"]).split("\n") if ln.strip()), str(node["name"]))
+
+
+def _step_bar_html(data, sc):
+    names = {nd["id"]: _step_name(nd) for nd in data["nodes"]}
+    segs = sc["segments"]
+    total = len(segs)
+    caps = [f'<span class="fc-cap" data-i="0">전체 {total}구간 · ← →로 한 구간씩</span>']
+    for k, sg in enumerate(segs, 1):
+        src = esc(names[sg["from"]])
+        route = f"{src} ↻" if sg.get("self") else f'{src} → {esc(names[sg["to"]])}'
+        label = f' {esc(_flat(sg["label"]))}' if sg.get("label") else ""
+        meta = f'<small class="fc-cap-meta">{esc(_flat(sg["meta"]))}</small>' if sg.get("meta") else ""
+        caps.append(f'<span class="fc-cap" data-i="{k}" hidden><b>{k} / {total}</b>'
+                    f'<span class="fc-cap-route">{route}</span>{label}{meta}</span>')
+    return ('\n    <div class="fc-step" role="group" aria-label="구간 단계 보기">'
+            '<button type="button" class="fc-step-btn" data-dir="-1" aria-label="이전 구간" disabled>←</button>'
+            f'<div class="fc-step-cap" role="status" aria-live="polite">{"".join(caps)}</div>'
+            '<button type="button" class="fc-step-btn" data-dir="1" aria-label="다음 구간">→</button></div>')
+
+
 def build_html(data, rendered):
     view = data.get("view", "sequence")
     draggable = view in ("topology", "component")
@@ -2179,18 +2356,25 @@ def build_html(data, rendered):
         css += DRAG_CSS
     ext = _topo_ext_used(data)
     tabs = view == "topology" and _topo_tabs(data)
+    stepper = view == "topology" and _topo_stepper(data)
     if ext:
         css += TOPO_EXT_CSS
         extra_h = 44 + max(_detail_h_estimate(sc.get("detail")) for sc in data["scenarios"])
         css = css.replace(f"@page {{ size: {page_w}px {page_h}px;",
                           f"@page {{ size: {page_w}px {page_h + extra_h}px;")
 
+    if stepper:
+        css += STEP_CSS
     tools = '<button class="iff-export" type="button">📋 좌표 복사</button>' if draggable else ""
     legend = _legend_html(data, tabs) if ext else ""
     sheets = []
     for i, ((svg, _, _), sc) in enumerate(zip(rendered, data["scenarios"])):
         src = f'<p class="sub">{esc(data["source"])}</p>' if data.get("source") else ""
         attrs = (f' data-tab="{i}"' + (" hidden" if i else "")) if tabs else ""
+        bar = ""
+        if stepper and sc.get("segments"):
+            attrs += f' data-fc-n="{len(sc["segments"])}"'
+            bar = _step_bar_html(data, sc)
         h1_tag = f" {_chip(sc['tag'])}" if ext and sc.get("tag") else ""
         nav = _tabs_html(data, i) if tabs else ""
         after = legend + (_detail_html(sc["detail"]) if ext and sc.get("detail") else "")
@@ -2200,7 +2384,7 @@ def build_html(data, rendered):
       <h1>{esc(sc["title"])}{h1_tag}</h1>
       {src}
     </header>{nav}
-    {tools}
+    {tools}{bar}
     <div class="diagram-wrap">{svg}</div>{after}
   </section>""")
 
@@ -2231,7 +2415,7 @@ def build_html(data, rendered):
   }});
 }})();
 </script>
-<script>{DRAG_JS if draggable else ""}</script>{f"{chr(10)}<script>{TAB_JS}</script>" if tabs else ""}
+<script>{DRAG_JS if draggable else ""}</script>{f"{chr(10)}<script>{TAB_JS}</script>" if tabs else ""}{f"{chr(10)}<script>{STEP_JS}</script>" if stepper else ""}
 </body>
 </html>
 """
